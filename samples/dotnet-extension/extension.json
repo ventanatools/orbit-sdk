@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "id": "example.dotnet-state",
+  "name": ".NET state sample",
+  "description": "Configured actions and passive status for a boolean kept only in this companion's memory. No other app or file is changed.",
+  "version": "0.1.0",
+  "hosts": ["orbit"],
+  "contributions": [
+    {
+      "id": "example.dotnet-state/set-state",
+      "name": "Set sample state",
+      "description": "Set the companion's in-memory state to the selected value. The face shows its current state.",
+      "glyph": "\uE7E8",
+      "capabilities": ["invoke", "face"],
+      "settings": [
+        {
+          "id": "mode",
+          "name": "When picked",
+          "default": "on",
+          "choices": [
+            { "value": "on", "name": "Turn sample on" },
+            { "value": "off", "name": "Turn sample off" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "example.dotnet-state/status",
+      "name": "Sample status",
+      "description": "Show the companion's in-memory state without performing an action.",
+      "glyph": "\uE7E8",
+      "capabilities": ["face"],
+      "settings": [
+        {
+          "id": "display",
+          "name": "Show",
+          "default": "words",
+          "choices": [
+            { "value": "words", "name": "On or Off" },
+            { "value": "number", "name": "1 or 0" }
+          ]
+        }
+      ]
+    }
+  ]
+}

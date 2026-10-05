@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 2,
+  "id": "example.countdown",
+  "name": "Countdown sample",
+  "description": "One local countdown shared by configured Start, Pause and Reset actions and a passive status face. No account, alarm sound or external service.",
+  "version": "0.1.0",
+  "hosts": ["orbit"],
+  "contributions": [
+    {
+      "id": "example.countdown/timer",
+      "name": "Countdown action",
+      "description": "Start or resume, pause, or reset the shared countdown. Duration applies to a fresh start or reset. The face shows time remaining.",
+      "glyph": "\uE916",
+      "capabilities": ["invoke", "face"],
+      "settings": [
+        {
+          "id": "mode",
+          "name": "When picked",
+          "default": "start",
+          "choices": [
+            { "value": "start", "name": "Start or resume" },
+            { "value": "pause", "name": "Pause" },
+            { "value": "reset", "name": "Reset" }
+          ]
+        },
+        {
+          "id": "duration",
+          "name": "Fresh start or reset duration",
+          "default": "five-minutes",
+          "choices": [
+            { "value": "one-minute", "name": "1 minute" },
+            { "value": "five-minutes", "name": "5 minutes" },
+            { "value": "twenty-five-minutes", "name": "25 minutes" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "example.countdown/status",
+      "name": "Countdown status",
+      "description": "Display the shared countdown without an action. Suitable for the middle of a ring.",
+      "glyph": "\uE916",
+      "capabilities": ["face"],
+      "settings": []
+    }
+  ]
+}

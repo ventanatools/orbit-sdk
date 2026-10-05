@@ -1,0 +1,20 @@
+{
+  "manifestVersion": 5,
+  "id": "example.orbit.photoshop",
+  "name": "Orbit Photoshop sample",
+  "version": "0.1.0",
+  "main": "index.html",
+  "host": [{ "app": "PS", "minVersion": "25.0.0", "data": { "apiVersion": 2 } }],
+  "entrypoints": [{
+    "type": "panel",
+    "id": "orbitBridge",
+    "label": { "default": "Orbit Photoshop sample" },
+    "minimumSize": { "width": 280, "height": 200 },
+    "preferredDockedSize": { "width": 300, "height": 260 },
+    "preferredFloatingSize": { "width": 340, "height": 260 }
+  }],
+  "requiredPermissions": {
+    "localFileSystem": "request",
+    "network": { "domains": ["ws://localhost:38475"] }
+  }
+}

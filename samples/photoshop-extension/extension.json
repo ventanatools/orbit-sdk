@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "id": "example.photoshop",
+  "name": "Photoshop sample",
+  "description": "Configured layer visibility actions and live layer status through a separately started local companion and UXP plugin.",
+  "version": "1.0.0",
+  "hosts": ["orbit"],
+  "contributions": [
+    {
+      "id": "example.photoshop/toggle-layer",
+      "name": "Selected layer visibility",
+      "description": "Toggle, show or hide the one selected layer. Its live face shows whether that layer is visible.",
+      "glyph": "\uE7B3",
+      "capabilities": ["invoke", "face"],
+      "settings": [{ "id": "mode", "name": "When picked", "default": "toggle", "choices": [
+        { "value": "toggle", "name": "Toggle visibility" },
+        { "value": "show", "name": "Show layer" },
+        { "value": "hide", "name": "Hide layer" }
+      ] }]
+    },
+    {
+      "id": "example.photoshop/layer-status",
+      "name": "Layer status",
+      "description": "Show the selected layer's visibility or how many layers are selected. Picking this item changes nothing.",
+      "glyph": "\uE7B3",
+      "capabilities": ["face"],
+      "settings": [{ "id": "display", "name": "Show", "default": "visibility", "choices": [
+        { "value": "visibility", "name": "Selected layer visibility" },
+        { "value": "selection", "name": "Layer selection" }
+      ] }]
+    }
+  ]
+}

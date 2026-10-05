@@ -1,0 +1,9 @@
+Orbit Extensions SDK
+Copyright 2026 Seth Cottle
+
+This repository contains the public extension SDK, protocol, developer tools,
+tests and examples for Orbit. Orbit and Lollipop applications remain proprietary
+and are not included or licensed by this repository.
+
+Product names and logos are not covered by a general trademark license.
+Third-party dependencies retain their own licenses; see THIRD-PARTY-NOTICES.md.

@@ -1,0 +1,4 @@
+node_modules/
+*.pairing.json
+*.bridge.json
+uxp/vendor/
