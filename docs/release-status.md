@@ -17,6 +17,10 @@ own extension license.
 - A small in-memory state example, a Countdown widget/action example, and an
   advanced Node/Adobe UXP Photoshop reference with tests and dependency notices.
 - Public author documentation at [dev.ventana.tools](https://dev.ventana.tools/orbit/).
+- A fresh standalone checkout builds and passes verification with an isolated
+  NuGet cache: 204 public library tests, 13 Countdown checks and 67 Photoshop
+  Node tests on Windows, plus packing and validation of both example archives.
+  This is automated SDK verification, not a Store or installed Adobe release test.
 
 **NuGet packages have not been published.** Build the exact preview locally
 using `pwsh -File tools/build.ps1`, then run `pwsh -File tools/verify.ps1`.
@@ -47,8 +51,7 @@ Photoshop, Adobe developer tooling, and explicit local setup.
 - Verify installation, paired named-pipe access, actions, live sessions,
   reconnect, cancellation, updates, and revocation in a real Store-signed Orbit
   build, including the developer-mode workflow.
-- Test SDK adoption from a fresh external checkout and publish versioned NuGet
-  packages only after release checks are complete.
+- Publish versioned NuGet packages only after release checks are complete.
 - Define a consumer companion installation/startup experience so users do not
   need to build examples or manually prepare runtimes.
 - Verify a clean Adobe `.ccx` installation and broader installed Photoshop

@@ -3,7 +3,7 @@
 These projects build against the public SDK and protocol projects only. They do
 not require Orbit's private source, a running app, or a developer build.
 
-Run each project from the repository root:
+Run `pwsh -File tools/build.ps1` first, then each project from the repository root:
 
 ```sh
 dotnet test tests/Orbit.Extensions.Protocol.Tests/Orbit.Extensions.Protocol.Tests.csproj -c Release
