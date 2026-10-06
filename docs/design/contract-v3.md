@@ -3366,18 +3366,30 @@ The tool always:
 
 - copies `extension.json` from the project folder and generates
   `extension.package.json`;
-- excludes `.git`, `.vs`, `obj`, `node_modules/.cache`, `*.user`,
-  `*.pairing.json` and `pairing.json` wherever they appear on the way from the
-  project folder to a staged file, including in the paths this file names (the
-  build step's output included): a copy rule whose `from` is or lies in one
-  copies nothing, a file named directly with a pairing file's name is
-  `pack.secret`, and a readme in an excluded folder is `package.file-missing`;
+- excludes the names `.git`, `.vs`, `obj`, `node_modules/.cache`, `*.user`,
+  `*.pairing.json` and `pairing.json`, whether they name a file or a folder (a
+  `.git` file is a Git worktree's or submodule's pointer to its repository),
+  wherever they appear on the way from the project folder to a staged file,
+  including in the paths this file names (the build step's output included): a
+  copy rule whose `from` is or lies in one copies nothing, a file named directly
+  with a pairing file's name is `pack.secret`, and a readme in an excluded
+  folder is `package.file-missing`;
+- never stages its own output: a copied folder that contains the output folder
+  leaves it out, and no package file (a name ending in a package file extension
+  of `hosts.json`) directly in the output folder is staged, even when a copy
+  rule's `from` is the output folder or the output folder is the project
+  folder; a copy rule whose `from` lies inside the output folder still copies;
 - refuses (`pack.secret`) any staged file of at most 4,096 bytes that contains
   both a quoted `pipeName` and a quoted `secret` member, JSON or not;
 - refuses symbolic links and junctions (`pack.link`) on the way from the project
   folder to every staged file and folder, including the readme and the strings
   folder, but does not inspect the project folder or the folders above it (for
-  a path outside the project, the folders the two share);
+  a path outside the project, the folders the two share). Inside a copied
+  folder it never looks into a link and decides on the link itself, before the
+  globs filter its contents: a link to a file is refused when the globs select
+  it, and a link to a folder when the globs could select anything inside it,
+  even if nothing there would match; a link the globs cannot reach (such as the
+  junction npm makes under a `node_modules` folder no glob reaches) is left out;
 - checks per-file size, entry count and expanded size before it reads any
   content (`package.file-too-large`, `package.entries`,
   `package.expanded-too-large`);

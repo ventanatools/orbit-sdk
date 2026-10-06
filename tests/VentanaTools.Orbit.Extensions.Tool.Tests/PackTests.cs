@@ -216,6 +216,197 @@ public sealed class PackTests
     }
 
     [Fact]
+    public async Task ExcludedNamesAreLeftOutWhetherTheyAreFilesOrFolders()
+    {
+        // A .git FILE is a worktree's or submodule's pointer to its repository, with an absolute local path.
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [
+                { "from": ".", "to": "root", "include": ["*", "tree/**"] },
+                { "from": "tree/.git", "to": "direct" },
+                { "from": "tree/obj", "to": "direct" },
+                { "from": "tree/notes.user", "to": "userfolder" },
+                { "from": "tree/old.pairing.json", "to": "pairingfolder" },
+                { "from": "tree/sub", "to": "parent", "include": ["../*.txt", "../../*.md"] }
+              ]
+            }
+            """);
+        project.Write(".git", "gitdir: C:/Users/someone/source/repo/.git/worktrees/tool-test\n");
+        project.Write("tree/kept.txt", "kept");
+        project.Write("tree/.git", "gitdir: ../.git/modules/tree\n");
+        project.Write("tree/sub/.git", "gitdir: ../../.git/modules/tree/sub\n");
+        project.Write("tree/sub/kept.txt", "kept");
+        project.Write("tree/.vs", "never packed");
+        project.Write("tree/obj", "never packed");
+        project.Write("tree/notes.user/inside.txt", "never packed: a folder with a *.user name");
+        project.Write("tree/old.pairing.json/inside.txt", "never packed: a folder with a pairing file's name");
+        project.Write("tree/pairing.json/inside.txt", "never packed");
+        project.Write("tree/node_modules/.cache", "never packed");
+        project.Write("tree/node_modules/index.js", "module.exports = 1;\n");
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.True(run.ExitCode == 0, run.ToString());
+
+        var package = ReadPackage(project.Combine("artifacts/" + PackageName));
+        Assert.Equal(
+            ["README.md", "extension.json", "extension.package.json", "payload/root/PACKAGE-README.md", "payload/root/extension.json",
+                "payload/root/extension.pack.json", "payload/root/tree/kept.txt", "payload/root/tree/node_modules/index.js",
+                "payload/root/tree/sub/kept.txt"],
+            package.Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+        Assert.DoesNotContain(package.Files, file => Text(file).Contains("gitdir", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(null, "artifacts")]
+    [InlineData("out/packages", "out/packages")]
+    public async Task PackNeverStagesItsOwnOutputFolder(string? outputArgument, string output)
+    {
+        // A copy rule of the whole project, with the default output folder or a nested -o folder inside it.
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [ { "from": ".", "to": "source", "exclude": ["companion/**"] } ]
+            }
+            """);
+        string[] pack = outputArgument is null ? ["pack"] : ["pack", "-o", outputArgument];
+        var first = await ToolHarness.RunAsync(project.Path, pack);
+        Assert.True(first.ExitCode == 0, first.ToString());
+        var packagePath = project.Combine(output + "/" + PackageName);
+        var firstBytes = File.ReadAllBytes(packagePath);
+        project.Write(output + "/notes.txt", "never packed: in the output folder");
+
+        // The second pack finds the first package (and a note) in the copied folder and leaves them out.
+        var second = await ToolHarness.RunAsync(project.Path, [.. pack, "--force"]);
+        Assert.True(second.ExitCode == 0, second.ToString());
+        Assert.Equal(firstBytes, File.ReadAllBytes(packagePath));
+        var top = "payload/source/" + output.Split('/')[0] + "/";
+        Assert.DoesNotContain(ReadPackage(packagePath).Files, file => file.Path.StartsWith(top, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ACopyRuleOfTheOutputFolderLeavesOutThePackagesInIt()
+    {
+        using var project = TestProject.Create(packConfig: $$"""
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [
+                { "from": "dist", "to": "dist" },
+                { "from": "dist/example.tool-test-0.0.1{{ActiveHost.Extension}}", "to": "named" }
+              ]
+            }
+            """);
+        project.Write("dist/notes.txt", "kept: the folder is copied, the packages in it are not");
+        project.Write("dist/example.tool-test-0.0.1" + ActiveHost.Extension, "an older package");
+        project.Write("dist/nested/example.tool-test-0.0.1" + ActiveHost.Extension, "kept: not directly in the output folder");
+        foreach (var force in new[] { false, true })
+        {
+            var run = await ToolHarness.RunAsync(project.Path, force ? ["pack", "-o", "dist", "--force"] : ["pack", "-o", "dist"]);
+            Assert.True(run.ExitCode == 0, run.ToString());
+            Assert.Equal(
+                ["README.md", "extension.json", "extension.package.json", "payload/dist/nested/example.tool-test-0.0.1" + ActiveHost.Extension,
+                    "payload/dist/notes.txt"],
+                ReadPackage(project.Combine("dist/" + PackageName)).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+        }
+
+        // The project folder as the output folder: the package written beside extension.json is never copied back.
+        using var flat = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [ { "from": ".", "to": "source", "include": ["*"] } ]
+            }
+            """);
+        Assert.Equal(0, (await ToolHarness.RunAsync(flat.Path, "pack", "-o", ".")).ExitCode);
+        var again = await ToolHarness.RunAsync(flat.Path, "pack", "-o", ".", "--force");
+        Assert.True(again.ExitCode == 0, again.ToString());
+        Assert.Equal(
+            ["README.md", "extension.json", "extension.package.json", "payload/source/PACKAGE-README.md", "payload/source/extension.json",
+                "payload/source/extension.pack.json"],
+            ReadPackage(flat.Combine(PackageName)).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task ALinkTheGlobsCanReachIsRefusedEvenWhenTheyWouldFilterItsContents()
+    {
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [
+                { "from": "app", "to": "app", "include": ["main.js", "uxp/*.js"] },
+                { "from": "site", "to": "site", "include": ["**/*.js"] }
+              ]
+            }
+            """);
+        using var outside = new TempFolder();
+        outside.Write("uxp/panel.js", "// outside");
+        outside.Write("docs/guide.md", "# Only Markdown, which the globs would filter out\n");
+        project.Write("app/main.js", "// main");
+        project.Write("site/index.js", "// index");
+        CreateLink(project.Combine("app/uxp"), outside.Combine("uxp"));
+        CreateLink(project.Combine("site/docs"), outside.Combine("docs"));
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.Equal(1, run.ExitCode);
+        Assert.Equal(
+            ["app/uxp: error pack.link: A staged file or folder is a symbolic link or junction. []",
+                "site/docs: error pack.link: A staged file or folder is a symbolic link or junction. []"],
+            ErrorLines(run).Order(StringComparer.Ordinal));
+        Assert.False(File.Exists(project.Combine("artifacts/" + PackageName)));
+    }
+
+    [FileLinkFact]
+    public async Task AFileLinkIsRefusedWhenTheGlobsSelectIt()
+    {
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [ { "from": "app", "to": "app", "include": ["*.js"] } ]
+            }
+            """);
+        using var outside = new TempFolder();
+        project.Write("app/main.js", "// main");
+        File.CreateSymbolicLink(project.Combine("app/linked.js"), outside.Write("linked.js", "// outside"));
+        File.CreateSymbolicLink(project.Combine("app/notes.md"), outside.Write("notes.md", "# Not selected\n"));
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.Equal(1, run.ExitCode);
+        Assert.Equal("app/linked.js: error pack.link: A staged file or folder is a symbolic link or junction. []", Assert.Single(ErrorLines(run)));
+    }
+
+    [Fact]
+    public async Task ALinkTheGlobsCannotReachIsLeftOut()
+    {
+        // npm links a file: dependency into node_modules; a copy rule that never reaches node_modules packs.
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [
+                { "from": "app", "to": "app", "include": ["main.js", "uxp/*.js"] },
+                { "from": "web", "to": "web", "exclude": ["node_modules/**"] }
+              ]
+            }
+            """);
+        using var outside = new TempFolder();
+        outside.Write("sdk/index.js", "// linked package");
+        project.Write("app/main.js", "// main");
+        project.Write("app/uxp/panel.js", "// panel");
+        project.Write("web/index.js", "// index");
+        Directory.CreateDirectory(project.Combine("app/node_modules/@scope"));
+        Directory.CreateDirectory(project.Combine("web/node_modules"));
+        CreateLink(project.Combine("app/node_modules/@scope/sdk"), outside.Combine("sdk"));
+        CreateLink(project.Combine("web/node_modules/sdk"), outside.Combine("sdk"));
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.True(run.ExitCode == 0, run.ToString());
+        Assert.Equal(
+            ["README.md", "extension.json", "extension.package.json", "payload/app/main.js", "payload/app/uxp/panel.js", "payload/web/index.js"],
+            ReadPackage(project.Combine("artifacts/" + PackageName)).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task AFailedBuildStepIsPackBuildFailed()
     {
         using var project = TestProject.Create(packConfig: """
@@ -294,15 +485,29 @@ public sealed class PackTests
     [Fact]
     public void AlwaysExcludedNamesAndPairingDetection()
     {
-        Assert.True(PackCommand.IsAlwaysExcluded("a/.git", folder: true));
-        Assert.True(PackCommand.IsAlwaysExcluded("obj", folder: true));
-        Assert.True(PackCommand.IsAlwaysExcluded("lib/node_modules/.cache", folder: true));
-        Assert.False(PackCommand.IsAlwaysExcluded("node_modules", folder: true));
-        Assert.True(PackCommand.IsAlwaysExcluded("x/My.csproj.user", folder: false));
-        Assert.True(PackCommand.IsAlwaysExcluded("pairing.json", folder: false));
-        Assert.True(PackCommand.IsAlwaysExcluded("a/example.x.pairing.json", folder: false));
-        Assert.False(PackCommand.IsAlwaysExcluded("obj.txt", folder: false));
-        Assert.False(PackCommand.IsAlwaysExcluded("obj/pairing", folder: true));
+        // Names, whether they name a file or a folder.
+        Assert.True(PackCommand.IsAlwaysExcluded("a/.git"));
+        Assert.True(PackCommand.IsAlwaysExcluded(".GIT"));
+        Assert.True(PackCommand.IsAlwaysExcluded("obj"));
+        Assert.True(PackCommand.IsAlwaysExcluded("x/.vs"));
+        Assert.True(PackCommand.IsAlwaysExcluded("lib/node_modules/.cache"));
+        Assert.False(PackCommand.IsAlwaysExcluded("node_modules"));
+        Assert.False(PackCommand.IsAlwaysExcluded(".cache"));
+        Assert.True(PackCommand.IsAlwaysExcluded("x/My.csproj.user"));
+        Assert.True(PackCommand.IsAlwaysExcluded("pairing.json"));
+        Assert.True(PackCommand.IsAlwaysExcluded("a/example.x.pairing.json"));
+        Assert.False(PackCommand.IsAlwaysExcluded("obj.txt"));
+        Assert.False(PackCommand.IsAlwaysExcluded(".gitignore"));
+        Assert.False(PackCommand.IsAlwaysExcluded(".github"));
+        Assert.False(PackCommand.IsAlwaysExcluded("obj/pairing"));
+
+        // Package files directly in the output folder.
+        var output = Path.Combine(Path.GetTempPath(), "project", "artifacts");
+        Assert.True(PackCommand.IsOutputPackage(Path.Combine(output, "example.x-1.0.0" + ActiveHost.Extension), output));
+        Assert.True(PackCommand.IsOutputPackage(Path.Combine(output, "OLD" + ActiveHost.Extension.ToUpperInvariant()), output));
+        Assert.False(PackCommand.IsOutputPackage(Path.Combine(output, "nested", "example.x-1.0.0" + ActiveHost.Extension), output));
+        Assert.False(PackCommand.IsOutputPackage(Path.Combine(output, "notes.txt"), output));
+        Assert.False(PackCommand.IsOutputPackage(Path.Combine(Path.GetTempPath(), "project", "example.x-1.0.0" + ActiveHost.Extension), output));
         Assert.True(PackCommand.IsPairingName("Example.X.Pairing.JSON"));
         Assert.True(PackCommand.IsPairingName("pairing.json"));
         Assert.False(PackCommand.IsPairingName("pairing.json.txt"));
@@ -311,6 +516,20 @@ public sealed class PackTests
         Assert.True(PackCommand.LooksLikePairing("{\"pipe\\u004eame\":\"x\",\"secret\":\"y\"}"u8.ToArray()));
         Assert.True(PackCommand.LooksLikePairing("not json \"pipeName\" \"secret\""u8.ToArray()));
         Assert.False(PackCommand.LooksLikePairing("{\"pipeName\":\"x\"}"u8.ToArray()));
+    }
+
+    /// <summary>A package the test wrote, read and verified for the active host.</summary>
+    private static ExtensionPackage ReadPackage(string path)
+    {
+        var package = PackageReader.Read(File.ReadAllBytes(path), new PackageReadOptions { Manifest = new ManifestReadOptions { HostId = ActiveHost.Id } });
+        Assert.True(package.Succeeded, string.Join('\n', package.Diagnostics));
+        return package.Value;
+    }
+
+    private static string Text(PackageFile file)
+    {
+        using var reader = new StreamReader(file.OpenRead());
+        return reader.ReadToEnd();
     }
 
     /// <summary>The canonical error lines a run printed, without their <c>fix:</c> lines.</summary>
@@ -337,5 +556,34 @@ public sealed class PackTests
         })!;
         process.WaitForExit();
         Assert.Equal(0, process.ExitCode);
+    }
+}
+
+/// <summary>A test that creates a symbolic link to a file: skipped, with the reason, where the account cannot create one.</summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class FileLinkFactAttribute : FactAttribute
+{
+    private static readonly bool CanCreate = Probe();
+
+    public FileLinkFactAttribute()
+    {
+        if (!CanCreate)
+        {
+            Skip = "Creating a symbolic link to a file needs Developer Mode or administrator rights on Windows.";
+        }
+    }
+
+    private static bool Probe()
+    {
+        using var folder = new TempFolder("ventana-link-probe-");
+        try
+        {
+            File.CreateSymbolicLink(folder.Combine("link.txt"), folder.Write("target.txt", "target"));
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 }

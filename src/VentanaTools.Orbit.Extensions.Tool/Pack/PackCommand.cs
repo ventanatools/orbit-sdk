@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.FileSystemGlobbing;
+using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using VentanaTools.Orbit.Extensions.Packaging;
 
 namespace VentanaTools.Orbit.Extensions.Tool;
@@ -17,7 +18,10 @@ internal static class PackCommand
     /// <summary>The largest staged JSON file that is checked for pairing members (contract §11.3).</summary>
     public const int SecretCheckBytes = 4_096;
 
-    private static readonly string[] ExcludedFolders = [".git", ".vs", "obj"];
+    /// <summary>Names never packed, whether they name a file or a folder (a <c>.git</c> file points a worktree or submodule at its repository).</summary>
+    private static readonly string[] ExcludedNames = [".git", ".vs", "obj"];
+
+    private static readonly StringComparison PathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
     public static async Task<int> RunAsync(ToolConsole console, string? projectArgument, string? outputArgument, string? hostId, bool force,
         bool json, CancellationToken cancellationToken)
@@ -54,7 +58,7 @@ internal static class PackCommand
             return report.Write(ExitCodes.Usage);
         }
 
-        var outputFolder = console.FullPath(outputArgument ?? Path.Combine(project, "artifacts"));
+        var outputFolder = Path.TrimEndingDirectorySeparator(console.FullPath(outputArgument ?? Path.Combine(project, "artifacts")));
         var outputPath = Path.Combine(outputFolder, manifest.Id + "-" + manifest.Version + extension);
         if (File.Exists(outputPath) && !force)
         {
@@ -62,7 +66,7 @@ internal static class PackCommand
             return report.Write(ExitCodes.InputOutput);
         }
 
-        var staging = new Staging(console, report, config, configPath);
+        var staging = new Staging(console, report, config, configPath, outputFolder);
         await staging.CollectAsync(project, manifestPath, cancellationToken).ConfigureAwait(false);
         if (!report.Ok)
         {
@@ -178,9 +182,11 @@ internal static class PackCommand
     /// folder, a copy rule's <c>from</c>) and to everything found under a copied folder: each folder
     /// from the project down to the item, and the item itself, is checked for the always-excluded
     /// names and for links. The project folder and the folders above it are never checked; for a
-    /// path outside the project, checking starts below the deepest folder the two share.
+    /// path outside the project, checking starts below the deepest folder the two share. The
+    /// output folder is never staged: a copied folder that holds it leaves it out, and no package
+    /// file directly in it is staged (<see cref="IsOutputPackage(string, string)"/>).
     /// </remarks>
-    private sealed class Staging(ToolConsole console, DiagnosticReport report, PackConfig config, string configPath)
+    private sealed class Staging(ToolConsole console, DiagnosticReport report, PackConfig config, string configPath, string outputFolder)
     {
         private readonly Dictionary<string, StagedFile> _files = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<string> _temporaryFolders = [];
@@ -296,7 +302,7 @@ internal static class PackCommand
                 return;
             }
 
-            if (ExcludedOnTheWay(project, source, folder: false))
+            if (ExcludedOnTheWay(project, source))
             {
                 ReportConfig(DiagnosticCodes.PackageFileMissing, path ?? string.Empty, node);
                 return;
@@ -319,7 +325,7 @@ internal static class PackCommand
                 return;
             }
 
-            if (ExcludedOnTheWay(project, folder, folder: true))
+            if (ExcludedOnTheWay(project, folder))
             {
                 return;
             }
@@ -333,7 +339,7 @@ internal static class PackCommand
             var name = Path.GetFileName(folder);
             foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly).Order(StringComparer.Ordinal))
             {
-                if (IsAlwaysExcluded(name + "/" + Path.GetFileName(file), folder: false))
+                if (IsAlwaysExcluded(name + "/" + Path.GetFileName(file)))
                 {
                     continue;
                 }
@@ -383,7 +389,8 @@ internal static class PackCommand
         /// <summary>
         /// Applies one copy rule. A <c>from</c> that is, or lies in, an always-excluded name copies
         /// nothing, as the same name would inside a copied folder; a file it names directly with a
-        /// pairing name is refused (<c>pack.secret</c>), since tools never pack a pairing file.
+        /// pairing name is refused (<c>pack.secret</c>), since tools never pack a pairing file; and a
+        /// package file directly in the output folder copies nothing.
         /// </summary>
         private void AddRule(PackCopyRule rule, string project)
         {
@@ -402,7 +409,7 @@ internal static class PackCommand
                 return;
             }
 
-            if (ExcludedOnTheWay(project, from, folder: !isFile))
+            if (ExcludedOnTheWay(project, from) || (isFile && IsOutputPackage(from, outputFolder)))
             {
                 return;
             }
@@ -422,27 +429,34 @@ internal static class PackCommand
             AddTree(from, rule.To, rule);
         }
 
+        /// <summary>
+        /// Stages what a copy rule's globs select under <paramref name="root"/>. The glob matcher walks
+        /// a <see cref="CopiedFolder"/>, which never shows it the always-excluded names, the output
+        /// folder or the packages directly in it, and never lets it into a link: a link is decided on
+        /// itself, before its contents are filtered, and refused when the globs select it (a file) or
+        /// could select anything inside it (a folder), even if nothing inside would match.
+        /// </summary>
         private void AddTree(string root, string to, PackCopyRule rule)
         {
-            var matcher = rule.Matcher();
-            foreach (var item in Walk(root))
+            var tree = new CopiedTree(outputFolder);
+            var matches = rule.Matcher().Execute(new CopiedFolder(tree, root, Path.GetFileName(root), relative: null, link: false, parent: null));
+            var links = new List<CopiedItem>(tree.EnteredLinks);
+            foreach (var match in matches.Files.Select(match => match.Path).Order(StringComparer.Ordinal))
             {
-                var probe = item.Folder ? Path.Combine(item.FullPath, "file") : item.FullPath;
-                if (!matcher.Match(root, probe).HasMatches)
+                var file = tree.Files[match];
+                if (file.Link)
                 {
-                    continue;
+                    links.Add(file);
                 }
+                else
+                {
+                    Stage(Join(to, file.Relative), file.FullPath);
+                }
+            }
 
-                if (item.Link)
-                {
-                    report.Add(DiagnosticCodes.PackLink, string.Empty, console.Display(item.FullPath));
-                    continue;
-                }
-
-                if (!item.Folder)
-                {
-                    Stage(Join(to, item.Relative), item.FullPath);
-                }
+            foreach (var link in links.OrderBy(link => link.Relative, StringComparer.Ordinal))
+            {
+                report.Add(DiagnosticCodes.PackLink, string.Empty, console.Display(link.FullPath));
             }
         }
 
@@ -560,20 +574,8 @@ internal static class PackCommand
         }
 
         /// <summary>Whether a folder on the way to <paramref name="target"/>, or the target itself, has an always-excluded name.</summary>
-        private static bool ExcludedOnTheWay(string project, string target, bool folder)
-        {
-            var way = OnTheWay(project, target);
-            for (var index = 0; index < way.Count; index++)
-            {
-                var parent = Path.GetFileName(Path.GetDirectoryName(way[index])) ?? string.Empty;
-                if (IsAlwaysExcluded(parent + "/" + Path.GetFileName(way[index]), folder || index < way.Count - 1))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        private static bool ExcludedOnTheWay(string project, string target) =>
+            OnTheWay(project, target).Exists(item => IsAlwaysExcluded(Path.GetFileName(Path.GetDirectoryName(item)) + "/" + Path.GetFileName(item)));
     }
 
     /// <summary>
@@ -584,9 +586,8 @@ internal static class PackCommand
     /// </summary>
     private static List<string> OnTheWay(string project, string target)
     {
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         var way = new List<string>();
-        for (var current = target; current is not null && !IsProjectOrAbove(current, project, comparison); current = Path.GetDirectoryName(current))
+        for (var current = target; current is not null && !IsProjectOrAbove(current, project, PathComparison); current = Path.GetDirectoryName(current))
         {
             way.Add(current);
         }
@@ -606,60 +607,144 @@ internal static class PackCommand
         return project.StartsWith(prefix, comparison);
     }
 
-    /// <summary>One file or folder under a copied folder, never descending into links.</summary>
-    private readonly record struct WalkItem(string Relative, string FullPath, bool Folder, bool Link);
+    /// <summary>
+    /// Whether <paramref name="path"/> is a package file (a name ending in a registry host's package
+    /// file extension) directly in <paramref name="outputFolder"/>. <c>pack</c> never stages its own
+    /// output, even when a copy rule copies the output folder itself or the output folder is the
+    /// project folder.
+    /// </summary>
+    public static bool IsOutputPackage(string path, string outputFolder) =>
+        string.Equals(Path.GetDirectoryName(path), outputFolder, PathComparison)
+        && HostRegistry.Known.Any(host => host.PackageExtension is { Length: > 0 } extension
+            && path.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Every file and folder under <paramref name="root"/>, without the names that are never packed (contract §11.3).</summary>
-    private static IEnumerable<WalkItem> Walk(string root)
+    /// <summary>A file, or a link the glob matcher reached, under a copied folder.</summary>
+    private sealed class CopiedItem
     {
-        var pending = new Stack<string>();
-        pending.Push(root);
-        while (pending.Count > 0)
+        /// <summary>The path below the copied folder, <c>/</c>-separated, as the glob matcher reports it.</summary>
+        public required string Relative { get; init; }
+
+        public required string FullPath { get; init; }
+
+        public required bool Link { get; init; }
+    }
+
+    /// <summary>What one walk of a copied folder found: its files by relative path, and the links the glob matcher tried to enter.</summary>
+    private sealed class CopiedTree(string outputFolder)
+    {
+        public string OutputFolder => outputFolder;
+
+        public Dictionary<string, CopiedItem> Files { get; } = new(StringComparer.Ordinal);
+
+        public List<CopiedItem> EnteredLinks { get; } = [];
+    }
+
+    /// <summary>
+    /// A folder under a copied folder as the glob matcher sees it (contract §11.3): without the
+    /// always-excluded names, the output folder and the packages directly in it, in ordinal order.
+    /// A link to a folder looks empty and records itself when the matcher looks inside, which the
+    /// matcher does only for a folder its include globs could select something in and its exclude
+    /// globs do not leave out; so a link is decided on itself, before its contents are filtered.
+    /// </summary>
+    private sealed class CopiedFolder(CopiedTree tree, string fullPath, string name, string? relative, bool link, CopiedFolder? parent)
+        : DirectoryInfoBase
+    {
+        public override string Name => name;
+
+        public override string FullName => fullPath;
+
+        public override DirectoryInfoBase? ParentDirectory => parent;
+
+        public override IEnumerable<FileSystemInfoBase> EnumerateFileSystemInfos()
         {
-            var folder = pending.Pop();
-            var folderName = Path.GetFileName(folder);
-            foreach (var info in new DirectoryInfo(folder).EnumerateFileSystemInfos().OrderBy(info => info.Name, StringComparer.Ordinal))
+            if (link)
             {
-                var relative = Path.GetRelativePath(root, info.FullName).Replace(Path.DirectorySeparatorChar, '/');
+                tree.EnteredLinks.Add(new CopiedItem { Relative = relative!, FullPath = fullPath, Link = true });
+                return [];
+            }
+
+            var items = new List<FileSystemInfoBase>();
+            foreach (var info in new DirectoryInfo(fullPath).EnumerateFileSystemInfos().OrderBy(info => info.Name, StringComparer.Ordinal))
+            {
                 var isFolder = (info.Attributes & FileAttributes.Directory) != 0;
 
-                // The containing folder's own name, so node_modules/.cache is found when the copied folder is node_modules.
-                if (IsAlwaysExcluded(folderName + "/" + info.Name, isFolder))
+                // The containing folder's own name counts, so node_modules/.cache is found when the copied folder is node_modules.
+                if (IsAlwaysExcluded(name + "/" + info.Name)
+                    || (isFolder ? string.Equals(info.FullName, tree.OutputFolder, PathComparison) : IsOutputPackage(info.FullName, tree.OutputFolder)))
                 {
                     continue;
                 }
 
-                var link = (info.Attributes & FileAttributes.ReparsePoint) != 0 || info.LinkTarget is not null;
-                yield return new WalkItem(relative, info.FullName, isFolder, link);
-                if (isFolder && !link)
+                var isLink = (info.Attributes & FileAttributes.ReparsePoint) != 0 || info.LinkTarget is not null;
+                var itemRelative = relative is null ? info.Name : relative + "/" + info.Name;
+                if (isFolder)
                 {
-                    pending.Push(info.FullName);
+                    items.Add(new CopiedFolder(tree, info.FullName, info.Name, itemRelative, isLink, this));
+                }
+                else
+                {
+                    tree.Files[itemRelative] = new CopiedItem { Relative = itemRelative, FullPath = info.FullName, Link = isLink };
+                    items.Add(new CopiedFile(info.Name, info.FullName, this));
                 }
             }
+
+            return items;
         }
+
+        /// <summary>A pattern's <c>..</c> segment: an empty folder, so no glob reaches outside the copied folder.</summary>
+        public override DirectoryInfoBase GetDirectory(string path) => new EmptyFolder(path, Path.Combine(fullPath, path), this);
+
+        public override FileInfoBase? GetFile(string path) => null;
+    }
+
+    /// <summary>A folder the glob matcher may name but finds nothing in.</summary>
+    private sealed class EmptyFolder(string name, string fullPath, DirectoryInfoBase parent) : DirectoryInfoBase
+    {
+        public override string Name => name;
+
+        public override string FullName => fullPath;
+
+        public override DirectoryInfoBase ParentDirectory => parent;
+
+        public override IEnumerable<FileSystemInfoBase> EnumerateFileSystemInfos() => [];
+
+        public override DirectoryInfoBase GetDirectory(string path) => new EmptyFolder(path, Path.Combine(fullPath, path), this);
+
+        public override FileInfoBase? GetFile(string path) => null;
+    }
+
+    /// <summary>A file under a copied folder as the glob matcher sees it.</summary>
+    private sealed class CopiedFile(string name, string fullPath, DirectoryInfoBase parent) : FileInfoBase
+    {
+        public override string Name => name;
+
+        public override string FullName => fullPath;
+
+        public override DirectoryInfoBase ParentDirectory => parent;
     }
 
     /// <summary>
-    /// Whether the last segment of a <c>/</c>-separated path is a name the tool never packs: <c>.git</c>,
-    /// <c>.vs</c>, <c>obj</c>, <c>node_modules/.cache</c> (the segment before counts here), <c>*.user</c>,
-    /// <c>*.pairing.json</c>, <c>pairing.json</c>. Callers check every segment of a path in turn.
+    /// Whether the last segment of a <c>/</c>-separated path is a name the tool never packs, whether it
+    /// names a file or a folder: <c>.git</c>, <c>.vs</c>, <c>obj</c>, <c>node_modules/.cache</c> (the
+    /// segment before counts here), <c>*.user</c>, <c>*.pairing.json</c>, <c>pairing.json</c>. Callers
+    /// check every segment of a path in turn.
     /// </summary>
-    public static bool IsAlwaysExcluded(string relative, bool folder)
+    public static bool IsAlwaysExcluded(string relative)
     {
         var segments = relative.Split('/');
         var name = segments[^1];
-        if (folder && Array.Exists(ExcludedFolders, excluded => excluded.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        if (Array.Exists(ExcludedNames, excluded => excluded.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }
 
-        if (folder && name.Equals(".cache", StringComparison.OrdinalIgnoreCase) && segments.Length > 1
+        if (name.Equals(".cache", StringComparison.OrdinalIgnoreCase) && segments.Length > 1
             && segments[^2].Equals("node_modules", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        return !folder && (name.EndsWith(".user", StringComparison.OrdinalIgnoreCase) || IsPairingName(name));
+        return name.EndsWith(".user", StringComparison.OrdinalIgnoreCase) || IsPairingName(name);
     }
 
     /// <summary>Whether a file name is a pairing file's: <c>*.pairing.json</c> or <c>pairing.json</c>.</summary>

@@ -106,13 +106,28 @@ refuses links and pairing files among the staged files, writes the package
 atomically and verifies it before it reports success. Packing the same files
 twice gives the same bytes.
 
-The left-out names and the link check apply to every folder on the way from the
-project folder to each staged file, including the paths the configuration names:
-a copy rule whose `from` is, or lies in, a left-out name copies nothing; a file
-named directly with a pairing file's name is refused (`pack.secret`); a readme in
-a left-out folder leaves the package without one (`package.file-missing`); and a
-link anywhere on the way is refused (`pack.link`). The project folder and the
-folders above it are never checked.
+The left-out names apply whether they name a file or a folder (a `.git` file is
+how a Git worktree or submodule points to its repository). They and the link
+check apply to every folder on the way from the project folder to each staged
+file, including the paths the configuration names: a copy rule whose `from` is,
+or lies in, a left-out name copies nothing; a file named directly with a pairing
+file's name is refused (`pack.secret`); a readme in a left-out folder leaves the
+package without one (`package.file-missing`); and a link anywhere on the way is
+refused (`pack.link`). The project folder and the folders above it are never
+checked.
+
+Inside a copied folder the tool never looks into a link; it decides on the link
+itself, before the globs filter what is inside it. A link to a file is refused
+when the globs select it, and a link to a folder when the globs could select
+anything inside it, even if nothing there would match. A link the globs cannot
+reach is left out, so the junction npm makes under `node_modules` for a `file:`
+dependency does not stop a pack whose globs never reach `node_modules` (or that
+excludes `node_modules/**`).
+
+`pack` never packs its own output. A copied folder that contains the output
+folder (by default `artifacts/` in the project folder) leaves it out, and package
+files directly in the output folder are never copied, even by a copy rule of the
+output folder itself or, with `-o .`, of the project folder.
 
 ## Simulation scripts
 
