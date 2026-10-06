@@ -142,12 +142,12 @@ A requirement addressed to "receivers" applies to hosts and companions alike.
    author package embeds it and exposes it as `HostRegistry` (§9.1), the Node
    SDK exports it as `hosts` (§10), the codename script regenerates every
    derived file in the repository from it (the Node copy, sample and template
-   manifests, template defaults and the schema folder), and the docs site's
-   sync script generates its redirects and schema paths from it. A host
-   application keeps its own id in one constant. The package family name
-   reaches code only as namespace and assembly identifiers (§9), and the tool
-   reads its own command name from its assembly (§11.1), so no source string
-   names the product. A test enforces this (`ProductNameConfinementTests`,
+   manifests, template defaults, the schema folder and the file's own pin),
+   and the docs site's sync script generates its redirects and schema paths
+   from it. A host application keeps its own id in one constant. The package
+   family name reaches code only as namespace and assembly identifiers (§9),
+   and the tool reads its own command name from its assembly (§11.1), so no
+   source string names the product. A test enforces this (`ProductNameConfinementTests`,
    §2.8).
 3. Assembly names equal package IDs, and each package's root namespace equals
    its ID. The author package has two further namespaces, `.Packaging` and
@@ -412,9 +412,13 @@ A host MUST refuse to admit a manifest that requires a capability the host does
 not implement (`requires.capability-unsupported`). Capability ids that start
 with `x.` are experimental: a host MUST refuse them unless developer mode is on.
 A tool without a host context reports unknown ids as the warning
-`requires.capability-unknown`. Every baseline feature of protocol 3 is implied
-by `schemaVersion: 3`, so a manifest that uses only baseline features has no
-`requires` member.
+`requires.capability-unknown`. A capability id listed twice is
+`requires.capability-duplicate`, and one longer than 64 characters is
+`string.too-long`. An id that breaks the dotted-code grammar can never be a
+known or implemented capability, so it is `requires.capability-unknown` (a
+tool) or `requires.capability-unsupported` (a host). Every baseline feature of
+protocol 3 is implied by `schemaVersion: 3`, so a manifest that uses only
+baseline features has no `requires` member.
 
 ### 3.3 Contribution object
 
@@ -662,9 +666,11 @@ A key that names no item in the manifest is an error (`strings.target-unknown`).
 ```
 
 Hosts MAY apply strings files. A host that does picks the best match for its UI
-language (exact tag, then the language subtag alone, then the manifest text)
-and applies it member by member. Readers MUST validate strings files even when
-the host does not apply them, so an author's mistakes surface everywhere.
+language (a file whose tag equals it, case-insensitively; then a file whose tag
+is the UI language's primary subtag alone, so `de` for `de-AT` and never another
+region such as `de-DE`; then the manifest text) and applies it member by
+member. Readers MUST validate strings files even when the host does not apply
+them, so an author's mistakes surface everywhere.
 
 ---
 
@@ -687,10 +693,22 @@ member, `file`.
 | `file` | string | No | The archive entry or file the path refers to, for example `extension.json` or `strings/de-DE.json`. Absent when the reader was given a single file. |
 | `line`, `column` | integer | No | 1-based line and 1-based UTF-8 byte column, as Lollipop's, of the token the path resolves to (for `json.syntax`, of the offending byte). Present for every diagnostic whose path resolves to a token in a JSON file; absent for archive-structure findings and for manifests built in code (§9.1 `Validate`). |
 
+`line` and `column` are those of the value token the pointer resolves to: for
+an unknown, renamed or repeated member, the member's value (for a repeat, the
+second occurrence). `json.required-missing`, `id.required` and the other
+presence codes for a missing member carry the position of the object that lacks
+it, and a truncated unknown-member path carries its parent object's position.
+`json.too-large`, `json.encoding` and archive-structure findings carry none;
+`json.syntax` for invalid UTF-8 points at the first invalid byte. Positions are
+counted after a UTF-8 byte order mark is removed.
+
 Path escaping follows RFC 6901 (`~` as `~0`, `/` as `~1`). When a path would
 end in an unknown member name that is longer than 64 characters or contains
 anything other than printable ASCII, readers MUST use the parent's path
-instead, so a hostile file cannot make a host display arbitrary text.
+instead, so a hostile file cannot make a host display arbitrary text. The same
+applies to the paths of `json.syntax`, `json.depth` and `json.duplicate-member`
+through a member name that contains anything other than printable ASCII; deeper
+paths stop at the same parent.
 
 The C# type is `Diagnostic` (§9.1); its `ToString()` is
 `"<code> <path>: <message>"`, as Lollipop's. The `--json` form of the tool uses
@@ -732,12 +750,24 @@ convention.
      declaration string uses `text.empty`, then `text.whitespace`, then
      `text.invalid-character`;
   6. cross-member checks (`setting.default-unknown`, `id.outside-namespace`,
-     `id.duplicate` and the like);
+     `id.duplicate`, `requires.capability-duplicate` and the like);
   7. warnings (`text.long`, `schema.uri-mismatch`, `manifest.host-unknown`,
      `requires.capability-unknown`).
 
-  The mapping is published as `fixtures/codes/precedence.json`, and every
-  `*.expected.json` fixture follows it.
+  The complete order, including structural and package codes, is
+  `fixtures/codes/precedence.json`, and every `*.expected.json` fixture follows
+  it. It adds a first tier, structure (the JSON structure codes `json.syntax`,
+  `json.depth`, `json.duplicate-member`, `json.unknown-member` and
+  `json.member-renamed`, the `package.*` structure codes and the `pairing.*`
+  file codes); places `schema.version-unsupported`, the `id.root-*` codes,
+  `strings.language-invalid`, `pairing.version-unsupported`,
+  `pairing.mode-unsupported`, `pairing.registration-invalid` and
+  `pairing.secret-invalid` in the grammar tier (3); and places the remaining
+  `strings.*`, `package.*`, `pack.*` and `pairing.*` codes among the
+  cross-member checks (6). Because one diagnostic is reported per file and
+  path, an archive diagnostic about one entry sets `file` to that entry's name
+  (when it is printable ASCII of at most 241 characters), so problems with
+  different entries are all reported.
 
 ### 4.3 Where each family comes from
 
@@ -814,6 +844,7 @@ Orbit reports the code Lollipop reports for the same fault.
 | `choice.value-grammar` | Error | A choice value is not a lowercase segment. | Use a value like `five-minutes`. | — |
 | `choice.value-duplicate` | Error | Two choices share a value. | Make values unique. | ✓ |
 | `choice.label-required` | Error | A choice's `name` is empty, or only white space or format characters. | Write a name. | ✓ |
+| `requires.capability-duplicate` | Error | A required capability id is listed twice. | Keep one. | — |
 | `requires.capability-unknown` | Warning | A required capability id is not in the registry this tool knows. | Check the id, or update the tool. | — |
 | `requires.capability-unsupported` | Error | This host does not implement a required capability. Raised by hosts. | Update the host, or remove the requirement. | — |
 | `url.invalid` | Error | A URL is not an absolute `https` URL within the rules of §3.8. | Use a full `https://` address. | — |
@@ -850,6 +881,14 @@ Orbit reports the code Lollipop reports for the same fault.
 | `pack.link` | Error | A staged file or folder is a symbolic link or junction. | Stage the real file. | — |
 | `pack.secret` | Error | A staged file looks like a pairing file. Pairing files are never packed. | Remove it from the payload. | — |
 | `pack.output-exists` | Error | The output file exists. | Remove it, or pass `--force`. | — |
+
+In a file, an escape that forms an unpaired surrogate is valid JSON: the value's
+own rule reports it (`text.invalid-character` for declaration text, §3.6; the
+grammar code for ids, versions, glyphs, URLs and other values with a grammar;
+`json.unknown-member` at the parent's path for a member name), and every other
+problem in the file is still reported. Members with no character rule (`$schema`,
+and the descriptor's informational `createdBy`) accept it. Wire frames refuse it
+(§7.2).
 
 Pairing-file codes (`pairing.*`) are reason codes, listed once, in §8.3. When the
 tool or SDK reads a pairing file it reports them in this same diagnostic shape.
@@ -928,9 +967,12 @@ archive at every maximum at once (Appendix A).
 - **Local headers agree with the central directory.** Each entry's local file
   header MUST carry the same name, compression method, general purpose flags
   and CRC-32 as its central record, and the same compressed and uncompressed
-  sizes unless flag bit 3 (data descriptor) is set, in which case the data
-  descriptor's values MUST equal the central record's. A local header MUST NOT
-  carry a ZIP64 extra field (`0x0001`) (`package.zip64`).
+  sizes unless flag bit 3 (data descriptor) is set, in which case the local
+  CRC-32 and sizes may be zero and the data descriptor's values, with or without
+  its signature, MUST equal the central record's. A local header MUST NOT carry
+  a ZIP64 extra field (`0x0001`) (`package.zip64`).
+- An unsupported compression method and a nonzero disk number are
+  `package.archive`; deflate data that cannot be decompressed is `package.crc`.
 - **No hidden bytes.** The local records (header, data and any data descriptor)
   MUST appear in ascending offset order, MUST NOT overlap, and MUST be
   contiguous from offset 0 up to the start of the central directory. Bytes
@@ -998,6 +1040,24 @@ A reader verifies, in this order, and collects every diagnostic it can:
    `manifestHash`;
 8. strings files (§3.10);
 9. `README.md`: UTF-8 (a byte order mark is stripped), not blank, no U+0000.
+
+Which code a finding gets:
+
+- A folder entry with data or a nonzero CRC-32 is `package.path`; an entry
+  under `strings/` that is not `strings/<name>.json` is `package.path-reserved`.
+- An over-long `README.md` is `package.readme`; any other over-long file is
+  `package.file-too-large`.
+- In the descriptor, a malformed `manifestHash` is `package.manifest-hash`, a
+  malformed `sha256` `package.hash-mismatch`, a `path` outside the entry grammar
+  `package.path`, and an unsorted, repeated or self-listing path
+  `package.descriptor`, each with `file` `extension.package.json`; the summary
+  `package.descriptor` has path `""` and no `file`.
+- An entry refused for its name or attributes is not reported again as unlisted
+  (`package.inventory-extra`), and a listed entry whose data failed is not
+  reported again as missing (`package.inventory-missing`).
+- Two strings files whose tags differ only in case cannot coexist in an archive
+  (`package.path-conflict`), so `strings.language-duplicate` arises only for a
+  loose folder.
 
 The **package hash** is the SHA-256 of the whole archive file, in hash form.
 Hosts SHOULD show it in install review and MUST record it with the
@@ -1241,8 +1301,10 @@ package and synced folder:
   liveness (§7.9).
 - A sender that cannot finish writing a frame within 5 seconds MUST close the
   connection (`frame.write-timeout`).
-- `null` is never a valid value. Integers have no fraction or exponent.
-  Strings MUST NOT contain unpaired surrogates after unescaping.
+- `null` is never a valid value, anywhere in a frame, ignored members included.
+  Integers have no fraction or exponent. Strings MUST NOT contain unpaired
+  surrogates after unescaping: an escape that forms an unpaired surrogate, in a
+  value or a member name, is `frame.json-invalid`.
 
 ### 7.3 Handshake
 
@@ -1612,7 +1674,8 @@ tokens on its own wire. The host always owns the words it shows.
   `limits.pongTimeoutMs` (10,000 ms in protocol 3), whatever else it is doing.
   The .NET and Node SDKs answer on their reader, without author code.
 - **At most one ping is outstanding per direction.** A `ping` that arrives
-  while the receiver's `pong` to that peer's previous ping is still unsent, or
+  while the receiver's `pong` to that peer's previous ping is still unsent (not
+  yet handed to the transport), or
   sooner than half of `ready.limits.pingIntervalMs` after the previous `ping`
   from that peer, is `protocol.unexpected`: the receiver closes, and a host
   counts it as a violation (§7.12). Both sides measure against the value in
@@ -1690,11 +1753,22 @@ additive change within a protocol version.
    (`frame.json-duplicate`); a known member with the wrong type, a value outside
    its grammar or limits, or a disallowed `null` (`protocol.message-invalid`,
    or the specific `face.*`/`invoke.*` code); a missing required member
-   (`protocol.message-invalid`, or `protocol.hello-invalid` before
-   authentication); an unknown `$type` in a discriminated object
+   (`protocol.message-invalid`, or `protocol.hello-invalid` for every fault in a
+   `hello`); an unknown `$type` in a discriminated object
    (`protocol.variant-unknown`); an unknown token of a closed enumeration (the
    specific code, for example `face.state-invalid`). `error.code` is not a
-   closed enumeration: it is an open registry (§7.5).
+   closed enumeration: it is an open registry (§7.5). In detail: every fault in
+   a `hello` (a missing member, a wrong type, a grammar violation, a `null`) is
+   `protocol.hello-invalid`; a missing or non-string `type`, and after
+   authentication a `type` outside the member-name grammar, is
+   `protocol.message-invalid`; a `goodForSeconds` that is not an integer is
+   `protocol.message-invalid`, and an integer outside its range
+   `face.lifetime-invalid`; a `supported` member with a code other than
+   `protocol.version-unsupported` is `protocol.message-invalid`. A reader also
+   applies the frame-size rules of §7.2 (`frame.too-large`). It reads `ready`
+   only after the peer's proof verified and before `ready`, `challenge`, `hello`
+   and `authenticate` only before that, and `error` in every phase; the Pre check
+   of §7.3 applies only before the peer's proof verified.
 2. **Unknown members in a known object are ignored** when the name matches the
    JSON member-name grammar (`[a-z][A-Za-z0-9]{0,31}`) and does not equal a
    known member of that object under case folding. Any other unknown name,
@@ -1729,9 +1803,12 @@ files where typo detection matters more than additive change.
 
 ### 7.12 Violations and the penalty box
 
-A **violation** is a connection that ends with a code whose `isViolation` flag
-is set in `fixtures/codes/reason-codes.json`, which is authoritative. The flag
-is set for every code whose disposition (§8) is "close", except:
+A **violation** is a connection that the host closes with a code whose
+`isViolation` flag is set in `fixtures/codes/reason-codes.json`, which is
+authoritative (or that ends in `auth.abandoned`); codes a companion sends never
+count, because they say nothing about the companion's behavior and would let a
+peer pause itself for the host's fault. The flag is set for every code whose
+disposition (§8) is "close", except:
 
 - `host.*` codes and `auth.timeout`;
 - `manifest.mismatch` and `auth.identity-changed`, which wait on a person
@@ -2097,7 +2174,11 @@ public static class ManifestWriter
     public static string ComputeHash(ExtensionManifest manifest);  // §B.2
 }
 
-public sealed class StringsReadOptions { public required ExtensionManifest Manifest { get; init; } }
+public sealed class StringsReadOptions
+{
+    public required ExtensionManifest Manifest { get; init; }
+    public IReadOnlyList<HostInfo> KnownHosts { get; init; } = HostRegistry.Known;  // schema.uri-mismatch
+}
 public static class StringsReader
 {
     public const int MaxBytes = 65_536;
@@ -2105,7 +2186,29 @@ public static class StringsReader
     public static Task<ReadResult<ExtensionStrings>> ReadFileAsync(string path, StringsReadOptions options,
         CancellationToken cancellationToken = default);         // the tag is the file name's
 }
-public sealed class ExtensionStrings { /* mirrors §3.10 */ }
+public sealed class ExtensionStrings                             // mirrors §3.10
+{
+    public string? Schema { get; init; }                         // "$schema"
+    public int SchemaVersion { get; init; } = ExtensionManifest.CurrentSchemaVersion;
+    public required string Language { get; init; }
+    public string? Name { get; init; }
+    public string? Description { get; init; }
+    public PublisherStrings? Publisher { get; init; }
+    public IReadOnlyDictionary<string, ContributionStrings> Contributions { get; init; }   // keyed by contribution id
+}
+public sealed class PublisherStrings { public required string Name { get; init; } }
+public sealed class ContributionStrings
+{
+    public string? Name { get; init; }
+    public string? Description { get; init; }
+    public IReadOnlyDictionary<string, SettingStrings> Settings { get; init; }   // keyed by setting id
+}
+public sealed class SettingStrings
+{
+    public string? Name { get; init; }
+    public string? Description { get; init; }
+    public IReadOnlyDictionary<string, string> Choices { get; init; }        // choice value → name
+}
 
 public enum IdOrigin { FirstParty = 1, ThirdParty = 2 }
 public static class ExtensionIds
@@ -2189,7 +2292,8 @@ problems with the content are always diagnostics, never exceptions.
 ```csharp
 namespace VentanaTools.Orbit.Extensions.Packaging;
 
-public sealed class PackageDescriptor { public int ArchiveVersion { get; } public string ManifestHash { get; } public IReadOnlyList<PackageFileEntry> Files { get; } }
+public sealed class PackageDescriptor { public int ArchiveVersion { get; } public string ManifestHash { get; } public IReadOnlyList<PackageFileEntry> Files { get; } public PackageCreator? CreatedBy { get; } }
+public sealed class PackageCreator { public required string Name { get; init; } public required string Version { get; init; } }   // createdBy (§5.6)
 public sealed class PackageFileEntry { public required string Path { get; init; } public required long Size { get; init; } public required string Sha256 { get; init; } }
 public sealed class PackageFile { public string Path { get; } public long Length { get; } public Stream OpenRead(); }
 public sealed class ExtensionPackage
@@ -2213,13 +2317,29 @@ public static class PackageWriter
 {
     public static byte[] Write(PackageContents contents);       // writes extension.package.json itself
 }
-public sealed class PackageContents { /* manifest bytes, readme bytes, strings, payload files */ }
+public sealed class PackageContents
+{
+    public required ReadOnlyMemory<byte> Manifest { get; init; }  // extension.json
+    public required ReadOnlyMemory<byte> Readme { get; init; }    // README.md
+    public IReadOnlyList<PackageContentFile> Strings { get; init; } = [];   // paths under strings/
+    public IReadOnlyList<PackageContentFile> Payload { get; init; } = [];   // paths under payload/
+    public PackageCreator? CreatedBy { get; init; }
+}
+public sealed class PackageContentFile { public required string Path { get; init; } public required ReadOnlyMemory<byte> Content { get; init; } }
 public static class ZoneOfOrigin
 {
     public static int? Read(string packagePath);                  // §5.8 item 5: null when no stream; 3 when unreadable or out of range
+    public static string? ReadHostUrl(string packagePath);        // HostUrl, only when §5.8 item 5 allows copying it
     public static void Apply(string extractedFilePath, int zone, string packagePath, string? hostUrl);
 }
 ```
+
+`PackageWriter.Write` writes the descriptor itself, deterministically: entries
+sorted ordinally, every timestamp 1980-01-01, external attributes 0 for files and
+0x10 for folders, folder entries included, and a file deflated only when that
+makes it smaller. It throws `ArgumentException` for an invalid manifest, a path
+outside the entry grammar or conflicting paths; the limits of §5.3 are left to
+verification.
 
 ```csharp
 namespace VentanaTools.Orbit.Extensions.Wire;
@@ -2234,6 +2354,8 @@ public static class Framing
         CancellationToken cancellationToken);
     public static ValueTask WriteFrameAsync(Stream stream, ReadOnlyMemory<byte> frame, CancellationToken cancellationToken);
 }
+public sealed class FrameException : IOException { public ReasonCode Code { get; } }   // internal constructor
+                                                                // ReadFrameAsync: frame.too-large or frame.timeout
 public static class PipeNames
 {
     public const string Prefix = "Ventana.Extensions.v3.";
@@ -2357,6 +2479,20 @@ public sealed class TokenBucket                                  // §B.3
     public static int CostOf(int frameBytes);                     // one token per started 1,024 bytes (§7.10)
 }
 ```
+
+`ReadFrameAsync` throws `FrameException` (`Code` `frame.too-large` or
+`frame.timeout`) and `EndOfStreamException` when the stream ends inside a frame;
+it returns null at a clean end of stream. `WriteFrameAsync` throws
+`ArgumentOutOfRangeException` for an empty or over-long body, which is a caller
+bug; callers enforce `frame.write-timeout` around it.
+`HandshakeTranscript.ToBytes` refuses values that contain LF or a comma, and
+`TokenBucket.CostOf` refuses lengths below 1.
+
+`MessageWriter` writes the canonical form: compact JSON, `type` first, then the
+members in the order of §7.5's tables, `picture` and `state` always written,
+`settings` keys sorted ordinally, and every character outside printable ASCII
+escaped as a JSON `\uXXXX` escape with uppercase hexadecimal digits, as in the
+example of §7.7.1.
 
 ### 9.2 Companion client
 
@@ -2512,9 +2648,16 @@ Behaviour the SDK guarantees:
   verified only when its challenge proof verifies. `StatusChangedEventArgs.ServerVerified`
   reports which.
 - **Status and backoff.** `StatusChanged` fires on every state change with the
-  reason code. Normal backoff is 1 s, doubling, at most `MaxRetryDelay` (30 s),
-  × uniform(0.8, 1.2), reset after 60 seconds connected. The reason decides the
-  next state:
+  reason code. Normal backoff is 1 s, doubling, × uniform(0.8, 1.2), and never
+  more than `MaxRetryDelay` (30 s): each delay is min(base × uniform(1 − j,
+  1 + j), cap), where the cap is `MaxRetryDelay`, or `HostAbsentMaxRetryDelay`
+  after `host.not-running` and `host.turned-off`. The backoff resets after 60
+  seconds connected, which also restores `host.reloaded`'s one immediate retry.
+  The retry delay starts before `Waiting` is raised, so `RetryIn` counts from
+  the moment the status reports. `Connecting` and `Connected` carry no reason;
+  `Host` and `ProtocolVersion` are set once the challenge verified. A connection
+  that the peer closes without an `error`, and a client stopped by cancellation,
+  have no reason code: `Reason` is null. The reason decides the next state:
 
   | Reason | Next state and retry |
   |---|---|
@@ -2523,13 +2666,17 @@ Behaviour the SDK guarantees:
   | `auth.proof-invalid`, `host.access-revoked` | `Stopped` (they only arrive after the challenge verified, so the server is verified) |
   | `manifest.mismatch`, `auth.identity-changed` | `Waiting`, retrying every `MaxRetryDelay`; `CompanionApp` re-reads `extension.json` before each retry, and retries at once when `extension.json` or the pairing file changes |
   | `host.not-running`, `host.turned-off` | `Waiting`, backoff capped at `HostAbsentMaxRetryDelay` (5 s), because probing a missing pipe costs the host nothing |
-  | `host.paused`, or an unknown code with `retryAfterMs` | `Waiting` for at least `retryAfterMs`, honoured up to 300,000 ms from a verified server and up to `MaxRetryDelay` otherwise |
+  | `host.paused`, or an unknown code with `retryAfterMs` | `Waiting` for at least `retryAfterMs`: from a verified server max(normal, min(`retryAfterMs`, 300,000 ms)); otherwise min(max(normal, `retryAfterMs`), `MaxRetryDelay`) |
   | `host.reloaded` | `Connecting` at once, once; then normal backoff |
+  | a connection that closes without an `error` (no reason) | `Waiting`, normal backoff |
   | any other code, known or unknown, and `auth.server-unverified` | `Waiting`, normal backoff |
+  | cancellation | `Stopped`, with no reason |
 
   A code that a server which is not verified sends can therefore never stop the
   SDK or keep it waiting longer than `MaxRetryDelay`: a program that squats on
-  the pipe name while the host is not running gains nothing.
+  the pipe name while the host is not running gains nothing. A `Connecting`
+  status carries no reason. After `host.reloaded` the SDK goes to `Connecting`
+  without a `Waiting` status, so the code itself is not reported.
 - **Faces.** `SetFace`, `ClearFace` and `Fail` check, in order:
   1. their arguments, throwing `ArgumentException`. `SetFace` validates only
      `GoodFor` (1 second to 1 day), the picture (the glyph rule of §3.7) and that
@@ -2549,9 +2696,14 @@ Behaviour the SDK guarantees:
      `Accepted` otherwise.
 
   At most one face command per session is pending: a newer one replaces it, so
-  backpressure never surfaces as a failure. The SDK paces its sends to half the
-  soft budget of §7.10 (64 tokens per second with a burst of 128 at protocol-3
-  values).
+  backpressure never surfaces as a failure. The SDK paces face commands
+  (`setFace`, `clearFace`, `fail`) to half the soft budget of §7.10 (64 tokens
+  per second, burst 128, at protocol-3 values, and never a burst below 8 tokens,
+  so a maximal face frame can always be paid for) and sends at most one face
+  command per session every 1/`faceChangesPerSecond` seconds; so 100 quick
+  `SetFace` calls send the first and the newest. Other frames (`result`,
+  `sessionRefused`, `ping`, `pong`, `error`) go first and are not paced. A
+  `rate.throttled` with `retryAfterMs` holds face commands for that long.
 - **Renewal.** A face published with `Renew = true` stays current without a
   timer in author code: the SDK republishes it at 80% of its lifetime while
   (a) the session is active, (b) the session's `RunSessionAsync` is still
@@ -2576,6 +2728,17 @@ Behaviour the SDK guarantees:
     answered as `Failed` and raises `HandlerFaulted` (`InvalidResult`). The SDK
     never sends a frame the host would close on, such as a failure with an
     outcome other than `Failed`.
+  - An `invoke` for a session the companion does not know, for a contribution
+    that does not provide `invoke`, beyond the companion's `maxPendingInvokes`,
+    or while 32 invocation handlers still run across reconnects, is answered
+    `result` `Refused`.
+  - `stopSession` cancels that session's running invocations; one that then
+    ends with `OperationCanceledException` is answered `Refused`. After the
+    host's `cancel`, nothing is sent for that request, even if the handler
+    returns a result. A `stopSession` for an unknown id is ignored, and refused
+    session ids enter the replay window.
+  - The face of a session handler that threw is cleared through the same pacing
+    as the author's own face commands.
 - **Invocation deadline.** The SDK's deadline is the companion's
   `invokeTimeoutMs` (§7.10) minus 3 seconds: 12 seconds at protocol-3 values,
   and never less than 1 second because the range starts at 4,000 ms. At its
@@ -2586,7 +2749,8 @@ Behaviour the SDK guarantees:
 - **Session cap.** Running handlers are counted across reconnects, at most 64.
   At the cap the SDK sends `sessionRefused` `session.capacity` for that one
   session and raises `HandlerFaulted` (`SessionCapacity`). The connection stays
-  up.
+  up. A host that opens more than the companion's `maxSessions` sessions gets
+  `sessionRefused` `session.capacity` too, with no `HandlerFaulted`.
 - **Replay window** of 1,024 ids (§7.6.3); no cap that grows with uptime.
 - **Liveness.** `ping` is answered on the reader. The SDK pings after its
   `pingIntervalMs` (§7.10) without a frame, and enforces the one-outstanding
@@ -2600,7 +2764,13 @@ Behaviour the SDK guarantees:
   global using only when the project sets `VentanaToolsImplicitUsings` to
   `true`. The templates set it; nothing else in this document depends on it.
 - **Client identity.** `hello.client` carries the author package's assembly
-  name and informational version, read from the assembly at run time.
+  name and informational version, read from the assembly at run time, without
+  build metadata when the whole value does not fit `[0-9A-Za-z.+-]{1,32}` (a
+  SourceLink build appends `+` and a 40-digit commit), and cut to its allowed
+  characters and 32 of them if even that does not fit. The SDK offers
+  `x.test-echo`, which does nothing, and no other capability, so a connection's
+  effective capabilities are at most `x.test-echo` until a later SDK implements
+  one.
 
 **`CompanionApp`.**
 
@@ -2610,6 +2780,9 @@ Behaviour the SDK guarantees:
   exits 2.
 - **Manifest.** `--manifest`, else `extension.json` in `AppContext.BaseDirectory`,
   else in the current directory. It is read with `ManifestReader.ReadFileAsync`.
+  An invalid manifest prints one line per error diagnostic,
+  `ventana: <file>: <code> <pointer>: <message>`; with `WatchFiles` on, the app
+  then waits for the manifest to change.
 - **Pairing.** `--pairing`, else the per-user default of §6.6 for each active
   host id in the manifest's `hosts`, in order, else `<extension-id>.pairing.json`
   in `AppContext.BaseDirectory`, then in the current directory. It is read with
@@ -2622,16 +2795,30 @@ Behaviour the SDK guarantees:
   `WatchFiles` is off.
 - **Watching.** With `WatchFiles` on, it restarts the client when the pairing
   file changes after `Stopped`, and re-reads `extension.json` before each retry
-  after `manifest.mismatch` and whenever the file changes.
+  after `manifest.mismatch` and whenever the file changes. It polls the watched
+  files (existence, last write time and length) every second on the client's
+  `TimeProvider`, because the per-user pairing folder may not exist yet; a
+  change counts from when the file was last read, and every file is stamped
+  before it is read. While the client waits on `manifest.mismatch` or
+  `auth.identity-changed`, a manifest that differs from the one read retries at
+  once and a pairing that differs restarts the client with it, however long ago
+  it changed.
 - **Output.** One status line per change, to `Output`:
-  `ventana: <state> (<code>) <fix> <help link>`, where the fix and help link
-  come from `ReasonCodeInfo` and the host display name from `HostRegistry`, for
-  example `ventana: waiting (auth.identity-changed) In Orbit, allow the new
+  `ventana: <state> (<code>) <fix> <help link>`, or `ventana: <state>` alone for
+  a status without a reason, where the fix and help link come from
+  `ReasonCodeInfo`. The catalog's "the host" is rendered with the display name
+  (from `HostRegistry`) of the pairing's host id, or, before a pairing is read,
+  of the manifest's first active host (else its first listed id), for example
+  `ventana: waiting (auth.identity-changed) In Orbit, allow the new
   program or revoke access. https://dev.ventana.tools/go/orbit/codes#auth-identity-changed`.
-  For each `HandlerFaulted` it prints the kind, the contribution id, and the
-  exception's type, message and stack trace (the author's own process and code).
-  It never prints pairing contents, and never prints a peer's `error.message`
-  except, cleaned to printable ASCII, with `--verbose`. It also calls the
+  For each `HandlerFaulted` it prints
+  `ventana: fault <Kind> in <contribution-id> (<code>) <fix> <help link>`, with
+  the code `session.handler-faulted`, `session.handler-stalled` or
+  `session.capacity`, followed by the exception's `ToString()` (the author's own
+  process and code). A `StatusChanged` or `HandlerFaulted` callback that throws
+  is reported once. It never prints pairing contents, and never prints a peer's
+  `error.message` except, with `--verbose`, as
+  `ventana: host message: <text>`, cleaned to printable ASCII. It also calls the
   `StatusChanged` and `HandlerFaulted` callbacks of `CompanionAppOptions`.
 - **Ctrl+C** cancels and exits 0.
 - **Exit codes:** 0 stopped by Ctrl+C or cancellation; 1 unexpected; 2 usage;
@@ -2720,7 +2907,12 @@ public sealed class CompanionTestHost : IAsyncDisposable          // a real Comp
     public IReadOnlyList<StatusChangedEventArgs> Statuses { get; }
     public IReadOnlyList<HandlerFaultedEventArgs> Faults { get; }
 }
-public sealed class TestHostSession { public string SessionId { get; } public string ContributionId { get; } }
+public sealed class TestHostSession
+{
+    public string SessionId { get; }
+    public string ContributionId { get; }
+    public ReasonCode? RefusedCode { get; }                       // null when the companion accepted the session
+}
 public sealed class TestInvocation { public string RequestId { get; } public Task<TestInvokeOutcome> Result { get; } }
 public enum TestInvokeOutcomeKind { Done = 1, Refused = 2, Failed = 3, Unsupported = 4, Cancelled = 5, TimedOut = 6 }
 public sealed class TestInvokeOutcome
@@ -2769,7 +2961,12 @@ public static class ExtensionConformance
         CancellationToken cancellationToken = default);
 }
 public sealed class ConformanceException : InvalidOperationException { public IReadOnlyList<string> Failures { get; } }
+                                                                  // also the three standard exception constructors
 ```
+
+`StartSessionAsync` returns once the companion has accepted or refused the
+session (and, when it refused, once the `sessionRefused` frame is in the
+transcript); `RefusedCode` says which.
 
 `ExtensionConformance.CollectContractFailuresAsync` runs the
 `ContributionContractSuite` checks with their defaults. By default the suite
@@ -2848,6 +3045,11 @@ When the host stops the session, `WaitForNextTickAsync` throws
 (§9.2). Deriving from `ContributionHandler` makes the compiler catch a
 misspelled or mistyped handler method through `override`.
 
+Companion projects target `net10.0-windows` (the templates do), so the platform
+analyzer knows the pipe transport is available; in a plain `net10.0` project
+these programs build with warning CA1416, because `CompanionApp.RunAsync` is
+Windows-only (§9.2).
+
 ---
 
 ## 10. Node SDK
@@ -2860,8 +3062,12 @@ dependencies, ships CommonJS with hand-written TypeScript declarations, and
 uses the same golden vectors as the .NET SDK. Its host list is
 `lib/hosts.json`, a checked-in copy of `fixtures/hosts.json` that the codename
 script regenerates and a test compares byte for byte; nothing else in
-`node/orbit-extensions/lib` names a host (§2.8). `hello.client` carries the
-package's own name and version, read from its `package.json` at run time.
+`node/orbit-extensions/lib` names a host (§2.8). The diagnostic, reason-code,
+precedence and capability catalogs are byte copies of the fixtures under
+`lib/codes/`, which a test also compares; the reserved publishers are derived
+from `lib/hosts.json` (its `reservedIds`, plus `ventana`, `ventanatools` and
+`ext`). `hello.client` carries the package's own name and version, read from its
+`package.json` at run time.
 
 ```js
 // require("@ventanatools/orbit-extensions")
@@ -2870,7 +3076,7 @@ class CompanionClient extends EventEmitter {
   constructor({ pairing, manifest, handler, retry?: { initialMs, maxMs, hostAbsentMaxMs, jitter, stableMs } })
   readonly state: "NotStarted" | "Connecting" | "Connected" | "Waiting" | "Stopped"
   run(signal: AbortSignal): Promise<void>
-  // events: "status" { state, reason?, retryInMs?, attempt, serverVerified, host?, protocolVersion? }
+  // events: "status" { state, reason?, retryInMs?, attempt, serverVerified, host?, negotiatedVersion? }
   //         "handlerFaulted" { kind, contributionId, sessionId?, requestId?, error? }
 }
 class ContributionRouter {                                     // implements Handler
@@ -2901,13 +3107,26 @@ interface Session {
 // require("@ventanatools/orbit-extensions/testing")
 createTestSession({ manifest, contributionId, settings?, uiLanguage? })   // records publications like RecordingSession
 startTestHost({ manifest, handler, hostId?, limits?, capabilities? })     // a real CompanionClient over an in-memory duplex
-assertManifestValid(pathOrManifest, options?)                             // throws listing every diagnostic
+assertManifestValid(path, options?)                                       // synchronous; throws an Error named
+                                                                          // "ConformanceError" with a failures array
 
 // require("@ventanatools/orbit-extensions/wire")
 encodeFrame(record), class FrameReader, transcriptBytes(transcript, role), computeProof(secret, transcript, role),
 verifyProof(secret, proof, transcript, role), negotiate(clientMin, clientMax, hostMin, hostMax),
 readMessage(text, sender, phase), writeMessage(message), class TokenBucket, ReasonCodes
 ```
+
+`negotiatedVersion` is the protocol version the handshake settled on (§7.3.2),
+the counterpart of .NET's `ProtocolVersion`; like `host` (`{ id, version }`
+from the challenge), it is present only once the host's challenge proof
+verified. A companion names the host with `findHost(host.id).displayName`.
+`testing` exports `createTestSession`, `startTestHost` and
+`assertManifestValid(path)`, which throws an `Error` named `ConformanceError`
+with a `failures` array, mirroring `ConformanceException`. A manifest given to
+`validateManifest` as a plain object (not bytes) treats a `null` member of a list
+(`hosts`, `contributions`, `settings`, `requires.capabilities`, `provides`) as
+`null.member` and any other `null` member as absent, as the .NET object path
+does. `runCompanion`'s test seams are not part of the public API.
 
 ```js
 const { runCompanion, Outcome } = require("@ventanatools/orbit-extensions");
@@ -2956,8 +3175,13 @@ handler rules and validation order. Specifically:
 ### 11.1 `orbit-ext`
 
 Installed from the package `VentanaTools.Orbit.Extensions.Tool` (global or local
-tool). Until packages are published, it is installed from the repository's
-local package folder with `--add-source`.
+tool). Until packages are published, it is installed from a folder of locally
+built packages. In the SDK repository, whose `NuGet.config` maps the package
+family to `artifacts/packages`, run `dotnet tool install
+VentanaTools.Orbit.Extensions.Tool --tool-path <folder> --prerelease` from the
+repository root; elsewhere, add `--add-source <folder>`, or, where a NuGet
+configuration uses package source mapping (the .NET SDK refuses `--add-source`
+there), add the folder to that configuration and map the package family to it.
 
 The tool package carries the packages a new project needs: the
 `VentanaTools.Orbit.Extensions`, `VentanaTools.Orbit.Extensions.Testing` and
@@ -2975,7 +3199,7 @@ Ventana tooling verbs `new`, `validate`, `pack`, `verify` and `test` (§2.7).
 
 | Command | Purpose |
 |---|---|
-| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same arguments plus `--package-source <feed>`. If the template pack is not installed, prints the install command, which installs it from the feed, and exits 3. |
+| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same arguments plus `--package-source <feed>`; it also passes `--display-name` and `--no-tests` to the template. It refuses an `--extension-id` outside the third-party grammar with the id code and exit 2 before anything is created. If the template pack is not installed, prints the install command, which installs it from the package file in the feed, and exits 3. After creating a Node project it copies the Node SDK tarball from the feed into `vendor/`, then prints the next commands. |
 | `orbit-ext validate [<path>] [--host <id>] [--json] [--warnings-as-errors]` | Validates an `extension.json`, a folder containing one (with its `strings/` folder), or a package file. Default path: the current directory. |
 | `orbit-ext pack [<project-dir>] [-o <output-dir>] [--host <id>] [--force] [--json]` | Builds a package from `extension.pack.json` (§11.3), running its `build` step first when it has one. |
 | `orbit-ext verify <package> [--host <id>] [--json]` | Verifies a package (§5.7) and prints its id, version, hosts, contributions, file count, size and package hash. |
@@ -2983,25 +3207,70 @@ Ventana tooling verbs `new`, `validate`, `pack`, `verify` and `test` (§2.7).
 | `orbit-ext simulate [--manifest <path>] [--script <file>] [--json] -- <command> [args…]` | Runs a pipe-level fake host: creates a temporary registration and pairing file, starts the companion with `--manifest` and `--pairing` appended, and drives it from an interactive prompt (`start <contribution> [key=value…]`, `invoke <session>`, `cancel <request>`, `stop <session>`, `faces`, `ping`, `disconnect`, `quit`) or a script. Prints the transcript. Because the arguments are appended, a `dotnet run` companion needs a trailing `--`: `orbit-ext simulate -- dotnet run --project . --`. |
 | `orbit-ext run [--watch] -- <command> [args…]` | Runs the companion command and prints its status lines. With `--watch`, restarts it when `extension.json`, the pairing file, or files the command builds change (for `dotnet run`, the project's sources). |
 | `orbit-ext link [<path>] [--host <id>] [--json]` | Checks the pairing for the project at `<path>`: prints where the SDK looks (§6.6, §9.2), whether a valid pairing file is there, and, when there is none, the host action that writes it. Exits 0 when a valid pairing is found, 1 otherwise. It never prints the secret. |
-| `orbit-ext schema [--kind <manifest\|strings\|package\|pairing\|pack>] [--host <id>] [-o <file>]` | Writes the bundled JSON Schema, for editors that work offline. |
+| `orbit-ext schema [--kind <manifest\|strings\|package\|pairing\|pack\|simulation>] [--host <id>] [-o <file>]` | Writes the bundled JSON Schema, for editors that work offline. |
 
 `--host` defaults to the first id in the manifest's `hosts` that is an active
 registry entry.
+
+- **`link`** searches the per-user default for each active host in `hosts` (or
+  for `--host`), then `<project folder>/<id>.pairing.json` as the companion's
+  current-directory fallback (the program folder of an unbuilt companion is
+  unknown). It reports `pairing.missing` only when no candidate exists; an
+  invalid file reports its own codes. `--json` adds `"pairing": { "searched":
+  [{ "path", "state": "Missing" | "Invalid" | "Valid" }], "found": <path> |
+  null }`.
+- **`run`** without `--watch` exits with the companion's exit code. `--watch`
+  polls every second: `extension.json` (or the command's `--manifest`), the
+  pairing files (the command's `--pairing`, else the per-user defaults and the
+  current folder), and the sources (`.cs`, `.csproj`, `.props`, `.targets`,
+  `.json`, `.js`, `.cjs`, `.mjs`, `.ts`, skipping `bin`, `obj`, `node_modules`,
+  `.git`, `.vs` and `artifacts`) under the `dotnet run --project` folder or the
+  current folder. When the companion exits on its own, it waits for a change.
+- **`simulate`** uses as host id the first active registry host in `hosts`,
+  else the first listed id. The simulated host advertises no capabilities,
+  reports the tool's version, and the current UI language when it is a valid
+  tag (else `en-US`). It applies every face as it arrives (no per-session
+  coalescing, so the transcript shows every publish), enforces the hard bucket
+  (`rate.exceeded`), sends `rate.throttled` at most every 5 seconds when the
+  soft bucket cannot pay for a face command, pings after `pingIntervalMs` idle,
+  and enforces §7.9 against the companion. A `start` step waits up to 90 seconds
+  for a connection (`dotnet run` builds first); a `disconnect` step returns once
+  the connection has ended, so the next `start` waits for the reconnection; the
+  prompt's `disconnect` defaults to `host.reloaded`. The companion's output goes
+  to standard error and the transcript to standard output; the transcript never
+  contains nonces, proofs or the secret, and shows face text cleaned as a host
+  would hold it. `simulate` needs Windows (exit 5 elsewhere).
 
 Text output, one line per diagnostic in the MSBuild canonical form that Visual
 Studio, VS Code problem matchers and CI annotations recognise, then a summary:
 
 ```text
 extension.json(12,9): error json.member-renamed: This member was renamed in schema 3 (capabilities is now provides; manifestVersion is now schemaVersion). [/contributions/0/capabilities]
+  fix: Use the new name.
 extension.json(31,15): warning text.long: This name is longer than 32 characters and will be truncated. [/contributions/1/name]
+  fix: Shorten it.
 orbit-ext: 1 error, 1 warning
 ```
 
 The form is `<file>(<line>,<column>): <severity> <code>: <message> [<path>]`; the column is the
 diagnostic's UTF-8 byte column, which equals the character column on the ASCII lines manifests
-almost always have.
+almost always have (the columns in the examples here are illustrative).
 When a diagnostic has no line (an archive-structure finding), the position is
 left out: `example.countdown-0.3.0.orbitextension: error package.zip64: … []`.
+Each line is followed by an indented `fix:` line with the catalog's fix (§4.4,
+§8.3), with `{tool}` replaced by the command name and, for `pairing.*` reason
+codes, "the host" replaced by the host's display name, as `CompanionApp` does.
+Problem matchers ignore the extra lines.
+
+`file` is the path as the author would type it: relative to the current
+directory with `/` separators when it is inside it, else the full path; it is
+both the MSBuild origin and the `--json` `file`. A finding about a package
+entry is shown as `<package>!/<entry>` (for example
+`example.countdown-0.3.0.orbitextension!/extension.json(4,11)`), and an
+archive-structure finding as the package path alone. A finding about no file
+(`tool.internal-error`, `json.internal-error`) uses the command name as its
+origin and has no `file`. `--json` omits `file`, `line` and `column` when they
+are absent, and escapes every character outside printable ASCII.
 
 `--json` writes one JSON object to standard output:
 
@@ -3030,7 +3299,12 @@ Exit codes:
 | 2 | Usage error. |
 | 3 | Input or output problem: a path is missing or unreadable, the output exists, or a template pack is missing. |
 | 4 | Internal error: a reader defect prints `json.internal-error`; any other defect prints the tool-only code `tool.internal-error`. |
-| 5 | `simulate` or `run` could not start the companion process, or `test` could not start `dotnet test` or `npm test`. |
+| 5 | `simulate` or `run` could not start the companion process, `test` could not start `dotnet test` or `npm test`, or `new` could not start `dotnet`; `simulate` also exits 5 on a platform other than Windows. |
+
+`new` maps the exit codes of `dotnet new`: 103 (template not found) and 73 (the
+output exists) to 3, 127 (an invalid option) to 2, and any other failure to 1.
+`pack` writes the build step's `dotnet publish` output to standard error, so its
+`--json` output stays one object.
 
 The tool prints diagnostic messages, paths and the author's own file names.
 It never prints file contents or secrets.
@@ -3040,8 +3314,18 @@ It never prints file contents or secrets.
 A script is a JSON array of steps such as
 `{ "start": "example.countdown/timer", "settings": { "mode": "pause" }, "as": "s1" }`,
 `{ "invoke": "s1", "expect": "Done" }`, `{ "expectFace": "s1", "within": "2s" }`,
-`{ "stop": "s1" }`, `{ "disconnect": "host.reloaded" }`. The schema is published
-with the tool. A failed expectation exits 1.
+`{ "stop": "s1" }`, `{ "disconnect": "host.reloaded" }`. The schema is
+`schemas/extensions/simulation.v1.json` (§11.5), published with the tool
+(`orbit-ext schema --kind simulation`). A failed expectation exits 1.
+
+Steps: `start` (with `settings` and `as`); `invoke` (with `as`, `expect`, one
+of `Done`, `Refused`, `Failed`, `Unsupported`, `Cancelled` and `TimedOut`,
+`failure`, and `wait`, default `true`); `cancel`; `stop`; `expectFace` (with
+`within`, default `2s`, and `line1`, `line2` and `state`; it passes when the
+current face matches or a matching one arrives in time); `disconnect` (with a
+reason code); and `wait`. Durations are `<n>s` or `<n>ms`. A script has at most
+1,000 steps, and its reader reports the codes of §4 (`enum.undefined` for an
+unknown token, or a malformed duration or code).
 
 `simulate` creates its pipe exactly as a host must (§7.1): access for the
 current user only, the first and only instance of its name, one connection at a
@@ -3069,23 +3353,43 @@ folders, so changing the target framework or runtime cannot silently break a
 pack.
 
 Copy rule: `{ "from": path, "to": path, "include"?: [glob], "exclude"?: [glob] }`.
-`from` is a file or folder relative to the pack file; `to` is a path under
-`payload/`. Globs support `*`, `**` and `?`. The defaults are `include: ["**/*"]`
-and `exclude: []`.
+`from` is a file or folder relative to the pack file; `to` names a folder under
+`payload/` (`""` or `.` for `payload/` itself), and files keep their names.
+Later rules replace earlier files of the same name. Names that differ only in
+case, or a file and a folder with one name, are `package.path-conflict`, and a
+staged name outside the entry grammar is `package.path`, both with the source
+file as `file`. Globs support `*`, `**` and `?`. The defaults are
+`include: ["**/*"]` and `exclude: []`. The default output folder is `artifacts/`
+in the project folder.
 
 The tool always:
 
 - copies `extension.json` from the project folder and generates
   `extension.package.json`;
 - excludes `.git`, `.vs`, `obj`, `node_modules/.cache`, `*.user`,
-  `*.pairing.json` and `pairing.json`;
-- refuses (`pack.secret`) any staged JSON file of at most 4,096 bytes that
-  contains both a `pipeName` and a `secret` member;
-- refuses symbolic links and junctions among staged files and folders
-  (`pack.link`), but does not inspect the folders above the project;
+  `*.pairing.json` and `pairing.json` wherever they appear on the way from the
+  project folder to a staged file, including in the paths this file names (the
+  build step's output included): a copy rule whose `from` is or lies in one
+  copies nothing, a file named directly with a pairing file's name is
+  `pack.secret`, and a readme in an excluded folder is `package.file-missing`;
+- refuses (`pack.secret`) any staged file of at most 4,096 bytes that contains
+  both a quoted `pipeName` and a quoted `secret` member, JSON or not;
+- refuses symbolic links and junctions (`pack.link`) on the way from the project
+  folder to every staged file and folder, including the readme and the strings
+  folder, but does not inspect the project folder or the folders above it (for
+  a path outside the project, the folders the two share);
+- checks per-file size, entry count and expanded size before it reads any
+  content (`package.file-too-large`, `package.entries`,
+  `package.expanded-too-large`);
 - writes `<output-dir>/<id>-<version><package-file-extension>` atomically and
   refuses to replace an existing file without `--force`;
 - verifies the result (§5.7) before reporting success.
+
+`pack.source-missing` and `pack.build-failed` carry `file` `extension.pack.json`
+and the position of the member; `pack.build-failed` also covers a `dotnet` that
+cannot start. A pack configuration of another `packVersion` gets only
+`schema.version-unsupported`, as manifests do. With no `--host` and no active
+host in `hosts`, the package file extension is unknown, which is a usage error.
 
 ### 11.4 Templates
 
@@ -3103,7 +3407,7 @@ Parameters (all templates):
 
 | Parameter | Option | Default | Rules |
 |---|---|---|---|
-| `extensionId` | `--extension-id` | `example.` + the lowercased project name with non-segment characters replaced by `-` | Checked at creation by the template engine's regex constraint for the third-party id grammar (§2.4); the generated conformance test checks everything else. |
+| `extensionId` | `--extension-id` | `example.` + the lowercased project name with non-segment characters replaced by `-` | Checked by `orbit-ext new` before the template runs; the template engine cannot refuse a parameter value, so a project created by `dotnet new` with an id outside the third-party grammar (§2.4) does not build (or, for Node, start) until it is corrected; the generated conformance test checks everything else. |
 | `hostId` | `--host` | `orbit` | Written into `hosts`. Regenerated from `hosts.json` by the codename script. |
 | `displayName` | `--display-name` | The project name | Written into `name`. |
 | `packageSource` | `--package-source` | none | A folder of packages. When given, the template writes a `nuget.config` with `<clear/>`, that folder and nuget.org as sources, and `packageSourceMapping` that maps `VentanaTools.Orbit.Extensions*` to the folder only (the pattern matches the author package's bare ID as well as `.Testing` and `.Tool`). `orbit-ext new` always passes its feed. Without it, the `nuget.config` lists nuget.org only, with a comment saying the packages are not yet published. |
@@ -3129,9 +3433,10 @@ Parameters (all templates):
 | Package descriptor 2 | `schemas/extensions/package.v2.json` | `https://dev.ventana.tools/schemas/extensions/package.v2.json` |
 | Pairing 3 | `schemas/extensions/pairing.v3.json` | `https://dev.ventana.tools/schemas/extensions/pairing.v3.json` |
 | Pack configuration 1 | `schemas/extensions/pack.v1.json` | `https://dev.ventana.tools/schemas/extensions/pack.v1.json` |
+| Simulation script 1 | `schemas/extensions/simulation.v1.json` | `https://dev.ventana.tools/schemas/extensions/simulation.v1.json` |
 
 The manifest and strings schemas are keyed by host id because a host may
-constrain them further later; the other three contain nothing host-specific.
+constrain them further later; the other four contain nothing host-specific.
 Each active host in `hosts.json` gets its folder, generated by the codename
 script (`orbit` today). Schemas use JSON Schema 2020-12 and set `$id` to their
 URL. A conformance test runs every fixture in `fixtures/manifests/` through both
@@ -3147,7 +3452,10 @@ PowerShell 7 (`tools/build.ps1`, `tools/verify.ps1`), and with plain `dotnet`
 commands (`dotnet build`, `dotnet test`) for the libraries. Local builds stamp
 packages `0.1.0-dev.<UTC yyyyMMddHHmmss>` and restore samples into a fresh
 per-run package folder, so a cached package can never stand in for the one just
-built.
+built; `tools/verify.ps1` checks that each sample's resolved author library has
+the same SHA-256 as the one in the freshly packed package. `tools/build.ps1`
+packs the libraries, then the templates, then the Node SDK tarball, then the
+tool, which carries the other three (§11.1).
 
 ---
 
@@ -3212,25 +3520,38 @@ to Pinwheel) is a scripted, mechanical rename with no alias:
    - the `hosts.json` entry, through the codename script (step 2);
    - the repository URL (`VentanaRepositoryUrl` and docs links), because the
      repository is renamed with the product (`orbit-sdk` → `pinwheel-sdk`;
-     GitHub redirects the old name); and
-   - the display name in the repository's docs, package readmes and package
-     descriptions, and, in those docs, the old host id and package file
-     extension where they appear as examples or URL segments.
+     GitHub redirects the old name);
+   - the display name in the repository's docs (every Markdown file), `NOTICE`,
+     package readmes and package descriptions, and, in those docs, the old host
+     id and package file extension where they appear as whole tokens or URL and
+     path segments; and
+   - what is left of the old name in every other tracked text file (test
+     literals and comments, build comments), keeping its case, so that after the
+     rename the old name appears only in the reserved lists.
 
-   It never edits `fixtures/reserved-publishers.json`, the `reservedIds` of
-   `hosts.json`, `CHANGELOG.md` history, or the normative design documents in
-   `docs/design/`, which name both the old and the new product and are
-   updated by hand in the same change.
+   It refuses to run on a working tree with changes, prints every renamed path
+   and the number of replacements per token, and ends by running
+   `ProductNameConfinementTests`. It never edits the fixtures (the codename
+   script edits the one registry entry), `fixtures/reserved-publishers.json`,
+   the `reservedIds` of `hosts.json` or of its Node copy, `CHANGELOG.md`
+   history, or the normative design documents in `docs/design/`, which name
+   both the old and the new product and are updated by hand in the same change.
+   The script itself names no product: every token derives from `-From` and
+   `-To`.
 2. The codename script, `tools/Set-HostCodename.ps1`, changes the product's
    entry in `fixtures/hosts.json` (§2.3): id, display name and package file
    extension. The old id stays in `reservedIds` and in the reserved-publisher
-   list (§3.5); the script never edits either list. It then regenerates every
-   file derived from `hosts.json`: the Node SDK's copy, sample and template
-   manifests (`hosts`, `$schema`), template defaults, and the schema folder
-   (`schemas/extensions/<new-id>/`). Fixtures and test vectors use the test
-   host id `example-host` (§2.3) and name no product, package or tool, so no
-   fixture, pin or proof changes. `ProductNameConfinementTests` (§2.8) fails if
-   any source still names the old product outside the allowed places.
+   list (§3.5); the script never edits either list, and warns when the new id
+   is missing from them (they are edited by hand, in the same change). It then
+   regenerates every file derived from `hosts.json`: the Node SDK's copy, sample
+   and template manifests (`hosts`, `$schema`), template defaults, the schema
+   folder (`schemas/extensions/<new-id>/`, moved with `git mv`), the pin of
+   `hosts.json` in the test project's `FixturePins.txt`, and, when the package
+   file extension changes, the ignored package files in `.gitignore`. Fixtures
+   and test vectors use the test host id `example-host` (§2.3) and name no
+   product, package or tool, so no fixture other than `hosts.json`, no pin other
+   than its own, and no proof changes. `ProductNameConfinementTests` (§2.8)
+   fails if any source still names the old product outside the allowed places.
 3. The host changes its single host-id constant and replaces the package family
    name in its project references and `using` directives.
 4. Docs move to the new slug with a permanent redirect from the old one; the
@@ -3269,7 +3590,8 @@ reserved ones, every fixture and vector uses the test host id `example-host`
 (§2.3), never a registry id, and names no product, package or tool: `hello`
 frames use the client name `example-client`, package fixtures carry no
 `createdBy`, and code fixes that name the tool use the `{tool}` placeholder
-(§4.4). A product rename therefore changes no fixture, pin or proof. The
+(§4.4). A product rename therefore changes no fixture but `hosts.json`, no pin
+but its own, and no proof. The
 fixtures for the Ventana conventions (`ids.json`, `reserved-publishers.json`,
 `text-rules.json`, `codes/diagnostics.json`) also state those conventions
 (§2.7) in testable form.
