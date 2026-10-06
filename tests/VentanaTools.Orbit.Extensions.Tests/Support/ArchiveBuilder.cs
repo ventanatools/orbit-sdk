@@ -232,6 +232,11 @@ internal static class ArchiveBuilder
         }
 
         files.Sort((x, y) => string.CompareOrdinal(x.Path, y.Path));
+        if (spec.DescriptorChanges is { } order && order.TryGetProperty("unsorted", out var unsorted) && unsorted.GetBoolean())
+        {
+            files.Reverse();
+        }
+
         return Fixtures.WriteJson(writer =>
         {
             writer.WriteStartObject();
@@ -248,6 +253,14 @@ internal static class ArchiveBuilder
             }
 
             writer.WriteEndArray();
+            if (spec.DescriptorChanges is { } more && more.TryGetProperty("extra", out var extra))
+            {
+                foreach (var member in extra.EnumerateObject())
+                {
+                    member.WriteTo(writer);
+                }
+            }
+
             writer.WriteEndObject();
         });
     }

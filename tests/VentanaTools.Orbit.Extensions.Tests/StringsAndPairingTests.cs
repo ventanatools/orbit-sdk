@@ -65,6 +65,24 @@ public sealed class StringsAndPairingTests
     }
 
     [Fact]
+    public void UnpairedSurrogatesInStringsAreTextFaultsAndCollectAllContinues()
+    {
+        var text = "{\"schemaVersion\": 3, \"language\": \"de-DE\", \"name\": \"Count\\ud800down\", "
+            + "\"description\": \"Ein \\udfff Beispiel\", \"extra\": 1, \"\\ud800\": 2}";
+        var result = StringsReader.Read(Encoding.UTF8.GetBytes(text), "de-DE",
+            new StringsReadOptions { Manifest = ManifestReaderTests.Countdown() });
+        Assert.Null(result.Value);
+        (string Code, string Path)[] expected =
+        [
+            (DiagnosticCodes.JsonUnknownMember, "/extra"),
+            (DiagnosticCodes.JsonUnknownMember, string.Empty),
+            (DiagnosticCodes.TextInvalidCharacter, "/name"),
+            (DiagnosticCodes.TextInvalidCharacter, "/description"),
+        ];
+        Assert.Equal(expected.Order(), Expected.Pairs(result.Diagnostics).Order());
+    }
+
+    [Fact]
     public async Task StringsFilesTakeTheirTagFromTheFileName()
     {
         var folder = Path.Combine(Path.GetTempPath(), "ventana-s2-" + Guid.NewGuid().ToString("N"));

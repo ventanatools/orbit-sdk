@@ -128,12 +128,20 @@ internal sealed class JsonParse
 
     /// <summary>Repeated members: the pointer of each repeat and its value. The first occurrence is kept.</summary>
     public List<(string Path, JsonNode Value)> Duplicates { get; init; } = [];
+
+    /// <summary>
+    /// Whether a string or member name holds an unpaired surrogate after unescaping. Such a
+    /// document is valid JSON, so files keep the text and their value rules refuse it (contract
+    /// §3.6); wire frames are refused (§7.2).
+    /// </summary>
+    public bool UnpairedSurrogate { get; init; }
 }
 
 /// <summary>
 /// A strict JSON reader on <see cref="Utf8JsonReader"/>: one value, no comments or trailing
-/// commas, valid UTF-8, no unpaired surrogates after unescaping, at most 8 levels of nesting,
-/// and member names compared ordinally after unescaping.
+/// commas, valid UTF-8, at most 8 levels of nesting, and member names compared ordinally after
+/// unescaping. An escape that forms an unpaired surrogate is kept as that one UTF-16 code unit
+/// and flagged in <see cref="JsonParse.UnpairedSurrogate"/>; it is not a syntax error.
 /// </summary>
 internal static class JsonTree
 {
@@ -164,6 +172,7 @@ internal static class JsonTree
 
         var frames = new List<Frame>();
         var duplicates = new List<(string Path, JsonNode Value)>();
+        var unpaired = false;
         JsonNode? root = null;
         try
         {
@@ -191,8 +200,9 @@ internal static class JsonTree
                         var node = reader.TokenType == JsonTokenType.StartObject
                             ? new JsonNode { Kind = JsonKind.Object, Offset = offset, Members = [] }
                             : new JsonNode { Kind = JsonKind.Array, Offset = offset, Items = [] };
+                        var opaque = IsOpaqueNext(frames);
                         Attach(frames, node, ref root, duplicates);
-                        frames.Add(new Frame(node, path));
+                        frames.Add(new Frame(node, path, opaque));
                         break;
                     }
 
@@ -204,7 +214,7 @@ internal static class JsonTree
                     case JsonTokenType.PropertyName:
                     {
                         var frame = frames[^1];
-                        var name = reader.GetString()!;
+                        var name = ReadString(ref reader, ref unpaired);
                         frame.PendingName = name;
                         frame.PendingDuplicate = !frame.Seen.Add(name);
                         break;
@@ -216,7 +226,7 @@ internal static class JsonTree
                         if (rawRootMembers is not null && frames.Count == 1 && frames[0].Node.Kind == JsonKind.Object
                             && frames[0].PendingName is { } member && rawRootMembers.Contains(member))
                         {
-                            CheckRaw(ref reader);
+                            CheckRaw(ref reader, ref unpaired);
                             node = new JsonNode
                             {
                                 Kind = JsonKind.String,
@@ -227,7 +237,7 @@ internal static class JsonTree
                         }
                         else
                         {
-                            node = new JsonNode { Kind = JsonKind.String, Offset = offset, Text = reader.GetString() };
+                            node = new JsonNode { Kind = JsonKind.String, Offset = offset, Text = ReadString(ref reader, ref unpaired) };
                         }
 
                         Attach(frames, node, ref root, duplicates);
@@ -272,7 +282,8 @@ internal static class JsonTree
         }
         catch (InvalidOperationException)
         {
-            // An escape that forms an unpaired surrogate, or text that does not decode.
+            // Defensive: the document is valid UTF-8 and ReadString decodes unpaired surrogates,
+            // so no token is expected to fail to decode.
             var (line, column) = Position(document, checked((int)reader.TokenStartIndex));
             return new JsonParse
             {
@@ -288,7 +299,7 @@ internal static class JsonTree
             return new JsonParse { Failure = JsonFailure.Syntax, FailureLine = 1, FailureColumn = 1 };
         }
 
-        return new JsonParse { Root = root, Duplicates = duplicates };
+        return new JsonParse { Root = root, Duplicates = duplicates, UnpairedSurrogate = unpaired };
     }
 
     /// <summary>
@@ -310,7 +321,15 @@ internal static class JsonTree
             return -1;
         }
 
-        return reader.CopyString(destination);
+        try
+        {
+            return reader.CopyString(destination);
+        }
+        catch (InvalidOperationException)
+        {
+            // An escape that forms an unpaired surrogate has no UTF-8 form.
+            return -1;
+        }
     }
 
     /// <summary>1-based line and UTF-8 byte column of <paramref name="offset"/>.</summary>
@@ -351,7 +370,66 @@ internal static class JsonTree
         return offset;
     }
 
-    private static void CheckRaw(ref Utf8JsonReader reader)
+    /// <summary>
+    /// Reads a string or member name. An escape that forms an unpaired surrogate, which
+    /// <see cref="Utf8JsonReader.GetString"/> refuses, is kept as that one UTF-16 code unit, as
+    /// JavaScript's <c>JSON.parse</c> keeps it, so the value rules can report it.
+    /// </summary>
+    private static string ReadString(ref Utf8JsonReader reader, ref bool unpaired)
+    {
+        try
+        {
+            return reader.GetString()!;
+        }
+        catch (InvalidOperationException)
+        {
+            unpaired = true;
+            return UnescapeKeepingSurrogates(reader.HasValueSequence ? reader.ValueSequence.ToArray() : reader.ValueSpan);
+        }
+    }
+
+    /// <summary>
+    /// Unescapes a string token's value that the reader has already checked: the text between
+    /// escapes is valid UTF-8 and every escape is well formed.
+    /// </summary>
+    private static string UnescapeKeepingSurrogates(ReadOnlySpan<byte> value)
+    {
+        var text = new StringBuilder(value.Length);
+        while (!value.IsEmpty)
+        {
+            var at = value.IndexOf((byte)'\\');
+            if (at < 0)
+            {
+                text.Append(Encoding.UTF8.GetString(value));
+                break;
+            }
+
+            text.Append(Encoding.UTF8.GetString(value[..at]));
+            var escape = value[at + 1];
+            if (escape == (byte)'u')
+            {
+                text.Append((char)int.Parse(value.Slice(at + 2, 4), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture));
+                value = value[(at + 6)..];
+                continue;
+            }
+
+            text.Append(escape switch
+            {
+                (byte)'b' => '\b',
+                (byte)'f' => '\f',
+                (byte)'n' => '\n',
+                (byte)'r' => '\r',
+                (byte)'t' => '\t',
+                _ => (char)escape,
+            });
+            value = value[(at + 2)..];
+        }
+
+        return text.ToString();
+    }
+
+    /// <summary>Checks a raw string's escapes without keeping its text, and flags an unpaired surrogate.</summary>
+    private static void CheckRaw(ref Utf8JsonReader reader, ref bool unpaired)
     {
         if (!reader.ValueIsEscaped)
         {
@@ -363,6 +441,10 @@ internal static class JsonTree
         try
         {
             reader.CopyString(buffer);
+        }
+        catch (InvalidOperationException)
+        {
+            unpaired = true;
         }
         finally
         {
@@ -385,7 +467,7 @@ internal static class JsonTree
             var name = frame.PendingName!;
             if (frame.PendingDuplicate)
             {
-                duplicates.Add((frame.Path + "/" + JsonPointer.Escape(name), node));
+                duplicates.Add((ChildPath(frame, name), node));
             }
             else
             {
@@ -412,17 +494,36 @@ internal static class JsonTree
         var frame = frames[^1];
         if (frame.Node.Kind == JsonKind.Object)
         {
-            return frame.PendingName is null ? frame.Path : frame.Path + "/" + JsonPointer.Escape(frame.PendingName);
+            return frame.PendingName is null ? frame.Path : ChildPath(frame, frame.PendingName);
         }
 
-        return frame.Path + "/" + frame.Index.ToString(CultureInfo.InvariantCulture);
+        return frame.Opaque ? frame.Path : frame.Path + "/" + frame.Index.ToString(CultureInfo.InvariantCulture);
     }
 
-    private sealed class Frame(JsonNode node, string path)
+    /// <summary>
+    /// Whether the value about to be read sits under a member name that is not printable ASCII,
+    /// so its pointer stops at that member's parent.
+    /// </summary>
+    private static bool IsOpaqueNext(List<Frame> frames) =>
+        frames.Count > 0 && (frames[^1].Opaque
+            || (frames[^1].Node.Kind == JsonKind.Object && frames[^1].PendingName is { } name && !JsonPointer.IsPrintableAscii(name)));
+
+    /// <summary>
+    /// The pointer of a member of <paramref name="frame"/>. A name that is not printable ASCII is
+    /// never a name the schemas define, so, as contract §4.1 requires for unknown members, the
+    /// pointer stops at the parent and a hostile file cannot put arbitrary text in a path.
+    /// </summary>
+    private static string ChildPath(Frame frame, string name) =>
+        frame.Opaque || !JsonPointer.IsPrintableAscii(name) ? frame.Path : frame.Path + "/" + JsonPointer.Escape(name);
+
+    private sealed class Frame(JsonNode node, string path, bool opaque)
     {
         public JsonNode Node { get; } = node;
 
         public string Path { get; } = path;
+
+        /// <summary>Whether <see cref="Path"/> stopped at an ancestor whose member name is not printable ASCII.</summary>
+        public bool Opaque { get; } = opaque;
 
         public HashSet<string> Seen { get; } = new(StringComparer.Ordinal);
 
@@ -454,7 +555,10 @@ internal static class JsonPointer
     /// </summary>
     public static string ForUnknown(string parent, string name, out bool truncated)
     {
-        truncated = name.Length > 64 || !name.All(c => c is >= ' ' and <= '~');
+        truncated = name.Length > 64 || !IsPrintableAscii(name);
         return truncated ? parent : Append(parent, name);
     }
+
+    /// <summary>Whether every character of <paramref name="name"/> is printable ASCII (U+0020 to U+007E).</summary>
+    public static bool IsPrintableAscii(string name) => name.All(c => c is >= ' ' and <= '~');
 }

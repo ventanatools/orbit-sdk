@@ -159,6 +159,7 @@ public sealed class PackageTests
     [InlineData("payload/a/b", "payload/A/c")]
     [InlineData("payload/a/", "payload/a")]
     [InlineData("payload/a/", "payload/a/")]
+    [InlineData("README.md", "payload/file")]
     public void CollisionsAreRefusedInEitherOrder(string first, string second)
     {
         foreach (var (a, b) in new[] { (first, second), (second, first) })
@@ -188,6 +189,102 @@ public sealed class PackageTests
         spec.Entries.Add(new EntrySpec { Name = "payload/file", Content = [], ExternalAttributes = attributes, MadeBy = 0x031E });
         var diagnostic = Assert.Single(PackageReader.Read(ArchiveBuilder.Build(spec), Options).Diagnostics);
         Assert.Equal((DiagnosticCodes.PackageLink, "payload/file"), (diagnostic.Code, diagnostic.File));
+    }
+
+    /// <summary>
+    /// The descriptor is strict (contract §5.6): unknown, repeated, mistyped, missing and null
+    /// members, over-long <c>createdBy</c> values, and an unsorted, repeated or self-listing
+    /// inventory are refused. Placeholders: <c>{HASH}</c> the manifest hash; <c>{R0}</c>,
+    /// <c>{R1}</c>, <c>{R2}</c> the rows of README.md, extension.json and payload/companion.txt;
+    /// <c>{SELF}</c> a row for the descriptor itself; <c>{SHA2}</c> the companion's SHA-256;
+    /// <c>{A65}</c> and <c>{A33}</c> strings of 65 and 33 characters. Every expected diagnostic
+    /// has file extension.package.json, and the package adds the summary package.descriptor.
+    /// </summary>
+    [Theory]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}],\"requirements\":[]}", "json.unknown-member /requirements")]
+    [InlineData("{\"archiveVersion\":2,\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}]}", "json.duplicate-member /archiveVersion")]
+    [InlineData("{\"archiveVersion\":\"2\",\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}]}", "json.type-mismatch /archiveVersion")]
+    [InlineData("{\"archiveVersion\":3,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}]}", "schema.version-unsupported /archiveVersion")]
+    [InlineData("{\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}]}", "json.required-missing /archiveVersion")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\"}", "json.required-missing /files")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":{}}", "json.type-mismatch /files")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":null,\"files\":[{R0},{R1},{R2}]}", "json.null-not-allowed /manifestHash")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},null,{R2}]}", "json.null-not-allowed /files/1")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"xyz\",\"files\":[{R0},{R1},{R2}]}", "package.manifest-hash /manifestHash")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}],\"createdBy\":{\"name\":\"{A65}\",\"version\":\"1.0.0\"}}", "string.too-long /createdBy/name")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}],\"createdBy\":{\"name\":\"example-tool\",\"version\":\"{A33}\"}}", "string.too-long /createdBy/version")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}],\"createdBy\":{\"name\":\"example-tool\"}}", "json.required-missing /createdBy/version")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}],\"createdBy\":{\"name\":\"example-tool\",\"version\":\"1.0.0\",\"url\":\"https://example.com\"}}", "json.unknown-member /createdBy/url")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R1},{R0},{R2}]}", "package.descriptor /files/1/path")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R0},{R1},{R2}]}", "package.descriptor /files/1/path")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{SELF},{R2}]}", "package.descriptor /files/2/path")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{\"path\":\"payload/companion.txt\",\"size\":15,\"sha256\":\"{SHA2}\",\"mode\":1}]}", "json.unknown-member /files/2/mode")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{\"path\":\"payload/companion.txt\",\"size\":15}]}", "json.required-missing /files/2/sha256")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{\"path\":\"payload/companion.txt\",\"size\":1.5,\"sha256\":\"{SHA2}\"}]}", "json.type-mismatch /files/2/size")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{\"path\":\"payload/companion.txt\",\"size\":-1,\"sha256\":\"{SHA2}\"}]}", "package.descriptor /files/2/size")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{\"path\":\"payload/../companion.txt\",\"size\":15,\"sha256\":\"{SHA2}\"}]}", "package.path /files/2/path")]
+    [InlineData("{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{\"path\":\"payload/companion.txt\",\"size\":15,\"sha256\":\"ABC\"}]}", "package.hash-mismatch /files/2/sha256")]
+    public void TheDescriptorRefusesUnknownRepeatedMistypedOrMisorderedMembers(string template, string expected)
+    {
+        var spec = Valid();
+        var descriptor = Encoding.UTF8.GetBytes(DescriptorText(spec, template));
+        Assert.Null(DescriptorReader.Read(descriptor, new DiagnosticBag()));
+
+        var entry = spec.Entries.FindIndex(item => item.Descriptor);
+        spec.Entries[entry] = new EntrySpec { Name = "extension.package.json", Content = descriptor };
+        var result = PackageReader.Read(ArchiveBuilder.Build(spec), Options);
+        Assert.Null(result.Value);
+        var wanted = expected.Split('|')
+            .Select(item => item.Split(' '))
+            .Select(parts => (parts[0], parts[1], (string?)"extension.package.json"))
+            .Append((DiagnosticCodes.PackageDescriptor, string.Empty, null))
+            .ToList();
+        Assert.Equal(wanted, result.Diagnostics.Select(diagnostic => (diagnostic.Code, diagnostic.Path, diagnostic.File)));
+    }
+
+    [Fact]
+    public void TheValidDescriptorTemplateIsAccepted()
+    {
+        var spec = Valid();
+        var descriptor = Encoding.UTF8.GetBytes(DescriptorText(spec,
+            "{\"archiveVersion\":2,\"manifestHash\":\"{HASH}\",\"files\":[{R0},{R1},{R2}],\"createdBy\":{\"name\":\"example-tool\",\"version\":\"1.0.0\"}}"));
+        var entry = spec.Entries.FindIndex(item => item.Descriptor);
+        spec.Entries[entry] = new EntrySpec { Name = "extension.package.json", Content = descriptor };
+        var result = PackageReader.Read(ArchiveBuilder.Build(spec), Options);
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal("example-tool", result.Value!.Descriptor.CreatedBy!.Name);
+    }
+
+    [Fact]
+    public void MoreThan64StringsFilesAreRefused()
+    {
+        var strings = Fixtures.Utf8(Fixtures.Text("strings/valid/fr.json"));
+        foreach (var count in new[] { 64, 65 })
+        {
+            var spec = Valid();
+            for (var i = 0; i < count; i++)
+            {
+                var tag = "q" + (char)('a' + (i / 26)) + (char)('a' + (i % 26));
+                spec.Entries.Add(new EntrySpec
+                {
+                    Name = "strings/" + tag + ".json",
+                    Content = Encoding.UTF8.GetBytes(strings.Replace("\"fr\"", "\"" + tag + "\"", StringComparison.Ordinal)),
+                });
+            }
+
+            var result = PackageReader.Read(ArchiveBuilder.Build(spec), Options);
+            if (count == 64)
+            {
+                Assert.Empty(result.Diagnostics);
+                Assert.Equal(64, result.Value!.Strings.Count);
+            }
+            else
+            {
+                Assert.Null(result.Value);
+                var diagnostic = Assert.Single(result.Diagnostics);
+                Assert.Equal((DiagnosticCodes.StringsTooManyFiles, string.Empty, (string?)null), (diagnostic.Code, diagnostic.Path, diagnostic.File));
+            }
+        }
     }
 
     [Fact]
@@ -419,6 +516,27 @@ public sealed class PackageTests
             new EntrySpec { Name = "payload/companion.txt", Content = Encoding.UTF8.GetBytes("The companion.\n") },
         ],
     };
+
+    /// <summary>Expands the placeholders of a descriptor template (see the descriptor theory) for <paramref name="spec"/>.</summary>
+    private static string DescriptorText(ArchiveSpec spec, string template)
+    {
+        byte[] Content(string name) => spec.Entries.Single(entry => entry.Name == name).Content!;
+        static string Sha(byte[] content) => Convert.ToHexStringLower(SHA256.HashData(content));
+        static string Row(string path, byte[] content) =>
+            "{\"path\":\"" + path + "\",\"size\":" + content.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + ",\"sha256\":\"" + Sha(content) + "\"}";
+
+        using var generated = JsonDocument.Parse(ArchiveBuilder.Descriptor(spec));
+        return template
+            .Replace("{HASH}", generated.RootElement.GetProperty("manifestHash").GetString(), StringComparison.Ordinal)
+            .Replace("{R0}", Row("README.md", Content("README.md")), StringComparison.Ordinal)
+            .Replace("{R1}", Row("extension.json", Content("extension.json")), StringComparison.Ordinal)
+            .Replace("{R2}", Row("payload/companion.txt", Content("payload/companion.txt")), StringComparison.Ordinal)
+            .Replace("{SELF}", Row("extension.package.json", []), StringComparison.Ordinal)
+            .Replace("{SHA2}", Sha(Content("payload/companion.txt")), StringComparison.Ordinal)
+            .Replace("{A65}", new string('a', 65), StringComparison.Ordinal)
+            .Replace("{A33}", new string('1', 33), StringComparison.Ordinal);
+    }
 
     private static byte[] Pad(byte[] json, int length)
     {

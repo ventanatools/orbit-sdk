@@ -1,5 +1,5 @@
 {
-  "about": "Package archive fixtures (contract section 5). Each archive is built from its description by the generator in the .NET test project and must equal the committed .zip byte for byte. Entries are written in order: a local header (version 20, the given flags and method, time 0, date 1980-01-01, CRC-32, sizes, the name, any local extra field), the data, and a data descriptor when dataDescriptor is set; then the central directory (version made by 20 unless madeBy is set, external attributes 0 for files and 16 for folders unless externalAttributes is set) and the end-of-central-directory record. method 8 is raw deflate. content names an entry of contents, or $descriptor for an extension.package.json the generator computes from the archive's files (sorted ordinally, with manifestHash computed from extension.json), changed by descriptor (add, drop, sha256, size, manifestHash, archiveVersion). local overrides the local header (name, method, flags, crc, uncompressedSize, extra); crc overrides both records; zip64Sizes writes 0xFFFFFFFF sizes in the central record; centralExtra is a central extra field; localOffsetOf points a central record at another entry's local header; gapBefore inserts bytes before a local record; prefix, trailing and afterEnd insert bytes before the first record, before the central directory and after the end record; eocd overrides diskNumber or entriesOnDisk; zip64Locator writes a ZIP64 end-of-central-directory locator; raw is the whole file. expected lists the diagnostics (code, path, file) a reader reports with the manifest read for example-host. generated describes the archive at every limit of section 5.3 at once, which is built at test time and not committed.",
+  "about": "Package archive fixtures (contract section 5). Each archive is built from its description by the generator in the .NET test project and must equal the committed .zip byte for byte. Entries are written in order: a local header (version 20, the given flags and method, time 0, date 1980-01-01, CRC-32, sizes, the name, any local extra field), the data, and a data descriptor when dataDescriptor is set; then the central directory (version made by 20 unless madeBy is set, external attributes 0 for files and 16 for folders unless externalAttributes is set) and the end-of-central-directory record. method 8 is raw deflate. content names an entry of contents, or $descriptor for an extension.package.json the generator computes from the archive's files (sorted ordinally, with manifestHash computed from extension.json), changed by descriptor (add, drop, sha256, size, manifestHash, archiveVersion; unsorted writes the rows in descending order; extra lists members written after files). local overrides the local header (name, method, flags, crc, uncompressedSize, extra); crc overrides both records; zip64Sizes writes 0xFFFFFFFF sizes in the central record; centralExtra is a central extra field; localOffsetOf points a central record at another entry's local header; gapBefore inserts bytes before a local record; prefix, trailing and afterEnd insert bytes before the first record, before the central directory and after the end record; eocd overrides diskNumber or entriesOnDisk; zip64Locator writes a ZIP64 end-of-central-directory locator; raw is the whole file. expected lists the diagnostics (code, path, file) a reader reports with the manifest read for example-host. generated describes the archive at every limit of section 5.3 at once, which is built at test time and not committed.",
   "contents": {
     "readme": {
       "text": "Start the companion yourself, then choose Save connection info in the host.\n"
@@ -1312,6 +1312,181 @@
         {
           "code": "schema.version-unsupported",
           "path": "/archiveVersion",
+          "file": "extension.package.json"
+        },
+        {
+          "code": "package.descriptor",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "descriptor-unknown-member.zip",
+      "description": "A descriptor with a member archive 2 does not define.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "extra": {
+          "requirements": []
+        }
+      },
+      "expected": [
+        {
+          "code": "json.unknown-member",
+          "path": "/requirements",
+          "file": "extension.package.json"
+        },
+        {
+          "code": "package.descriptor",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "descriptor-unsorted.zip",
+      "description": "A descriptor whose files are listed in descending order.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "unsorted": true
+      },
+      "expected": [
+        {
+          "code": "package.descriptor",
+          "path": "/files/1/path",
+          "file": "extension.package.json"
+        },
+        {
+          "code": "package.descriptor",
+          "path": "/files/2/path",
+          "file": "extension.package.json"
+        },
+        {
+          "code": "package.descriptor",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "descriptor-repeated.zip",
+      "description": "A descriptor that lists README.md twice.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "add": {
+          "path": "README.md",
+          "size": 76,
+          "sha256": "4452326e2d65880ff0060ad47046daa7676733feb79e245cf54bb671d549d97b"
+        }
+      },
+      "expected": [
+        {
+          "code": "package.descriptor",
+          "path": "/files/1/path",
+          "file": "extension.package.json"
+        },
+        {
+          "code": "package.descriptor",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "descriptor-self-listed.zip",
+      "description": "A descriptor that lists itself.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "add": {
+          "path": "extension.package.json",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "expected": [
+        {
+          "code": "package.descriptor",
+          "path": "/files/2/path",
           "file": "extension.package.json"
         },
         {

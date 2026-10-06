@@ -196,6 +196,75 @@ public sealed class ManifestReaderTests
         Assert.All(result.Diagnostics, diagnostic => Assert.DoesNotContain("run.exe", diagnostic.Message, StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// An escape that forms an unpaired surrogate is valid JSON (contract §4.4 limits
+    /// <c>json.syntax</c> to bad tokens, comments, trailing commas or content, and invalid UTF-8),
+    /// so it never stops collect-all: declaration text reports <c>text.invalid-character</c> (§3.6),
+    /// other values their grammar code, and a member name the parent's path (§4.1).
+    /// </summary>
+    [Fact]
+    public void UnpairedSurrogatesAreValueFaultsAndEveryOtherProblemIsStillReported()
+    {
+        var edits = new (string Before, string After)[]
+        {
+            ("\"name\": \"Countdown sample\"", "\"name\": \"Countdown \\ud800 sample\""),
+            ("\"version\": \"0.3.0\"", "\"version\": \"x\""),
+            ("\"publisher\": { \"name\": \"Example Co\"", "\"publisher\": { \"name\": \"Example \\uDC00Co\""),
+            ("\"disclosures\": { \"network\": \"None\" }", "\"disclosures\": { \"network\": \"None\", \"\\ud83d\": true }"),
+            ("{ \"value\": \"pause\", \"name\": \"Pause\" }", "{ \"value\": \"pause\", \"name\": \"Pa\\udfffuse\" }"),
+            ("\"id\": \"example.countdown/status\"", "\"id\": \"example.countdown/st\\ud800tus\""),
+            ("\"glyph\": \"\\uE916\",\n      \"provides\": [\"face\"]", "\"glyph\": \"\\uDFFF\",\n      \"provides\": [\"face\"]"),
+        };
+        var text = Fixtures.Utf8(Fixtures.Text("manifests/valid/countdown.json"));
+        foreach (var (before, after) in edits)
+        {
+            Assert.Contains(before, text, StringComparison.Ordinal);
+            text = text.Replace(before, after, StringComparison.Ordinal);
+        }
+
+        var result = ManifestReader.Read(Encoding.UTF8.GetBytes(text), TestHosts.Options);
+        Assert.Null(result.Value);
+        (string Code, string Path)[] expected =
+        [
+            (DiagnosticCodes.TextInvalidCharacter, "/name"),
+            (DiagnosticCodes.ManifestVersionInvalid, "/version"),
+            (DiagnosticCodes.TextInvalidCharacter, "/publisher/name"),
+            (DiagnosticCodes.JsonUnknownMember, "/disclosures"),
+            (DiagnosticCodes.TextInvalidCharacter, "/contributions/0/settings/0/choices/1/name"),
+            (DiagnosticCodes.IdGrammar, "/contributions/1/id"),
+            (DiagnosticCodes.ChromeGlyphInvalid, "/contributions/1/glyph"),
+        ];
+        Assert.Equal(expected.Order(), Expected.Pairs(result.Diagnostics).Order());
+    }
+
+    [Fact]
+    public void UnpairedSurrogatesInMemberNamesNeverReachAPath()
+    {
+        var result = ManifestReader.Read(Encoding.UTF8.GetBytes(
+            "{\"schemaVersion\": 3, \"\\udc00\": 1, \"\\udc00\": 2, \"publisher\": {\"\\ud800x\": [tru]}}"));
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal((DiagnosticCodes.JsonSyntax, "/publisher"), (diagnostic.Code, diagnostic.Path));
+
+        result = ManifestReader.Read(Encoding.UTF8.GetBytes(
+            "{\"schemaVersion\": 3, \"\\udc00\": 1, \"\\udc00\": 2, \"publisher\": {\"\\ud800x\": [[[[[[[[1]]]]]]]]}}"));
+        diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal((DiagnosticCodes.JsonDepth, "/publisher"), (diagnostic.Code, diagnostic.Path));
+
+        result = ManifestReader.Read(Encoding.UTF8.GetBytes("{\"schemaVersion\": 3, \"\\udc00\": 1, \"\\udc00\": 2}"));
+        Assert.Contains(result.Diagnostics, item => item is { Code: DiagnosticCodes.JsonDuplicateMember, Path: "" });
+        Assert.All(result.Diagnostics, item => Assert.True(JsonPointer.IsPrintableAscii(item.Path), item.Code));
+    }
+
+    [Fact]
+    public void ASchemaMemberHasNoCharacterRule()
+    {
+        var text = Fixtures.Utf8(Fixtures.Text("manifests/valid/countdown.json"))
+            .Replace("\"schemaVersion\": 3,", "\"$schema\": \"./manifest\\ud800.v3.json\",\n  \"schemaVersion\": 3,", StringComparison.Ordinal);
+        var result = ManifestReader.Read(Encoding.UTF8.GetBytes(text), TestHosts.Options);
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal("./manifest\ud800.v3.json", result.Value!.Schema);
+    }
+
     [Fact]
     public void ContributionCatalogsAreBoundedAndIdsUnique()
     {

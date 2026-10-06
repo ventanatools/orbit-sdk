@@ -124,7 +124,8 @@ public static class MessageReader
             return Refuse(ReasonCode.FrameUtf8Invalid);
         }
 
-        if (parse.Root is not { Kind: JsonKind.Object } root)
+        // §7.2: strings must not contain unpaired surrogates after unescaping.
+        if (parse.Root is not { Kind: JsonKind.Object } root || parse.UnpairedSurrogate)
         {
             return Refuse(ReasonCode.FrameJsonInvalid);
         }

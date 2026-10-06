@@ -1,7 +1,7 @@
 {
   "diagnostics": [
     {
-      "code": "json.syntax",
+      "code": "text.invalid-character",
       "path": "/name",
       "severity": "Error",
       "line": 4,

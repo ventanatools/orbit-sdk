@@ -85,6 +85,18 @@ public sealed class MessageReaderTests
         Assert.Equal(frame, Encoding.ASCII.GetString(MessageWriter.Write(message)));
     }
 
+    /// <summary>Unlike files, a frame with an unpaired surrogate anywhere is refused (contract §7.2).</summary>
+    [Theory]
+    [InlineData("{\"type\":\"ping\",\"id\":1,\"\\ud800\":1}")]
+    [InlineData("{\"type\":\"ping\",\"id\":1,\"x\":1,\"x\":\"\\udc00\"}")]
+    [InlineData("{\"type\":\"ping\",\"id\":1,\"x\":[\"a\\udbffb\"]}")]
+    public void UnpairedSurrogatesAnywhereInAFrameAreRefused(string frame)
+    {
+        var result = MessageReader.Read(Encoding.ASCII.GetBytes(frame), Wire.Sender.Host, ConnectionPhase.Authenticated);
+        Assert.Null(result.Message);
+        Assert.Equal(ReasonCode.FrameJsonInvalid.Value, result.Violation?.Value);
+    }
+
     [Fact]
     public void MessagesMirrorTheirFrames()
     {
