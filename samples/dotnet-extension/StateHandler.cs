@@ -106,7 +106,7 @@ internal sealed class StateHandler : ContributionHandler
             : "Memory only";
         return new Face
         {
-            Picture = FacePicture.Glyph(""),
+            Picture = FacePicture.Glyph("\uE7E8"),
             Line1 = number ? (on ? "1" : "0") : (on ? "On" : "Off"),
             Line2 = line2,
             Detail = on ? "The sample's in-memory state is on." : "The sample's in-memory state is off.",

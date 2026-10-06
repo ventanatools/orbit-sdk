@@ -88,7 +88,7 @@ internal sealed class CountdownHandler(TimeProvider? time = null) : Contribution
         var running = snapshot.Phase == CountdownPhase.Running;
         return new Face
         {
-            Picture = FacePicture.Glyph(""),
+            Picture = FacePicture.Glyph("\uE916"),
             Line1 = text,
             Line2 = operation is null ? phase : operation + " · " + phase,
             Detail = "Countdown " + phase.ToLowerInvariant() + ". " + text + " remaining.",

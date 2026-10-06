@@ -9,7 +9,7 @@
  * handler, and reconnects with backoff. It never starts the host or loads anything into it.
  *
  * Events are delivered asynchronously, one at a time and in order, never on the pipe reader's
- * stack: "status" { state, reason?, retryInMs?, attempt, serverVerified, host?, protocolVersion? }
+ * stack: "status" { state, reason?, retryInMs?, attempt, serverVerified, host?, negotiatedVersion? }
  * and "handlerFaulted" { kind, contributionId, sessionId?, requestId?, error? }. A listener that
  * throws is caught and never stops the client.
  */
@@ -264,7 +264,7 @@ class CompanionClient extends EventEmitter {
         this.#post("handlerFaulted", Object.freeze(args));
     }
 
-    #setState(state, reason, retryInMs, attempt, serverVerified, host, protocolVersion, peerMessage) {
+    #setState(state, reason, retryInMs, attempt, serverVerified, host, negotiatedVersion, peerMessage) {
         this.#state = state;
         const args = { state };
         if (reason !== undefined) args.reason = reason;
@@ -272,7 +272,7 @@ class CompanionClient extends EventEmitter {
         args.attempt = attempt;
         args.serverVerified = serverVerified === true;
         if (host !== undefined) args.host = host;
-        if (protocolVersion !== undefined) args.protocolVersion = protocolVersion;
+        if (negotiatedVersion !== undefined) args.negotiatedVersion = negotiatedVersion;
         if (peerMessage !== undefined) Object.defineProperty(args, kPeerMessage, { value: peerMessage });
         this.#post("status", Object.freeze(args));
     }

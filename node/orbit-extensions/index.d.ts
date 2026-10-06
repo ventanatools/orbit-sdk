@@ -271,8 +271,10 @@ export interface StatusEvent {
     readonly retryInMs?: number;
     readonly attempt: number;
     readonly serverVerified: boolean;
+    /** The host's id and version from its challenge; present only once the challenge proof verified. */
     readonly host?: { readonly id: string; readonly version: string };
-    readonly protocolVersion?: number;
+    /** The protocol version negotiated with the host (contract §7.3); present only with `host`. */
+    readonly negotiatedVersion?: number;
 }
 
 export interface HandlerFaultedEvent {

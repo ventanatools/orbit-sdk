@@ -125,7 +125,7 @@ function clean(text, maxElements, maxUnits) {
     let elements = 0;
     for (const { segment } of segmenter.segment(cleaned)) {
         if (elements >= maxElements) break;
-        const element = segment.length > MAX_ELEMENT_UNITS ? "�" : segment;
+        const element = segment.length > MAX_ELEMENT_UNITS ? "\uFFFD" : segment;
         if (cut.length + element.length > maxUnits) break;
         cut += element;
         elements++;

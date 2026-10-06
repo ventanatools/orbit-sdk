@@ -87,7 +87,7 @@ test("codes after the challenge verified come from a verified server: proof-inva
         assert.equal(status.reason, "auth.proof-invalid");
         assert.equal(status.serverVerified, true);
         assert.equal(status.host.id, "example-host");
-        assert.equal(status.protocolVersion, 3);
+        assert.equal(status.negotiatedVersion, 3);
     } finally {
         await proof.stop();
     }
@@ -208,9 +208,9 @@ test("100 quick setFace calls send at most the first and the newest", async () =
 });
 
 test("setFace never throws for text and sends it cleaned", async () => {
-    const flag = "🏴󠁧󠁢󠁥󠁮󠁧󠁿";
+    const flag = "\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}";
     const harness = new ClientHarness({ handler: faceHandler(async (s, signal) => {
-        s.setFace({ line1: "x".repeat(500), line2: "Meeting​ " + flag + " in 5", detail: "  padded\n detail  ", glyph: "", state: FaceState.Playing, goodForSeconds: 1.5 });
+        s.setFace({ line1: "x".repeat(500), line2: "Meeting\u200B " + flag + " in 5", detail: "  padded\n detail  ", glyph: "\uE916", state: FaceState.Playing, goodForSeconds: 1.5 });
         await new Promise((resolve) => signal.addEventListener("abort", resolve));
     }) }).start();
     try {
@@ -218,9 +218,9 @@ test("setFace never throws for text and sends it cleaned", async () => {
         peer.send({ type: "startSession", sessionId: newId(), contributionId: STATUS, settings: {} });
         const message = await peer.read("Authenticated", "setFace");
         assert.equal(message.face.line1.text, "x".repeat(40));
-        assert.equal(message.face.line2.text, "Meeting 🏴 in 5");
+        assert.equal(message.face.line2.text, "Meeting \u{1F3F4} in 5");
         assert.equal(message.face.detail, "padded  detail");
-        assert.deepEqual(message.face.picture, { $type: "glyph", glyph: "" });
+        assert.deepEqual(message.face.picture, { $type: "glyph", glyph: "\uE916" });
         assert.equal(message.face.state, "Playing");
         assert.equal(message.face.goodForSeconds, 2);
     } finally {
@@ -254,7 +254,7 @@ test("setFace, clearFace and fail check their arguments, then provides, then the
     }, manifest: (() => {
         const manifest = countdown();
         manifest.contributions[1].provides = ["face"];
-        manifest.contributions.push({ id: "example.countdown/run", name: "Run", description: "Runs.", glyph: "", provides: ["invoke"] });
+        manifest.contributions.push({ id: "example.countdown/run", name: "Run", description: "Runs.", glyph: "\uE916", provides: ["invoke"] });
         return manifest;
     })() }).start();
     try {
@@ -276,7 +276,7 @@ test("setFace, clearFace and fail check their arguments, then provides, then the
 test("an invoke-only contribution cannot publish", async () => {
     let error;
     const manifest = countdown();
-    manifest.contributions.push({ id: "example.countdown/run", name: "Run", description: "Runs.", glyph: "", provides: ["invoke"] });
+    manifest.contributions.push({ id: "example.countdown/run", name: "Run", description: "Runs.", glyph: "\uE916", provides: ["invoke"] });
     const harness = new ClientHarness({ manifest, handler: {
         async invoke(invocation) {
             try {

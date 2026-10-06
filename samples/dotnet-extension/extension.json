@@ -12,7 +12,7 @@
       "id": "example.dotnet-state/set-state",
       "name": "Set sample state",
       "description": "Sets the companion's in-memory value to the chosen state. The face shows the current state.",
-      "glyph": "",
+      "glyph": "\uE7E8",
       "provides": ["invoke", "face"],
       "settings": [
         {
@@ -31,7 +31,7 @@
       "id": "example.dotnet-state/status",
       "name": "Sample status",
       "description": "Shows the companion's in-memory value. Picking it changes nothing.",
-      "glyph": "",
+      "glyph": "\uE7E8",
       "provides": ["face"],
       "settings": [
         {

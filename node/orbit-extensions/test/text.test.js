@@ -85,7 +85,7 @@ test("the disallowed-character class refuses every format character but the five
         assert.equal(text.isDisallowed(refused), true, refused.toString(16));
     }
     assert.equal(text.isDisallowed(0x41), false);
-    assert.equal(text.textElements("👨‍👩‍👧"), 1);
+    assert.equal(text.textElements("\u{1F468}\u200D\u{1F469}\u200D\u{1F467}"), 1);
 });
 
 test("keys are canonical Base64 of exactly 32 bytes", () => {
