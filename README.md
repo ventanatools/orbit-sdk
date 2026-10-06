@@ -81,7 +81,7 @@ sample's resolved author library is byte for byte the one in the new package,
 the samples' tests, the Node SDK's and the Photoshop sample's tests, `orbit-ext
 validate`, `pack` and `verify` for every sample with the freshly packed tool,
 and every template, created through `orbit-ext new` outside the repository, then
-built and tested.
+built and tested with that tool's `test` command.
 
 The named-pipe tests, the samples and the templates need Windows. The other
 tests run on any platform that runs .NET 10.
@@ -112,19 +112,27 @@ dotnet pack src/VentanaTools.Orbit.Extensions.Tool -c Release -o artifacts/packa
 
 From the repository root, whose `NuGet.config` maps the package family to
 `artifacts/packages`, install the tool into a folder of your choice and,
-optionally, the templates into a template cache of their own:
+optionally, the templates into a template cache of their own. Then create a
+project outside the repository: inside it, the repository's build settings and
+central package versions would apply to the project:
 
 ```powershell
 dotnet tool install VentanaTools.Orbit.Extensions.Tool --tool-path artifacts/tools --version <version>
-dotnet new install artifacts/packages/VentanaTools.Orbit.Extensions.Templates.<version>.nupkg --debug:custom-hive artifacts/template-hive
-artifacts/tools/orbit-ext new widget -n MyWidget --extension-id contoso.my-widget --debug:custom-hive artifacts/template-hive
+dotnet new install "$PWD\artifacts\packages\VentanaTools.Orbit.Extensions.Templates.<version>.nupkg" --debug:custom-hive "$PWD\artifacts\template-hive"
+artifacts\tools\orbit-ext new widget -n MyWidget -o ..\MyWidget --extension-id contoso.my-widget --debug:custom-hive "$PWD\artifacts\template-hive"
+cd ..\MyWidget
+dotnet tool restore
+dotnet orbit-ext test
 ```
 
 `<version>` is the one `tools/build.ps1` printed (it is also in
-`artifacts/build/state.json`). Leave out `--debug:custom-hive` to use your normal
-template cache. Outside this repository, add `--add-source <folder>` to the tool
-install, or, where a NuGet configuration uses package source mapping (the .NET
-SDK refuses `--add-source` there), add the folder to that configuration and map
+`artifacts/build/state.json`). The template cache path must be absolute, as
+`$PWD` makes it here: given a relative path, `dotnet new install` copies the
+template pack but finds no templates in it, and still reports success. Leave out
+`--debug:custom-hive` to use your normal template cache. Outside this
+repository, add `--add-source <folder>` to the tool install, or, where a NuGet
+configuration uses package source mapping (the .NET SDK refuses `--add-source`
+there), add the folder to that configuration and map
 `VentanaTools.Orbit.Extensions*` to it.
 
 `orbit-ext new` copies the packages a new project needs into a per-user feed,

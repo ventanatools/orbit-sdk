@@ -17,7 +17,8 @@ reads the version and run id it wrote to artifacts/build/state.json.
    SHA-256 as the one in the new .nupkg, and its tests pass.
 5. The freshly packed tool, installed with --tool-path: validate, pack and verify every sample.
 6. Every template, instantiated through the tool's new command (custom template hive, --feed) in a
-   temporary folder outside the repository, then built and tested.
+   temporary folder outside the repository: its tool manifest pins the new tool, and it builds and
+   passes the installed tool's test command.
 
 No name of the product is written here: the product names come from fixtures/hosts.json, the package
 family from the solution file's name and the tool's command from its project file.
@@ -400,18 +401,32 @@ try {
     New-Item -ItemType Directory -Force -Path $work | Out-Null
     $templates = [System.IO.Path]::Combine($packages, $family + '.Templates.' + $version + '.nupkg')
     Invoke-Native dotnet @('new', 'install', $templates, '--debug:custom-hive', $hive) $work
+    $toolPackage = ($family + '.Tool.' + $version + '.nupkg').ToLowerInvariant()
     foreach ($kind in @('action', 'widget', 'node')) {
         $name = 'Verify' + $kind.Substring(0, 1).ToUpperInvariant() + $kind.Substring(1)
         $project = [System.IO.Path]::Combine($work, $name)
         Invoke-Native $tool @('new', $kind, '-n', $name, '-o', $project, '--extension-id', ('example.verify-' + $kind),
             '--feed', $feed, '--debug:custom-hive', $hive) $work
-        Invoke-Native dotnet @('tool', 'restore') $project
+        # The project's local tool manifest pins this build's tool, whose package new copied into the
+        # feed. The tool tests' template tests run `dotnet tool restore` and `dotnet tool run` on it.
+        $toolManifest = [System.IO.File]::ReadAllText([System.IO.Path]::Combine($project, '.config', 'dotnet-tools.json')) | ConvertFrom-Json
+        $pinned = $toolManifest.tools.PSObject.Properties[($family + '.Tool').ToLowerInvariant()]
+        if ($null -eq $pinned -or [string]$pinned.Value.version -ne $version -or @($pinned.Value.commands) -notcontains $command) {
+            throw ($name + '/.config/dotnet-tools.json does not pin ' + $command + ' ' + $version + '.')
+        }
+        if (@(Get-ChildItem -LiteralPath $feed -Filter '*.nupkg' -File | Where-Object { $_.Name.ToLowerInvariant() -eq $toolPackage }).Count -ne 1) {
+            throw ('new did not copy the tool''s own package into ' + $feed + '.')
+        }
         if ($kind -eq 'node') {
             Invoke-Native $npm @('install', '--no-audit', '--no-fund') $project
         } else {
             Invoke-Native dotnet @('build', '-nologo', '-warnaserror') $project
         }
-        Invoke-Native dotnet @('tool', 'run', $command, 'test') $project
+        # The tool installed above, by path. `dotnet tool run` would resolve the manifest through the
+        # per-user tool resolver cache, which keeps the first package it saw for a version: with a
+        # fixed version (-PackageVersion, -RepositoryVersion) a second run would fail, or test an
+        # older tool than the one just built.
+        Invoke-Native $tool @('test') $project
     }
 } finally {
     $env:NUGET_PACKAGES = $savedNuGetPackages
