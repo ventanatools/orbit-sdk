@@ -9,4 +9,14 @@
       <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)" ProjectVersion="[$(Version)]" />
     </ItemGroup>
   </Target>
+
+  <!-- The author package's internals for the tool. The tool reads extension.pack.json and simulation
+       scripts with the same strict JSON reader, diagnostic bag and catalog as manifests (contract §3.1,
+       §4), so its diagnostics never fork from the readers'. The tool package carries the exact author
+       assembly it was built with (PackAsTool packs dependencies), so the two never mix versions. The
+       name comes from the assembly name, never a literal in code (contract §2.8); the author project
+       file declares its Testing and Tests items itself. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'VentanaTools.Orbit.Extensions'">
+    <InternalsVisibleTo Include="$(AssemblyName).Tool" />
+  </ItemGroup>
 </Project>

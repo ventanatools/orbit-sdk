@@ -14,7 +14,13 @@ dotnet orbit-ext test
 ```
 
 The packages are not published yet. Until they are, install the tool from a
-folder of locally built packages (`--add-source <folder>`). The tool carries the
+folder of locally built packages (`--add-source <folder>`). Where a NuGet
+configuration uses package source mapping, `dotnet tool install` refuses
+`--add-source`: add the folder to that configuration, map
+`VentanaTools.Orbit.Extensions*` to it, and leave `--add-source` out. The SDK
+repository's own `NuGet.config` already maps the family to `artifacts/packages`,
+so from its root `dotnet tool install VentanaTools.Orbit.Extensions.Tool
+--tool-path artifacts/tools --prerelease` is enough. The tool carries the
 packages a new project needs, so `orbit-ext new` works offline: it copies them,
 with its own package, into `%LOCALAPPDATA%\VentanaTools\packages\<version>\`
 (or the folder you give with `--feed`), and the project it creates restores

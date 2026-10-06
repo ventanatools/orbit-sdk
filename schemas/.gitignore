@@ -1,0 +1,5 @@
+# The JSON Schemas of pairing files are not pairing files. The repository's root rule
+# *pairing*.json keeps real pairing files out of commits; this rule, lower in the tree,
+# overrides it for the schemas only. It lives here, not in extensions/, so that folder
+# holds nothing but the published schemas.
+!extensions/pairing.v*.json
