@@ -106,6 +106,14 @@ refuses links and pairing files among the staged files, writes the package
 atomically and verifies it before it reports success. Packing the same files
 twice gives the same bytes.
 
+The left-out names and the link check apply to every folder on the way from the
+project folder to each staged file, including the paths the configuration names:
+a copy rule whose `from` is, or lies in, a left-out name copies nothing; a file
+named directly with a pairing file's name is refused (`pack.secret`); a readme in
+a left-out folder leaves the package without one (`package.file-missing`); and a
+link anywhere on the way is refused (`pack.link`). The project folder and the
+folders above it are never checked.
+
 ## Simulation scripts
 
 A script is a JSON array of steps, run in order (schema:

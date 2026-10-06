@@ -91,6 +91,131 @@ public sealed class PackTests
     }
 
     [Fact]
+    public async Task ExcludedNamesAreNeverPackedEvenWhenACopyRuleNamesThem()
+    {
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [
+                { "from": "companion/notes.user", "to": "direct" },
+                { "from": "companion/obj", "to": "objfolder" },
+                { "from": "companion/obj/cache.bin", "to": "objfile" },
+                { "from": "node_modules", "to": "modules" },
+                { "from": "node_modules/.cache", "to": "cache" },
+                { "from": "node_modules/.cache/hit.txt", "to": "cachefile" },
+                { "from": "lib/", "to": "lib" }
+              ]
+            }
+            """);
+        project.Write("node_modules/lib.js", "module.exports = 1;\n");
+        project.Write("node_modules/.cache/hit.txt", "never packed");
+        project.Write("lib/kept.txt", "kept");
+        project.Write("lib/.vs/state.txt", "never packed");
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.True(run.ExitCode == 0, run.ToString());
+
+        var package = PackageReader.Read(File.ReadAllBytes(project.Combine("artifacts/" + PackageName)),
+            new PackageReadOptions { Manifest = new ManifestReadOptions { HostId = ActiveHost.Id } });
+        Assert.True(package.Succeeded, string.Join("\n", package.Diagnostics));
+        Assert.Equal(
+            ["README.md", "extension.json", "extension.package.json", "payload/lib/kept.txt", "payload/modules/lib.js"],
+            package.Value.Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task APairingFileNamedDirectlyIsRefusedByName()
+    {
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "docs/pairing.json",
+              "payload": [ { "from": "companion/example.tool-test.pairing.json", "to": "companion" } ]
+            }
+            """);
+        project.Write("docs/pairing.json", "never packed: a pairing file's name");
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.Equal(1, run.ExitCode);
+        Assert.Equal(
+            ["companion/example.tool-test.pairing.json: error pack.secret: A staged file looks like a pairing file; pairing files are never packed. []",
+                "docs/pairing.json: error pack.secret: A staged file looks like a pairing file; pairing files are never packed. []"],
+            ErrorLines(run).Order(StringComparer.Ordinal));
+        Assert.False(File.Exists(project.Combine("artifacts/" + PackageName)));
+    }
+
+    [Fact]
+    public async Task AReadmeInAnExcludedFolderLeavesThePackageWithoutOne()
+    {
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "obj/README.md",
+              "payload": [ { "from": "companion", "to": "companion" } ]
+            }
+            """);
+        project.Write("obj/README.md", "# Generated\n");
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.Equal(1, run.ExitCode);
+        Assert.Equal(
+            "extension.pack.json(3,13): error package.file-missing: A required file is missing: extension.json, extension.package.json or README.md. [/readme]",
+            Assert.Single(ErrorLines(run)));
+    }
+
+    [Fact]
+    public async Task ALinkOnTheWayToTheReadmeOrTheStringsIsRefused()
+    {
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "docs/README.md",
+              "strings": "languages/strings"
+            }
+            """);
+        using var outside = new TempFolder();
+        outside.Write("docs/README.md", "# Outside\n");
+        outside.Write("languages/strings/de-DE.json", TestProject.Strings());
+        CreateLink(project.Combine("docs"), outside.Combine("docs"));
+        CreateLink(project.Combine("languages"), outside.Combine("languages"));
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.Equal(1, run.ExitCode);
+        Assert.Equal(
+            ["docs: error pack.link: A staged file or folder is a symbolic link or junction. []",
+                "languages: error pack.link: A staged file or folder is a symbolic link or junction. []"],
+            ErrorLines(run).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task OutsideTheProjectLinksAreCheckedBelowTheSharedFolderOnly()
+    {
+        // parent/project packs ../shared/file.txt; parent/shared is a junction, parent is not inspected.
+        using var parent = new TempFolder();
+        using var target = new TempFolder();
+        target.Write("file.txt", "outside");
+        parent.Write("plain/file.txt", "plain");
+        parent.Write("project/extension.json", TestProject.Manifest(ActiveHost.Id));
+        parent.Write("project/PACKAGE-README.md", "# Tool test\n");
+        parent.Write("project/extension.pack.json", """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [ { "from": "../plain/file.txt", "to": "plain" }, { "from": "../shared/file.txt", "to": "shared" } ]
+            }
+            """);
+        CreateLink(parent.Combine("shared"), target.Path);
+        var run = await ToolHarness.RunAsync(parent.Combine("project"), "pack");
+        Assert.Equal(1, run.ExitCode);
+        var line = Assert.Single(ErrorLines(run));
+        Assert.EndsWith("shared: error pack.link: A staged file or folder is a symbolic link or junction. []", line, StringComparison.Ordinal);
+
+        // The project folder itself, reached through a link, is not inspected.
+        using var holder = new TempFolder();
+        using var linked = TestProject.Create();
+        CreateLink(holder.Combine("alias"), linked.Path);
+        var throughLink = await ToolHarness.RunAsync(holder.Combine("alias"), "pack");
+        Assert.True(throughLink.ExitCode == 0, throughLink.ToString());
+    }
+
+    [Fact]
     public async Task AFailedBuildStepIsPackBuildFailed()
     {
         using var project = TestProject.Create(packConfig: """
@@ -177,11 +302,23 @@ public sealed class PackTests
         Assert.True(PackCommand.IsAlwaysExcluded("pairing.json", folder: false));
         Assert.True(PackCommand.IsAlwaysExcluded("a/example.x.pairing.json", folder: false));
         Assert.False(PackCommand.IsAlwaysExcluded("obj.txt", folder: false));
+        Assert.False(PackCommand.IsAlwaysExcluded("obj/pairing", folder: true));
+        Assert.True(PackCommand.IsPairingName("Example.X.Pairing.JSON"));
+        Assert.True(PackCommand.IsPairingName("pairing.json"));
+        Assert.False(PackCommand.IsPairingName("pairing.json.txt"));
+        Assert.False(PackCommand.IsPairingName("my-pairing.json"));
         Assert.True(PackCommand.LooksLikePairing("{\"a\":{\"pipeName\":\"x\",\"secret\":\"y\"}}"u8.ToArray()));
         Assert.True(PackCommand.LooksLikePairing("{\"pipe\\u004eame\":\"x\",\"secret\":\"y\"}"u8.ToArray()));
         Assert.True(PackCommand.LooksLikePairing("not json \"pipeName\" \"secret\""u8.ToArray()));
         Assert.False(PackCommand.LooksLikePairing("{\"pipeName\":\"x\"}"u8.ToArray()));
     }
+
+    /// <summary>The canonical error lines a run printed, without their <c>fix:</c> lines.</summary>
+    private static List<string> ErrorLines(ToolRun run) =>
+        run.Out.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n')
+            .Where(line => line.Contains(": error ", StringComparison.Ordinal))
+            .Select(line => line.Replace('\\', '/'))
+            .ToList();
 
     /// <summary>A junction on Windows (no privilege needed), a symbolic link elsewhere.</summary>
     internal static void CreateLink(string link, string target)

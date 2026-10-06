@@ -173,6 +173,13 @@ internal static class PackCommand
     /// It refuses links and pairing files among them, and checks names and limits before reading
     /// any content.
     /// </summary>
+    /// <remarks>
+    /// The same two checks apply to every path the configuration names (the readme, the strings
+    /// folder, a copy rule's <c>from</c>) and to everything found under a copied folder: each folder
+    /// from the project down to the item, and the item itself, is checked for the always-excluded
+    /// names and for links. The project folder and the folders above it are never checked; for a
+    /// path outside the project, checking starts below the deepest folder the two share.
+    /// </remarks>
     private sealed class Staging(ToolConsole console, DiagnosticReport report, PackConfig config, string configPath)
     {
         private readonly Dictionary<string, StagedFile> _files = new(StringComparer.OrdinalIgnoreCase);
@@ -183,11 +190,11 @@ internal static class PackCommand
         {
             try
             {
-                AddSingle(PackageReader.ManifestName, manifestPath, null);
-                AddSingle(PackageReader.ReadmeName, Path.GetFullPath(config.Readme, _configFolder), config.ReadmeNode, "/readme");
+                AddSingle(project, PackageReader.ManifestName, manifestPath, null);
+                AddSingle(project, PackageReader.ReadmeName, Resolve(config.Readme), config.ReadmeNode, "/readme");
                 if (config.Strings is { } strings)
                 {
-                    AddStrings(Path.GetFullPath(strings, _configFolder));
+                    AddStrings(project, Resolve(strings));
                 }
 
                 if (config.Build is { } build && !await PublishAsync(build, cancellationToken).ConfigureAwait(false))
@@ -267,7 +274,15 @@ internal static class PackCommand
             }
         }
 
-        private void AddSingle(string entry, string source, JsonNode? node, string? path = null)
+        /// <summary>A path from the pack configuration, in full and without a trailing separator.</summary>
+        private string Resolve(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path, _configFolder));
+
+        /// <summary>
+        /// Stages <c>extension.json</c> or the readme. Both are required, so a readme the tool never
+        /// packs is refused rather than left out: a pairing name is <c>pack.secret</c>, any other
+        /// always-excluded name on its way leaves the package without its readme.
+        /// </summary>
+        private void AddSingle(string project, string entry, string source, JsonNode? node, string? path = null)
         {
             if (!File.Exists(source))
             {
@@ -275,16 +290,28 @@ internal static class PackCommand
                 return;
             }
 
-            if (IsLink(source))
+            if (IsPairingName(Path.GetFileName(source)))
             {
-                report.Add(DiagnosticCodes.PackLink, string.Empty, console.Display(source));
+                report.Add(DiagnosticCodes.PackSecret, string.Empty, console.Display(source));
+                return;
+            }
+
+            if (ExcludedOnTheWay(project, source, folder: false))
+            {
+                ReportConfig(DiagnosticCodes.PackageFileMissing, path ?? string.Empty, node);
+                return;
+            }
+
+            if (LinkOnTheWay(project, source) is { } link)
+            {
+                report.Add(DiagnosticCodes.PackLink, string.Empty, console.Display(link));
                 return;
             }
 
             Stage(entry, source);
         }
 
-        private void AddStrings(string folder)
+        private void AddStrings(string project, string folder)
         {
             if (!Directory.Exists(folder))
             {
@@ -292,14 +319,25 @@ internal static class PackCommand
                 return;
             }
 
-            if (IsLink(folder))
+            if (ExcludedOnTheWay(project, folder, folder: true))
             {
-                report.Add(DiagnosticCodes.PackLink, string.Empty, console.Display(folder));
                 return;
             }
 
+            if (LinkOnTheWay(project, folder) is { } link)
+            {
+                report.Add(DiagnosticCodes.PackLink, string.Empty, console.Display(link));
+                return;
+            }
+
+            var name = Path.GetFileName(folder);
             foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly).Order(StringComparer.Ordinal))
             {
+                if (IsAlwaysExcluded(name + "/" + Path.GetFileName(file), folder: false))
+                {
+                    continue;
+                }
+
                 if (IsLink(file))
                 {
                     report.Add(DiagnosticCodes.PackLink, string.Empty, console.Display(file));
@@ -342,13 +380,30 @@ internal static class PackCommand
             return true;
         }
 
+        /// <summary>
+        /// Applies one copy rule. A <c>from</c> that is, or lies in, an always-excluded name copies
+        /// nothing, as the same name would inside a copied folder; a file it names directly with a
+        /// pairing name is refused (<c>pack.secret</c>), since tools never pack a pairing file.
+        /// </summary>
         private void AddRule(PackCopyRule rule, string project)
         {
-            var from = Path.GetFullPath(rule.From, _configFolder);
+            var from = Resolve(rule.From);
             var path = JsonPointer.Append(JsonPointer.Append("/payload", rule.Index), "from");
-            if (!File.Exists(from) && !Directory.Exists(from))
+            var isFile = File.Exists(from);
+            if (!isFile && !Directory.Exists(from))
             {
                 ReportConfig(DiagnosticCodes.PackSourceMissing, path, rule.FromNode);
+                return;
+            }
+
+            if (isFile && IsPairingName(Path.GetFileName(from)))
+            {
+                report.Add(DiagnosticCodes.PackSecret, string.Empty, console.Display(from));
+                return;
+            }
+
+            if (ExcludedOnTheWay(project, from, folder: !isFile))
+            {
                 return;
             }
 
@@ -358,7 +413,7 @@ internal static class PackCommand
                 return;
             }
 
-            if (File.Exists(from))
+            if (isFile)
             {
                 Stage(Join(rule.To, Path.GetFileName(from)), from);
                 return;
@@ -489,27 +544,66 @@ internal static class PackCommand
         private static string Join(string folder, string relative) =>
             "payload/" + (folder.Length == 0 ? string.Empty : folder + "/") + relative.Replace('\\', '/');
 
-        /// <summary>The first link from the project folder down to <paramref name="target"/> (both inclusive when inside it), or null.</summary>
+        /// <summary>
+        /// The first link among the folders on the way to <paramref name="target"/> and the target
+        /// itself (<see cref="OnTheWay"/>); for the project folder or a folder above it, the target alone.
+        /// </summary>
         private static string? LinkOnTheWay(string project, string target)
         {
-            var relative = Path.GetRelativePath(project, target);
-            if (relative == "." || Path.IsPathRooted(relative) || relative.StartsWith("..", StringComparison.Ordinal))
+            var way = OnTheWay(project, target);
+            if (way.Count == 0)
             {
                 return IsLink(target) ? target : null;
             }
 
-            var current = project;
-            foreach (var segment in relative.Split(Path.DirectorySeparatorChar))
+            return way.Find(IsLink);
+        }
+
+        /// <summary>Whether a folder on the way to <paramref name="target"/>, or the target itself, has an always-excluded name.</summary>
+        private static bool ExcludedOnTheWay(string project, string target, bool folder)
+        {
+            var way = OnTheWay(project, target);
+            for (var index = 0; index < way.Count; index++)
             {
-                current = Path.Combine(current, segment);
-                if (IsLink(current))
+                var parent = Path.GetFileName(Path.GetDirectoryName(way[index])) ?? string.Empty;
+                if (IsAlwaysExcluded(parent + "/" + Path.GetFileName(way[index]), folder || index < way.Count - 1))
                 {
-                    return current;
+                    return true;
                 }
             }
 
-            return null;
+            return false;
         }
+    }
+
+    /// <summary>
+    /// The folders from <paramref name="project"/> down to <paramref name="target"/>, and the target,
+    /// outermost first, leaving out the project folder and every folder above it (contract §11.3:
+    /// those are never inspected). For a target outside the project the list starts below the
+    /// deepest folder the two share; for the project folder or a folder above it, it is empty.
+    /// </summary>
+    private static List<string> OnTheWay(string project, string target)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var way = new List<string>();
+        for (var current = target; current is not null && !IsProjectOrAbove(current, project, comparison); current = Path.GetDirectoryName(current))
+        {
+            way.Add(current);
+        }
+
+        way.Reverse();
+        return way;
+    }
+
+    private static bool IsProjectOrAbove(string folder, string project, StringComparison comparison)
+    {
+        if (string.Equals(Path.TrimEndingDirectorySeparator(folder), Path.TrimEndingDirectorySeparator(project), comparison))
+        {
+            return true;
+        }
+
+        var prefix = Path.EndsInDirectorySeparator(folder) ? folder : folder + Path.DirectorySeparatorChar;
+        return project.StartsWith(prefix, comparison);
     }
 
     /// <summary>One file or folder under a copied folder, never descending into links.</summary>
@@ -523,11 +617,14 @@ internal static class PackCommand
         while (pending.Count > 0)
         {
             var folder = pending.Pop();
+            var folderName = Path.GetFileName(folder);
             foreach (var info in new DirectoryInfo(folder).EnumerateFileSystemInfos().OrderBy(info => info.Name, StringComparer.Ordinal))
             {
                 var relative = Path.GetRelativePath(root, info.FullName).Replace(Path.DirectorySeparatorChar, '/');
                 var isFolder = (info.Attributes & FileAttributes.Directory) != 0;
-                if (IsAlwaysExcluded(relative, isFolder))
+
+                // The containing folder's own name, so node_modules/.cache is found when the copied folder is node_modules.
+                if (IsAlwaysExcluded(folderName + "/" + info.Name, isFolder))
                 {
                     continue;
                 }
@@ -542,7 +639,11 @@ internal static class PackCommand
         }
     }
 
-    /// <summary>Whether a path is one the tool never packs: <c>.git</c>, <c>.vs</c>, <c>obj</c>, <c>node_modules/.cache</c>, <c>*.user</c>, <c>*.pairing.json</c>, <c>pairing.json</c>.</summary>
+    /// <summary>
+    /// Whether the last segment of a <c>/</c>-separated path is a name the tool never packs: <c>.git</c>,
+    /// <c>.vs</c>, <c>obj</c>, <c>node_modules/.cache</c> (the segment before counts here), <c>*.user</c>,
+    /// <c>*.pairing.json</c>, <c>pairing.json</c>. Callers check every segment of a path in turn.
+    /// </summary>
     public static bool IsAlwaysExcluded(string relative, bool folder)
     {
         var segments = relative.Split('/');
@@ -558,10 +659,12 @@ internal static class PackCommand
             return true;
         }
 
-        return !folder && (name.EndsWith(".user", StringComparison.OrdinalIgnoreCase)
-            || name.EndsWith(".pairing.json", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("pairing.json", StringComparison.OrdinalIgnoreCase));
+        return !folder && (name.EndsWith(".user", StringComparison.OrdinalIgnoreCase) || IsPairingName(name));
     }
+
+    /// <summary>Whether a file name is a pairing file's: <c>*.pairing.json</c> or <c>pairing.json</c>.</summary>
+    public static bool IsPairingName(string name) =>
+        name.EndsWith(".pairing.json", StringComparison.OrdinalIgnoreCase) || name.Equals("pairing.json", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Whether a path is a symbolic link, junction or other reparse point.</summary>
     public static bool IsLink(string path)
