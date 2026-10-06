@@ -106,6 +106,15 @@ refuses links and pairing files among the staged files, writes the package
 atomically and verifies it before it reports success. Packing the same files
 twice gives the same bytes.
 
+A copy rule's `include` (default `["**/*"]`) and `exclude` globs are paths below
+its `from`, matched without regard to case. Within a name `*` matches any run of
+characters and `?` exactly one; `**` as a whole segment matches any number of
+folders, including none, and at the end of a glob every file below, as a glob
+ending in `/` does (`src/**` and `src/` are the same). An exclude glob that
+matches a folder, or ends with `**` below it, leaves out the whole folder. A glob
+with a `..` segment, or an empty one, is refused (`package.path`) with its
+position in `extension.pack.json`.
+
 The left-out names apply whether they name a file or a folder (a `.git` file is
 how a Git worktree or submodule points to its repository). They and the link
 check apply to every folder on the way from the project folder to each staged
@@ -127,7 +136,9 @@ excludes `node_modules/**`).
 `pack` never packs its own output. A copied folder that contains the output
 folder (by default `artifacts/` in the project folder) leaves it out, and package
 files directly in the output folder are never copied, even by a copy rule of the
-output folder itself or, with `-o .`, of the project folder.
+output folder itself or, with `-o .`, of the project folder. The output folder is
+recognized however `-o` spells it, including through a junction or symbolic
+link, a substituted drive or an 8.3 short name.
 
 ## Simulation scripts
 

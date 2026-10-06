@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 
-using Microsoft.Extensions.FileSystemGlobbing;
 using VentanaTools.Orbit.Extensions.Packaging;
 
 namespace VentanaTools.Orbit.Extensions.Tool;
@@ -31,20 +30,13 @@ internal sealed class PackCopyRule
     /// <summary>The folder under <c>payload/</c> the files go to; empty for <c>payload/</c> itself.</summary>
     public required string To { get; init; }
 
-    public IReadOnlyList<string> Include { get; init; } = ["**/*"];
+    /// <summary>The globs that select files below <see cref="From"/>; by default every file.</summary>
+    public IReadOnlyList<PackGlob> Include { get; init; } = [PackGlob.Everything];
 
-    public IReadOnlyList<string> Exclude { get; init; } = [];
+    /// <summary>The globs that leave out files, and folders with everything in them.</summary>
+    public IReadOnlyList<PackGlob> Exclude { get; init; } = [];
 
     public required JsonNode FromNode { get; init; }
-
-    /// <summary>The globs as a matcher over paths relative to <see cref="From"/>.</summary>
-    public Matcher Matcher()
-    {
-        var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
-        matcher.AddIncludePatterns(Include);
-        matcher.AddExcludePatterns(Exclude);
-        return matcher;
-    }
 }
 
 /// <summary>A valid <c>extension.pack.json</c>, pack configuration version 1 (contract §11.3).</summary>
@@ -219,13 +211,18 @@ internal static class PackConfigReader
             Index = index,
             From = from,
             To = Normalize(to),
-            Include = m.ContainsKey("include") ? include : ["**/*"],
+            Include = m.ContainsKey("include") ? include : [PackGlob.Everything],
             Exclude = exclude,
             FromNode = m["from"],
         };
     }
 
-    private static List<string>? Globs(Dictionary<string, JsonNode> m, string name, string path, JsonValidator v)
+    /// <summary>
+    /// A copy rule's <c>include</c> or <c>exclude</c>. A glob is relative to the rule's <c>from</c>
+    /// and never leaves it, so one with a <c>..</c> segment, or with no segment, is
+    /// <c>package.path</c> at its own position, as a <c>to</c> outside <c>payload/</c> is.
+    /// </summary>
+    private static List<PackGlob>? Globs(Dictionary<string, JsonNode> m, string name, string path, JsonValidator v)
     {
         if (!m.TryGetValue(name, out var node))
         {
@@ -238,16 +235,22 @@ internal static class PackConfigReader
             return null;
         }
 
-        var globs = new List<string>();
+        var globs = new List<PackGlob>();
         var valid = true;
         for (var i = 0; i < node.Items!.Count; i++)
         {
-            if (v.AsString(node.Items[i], JsonPointer.Append(memberPath, i), element: true) is { } glob)
+            var itemPath = JsonPointer.Append(memberPath, i);
+            if (v.AsString(node.Items[i], itemPath, element: true) is not { } text)
+            {
+                valid = false;
+            }
+            else if (PackGlob.TryParse(text, out var glob))
             {
                 globs.Add(glob);
             }
             else
             {
+                v.Report(DiagnosticCodes.PackagePath, itemPath, node.Items[i]);
                 valid = false;
             }
         }

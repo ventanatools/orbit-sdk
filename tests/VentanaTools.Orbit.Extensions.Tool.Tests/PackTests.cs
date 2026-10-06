@@ -228,8 +228,7 @@ public sealed class PackTests
                 { "from": "tree/.git", "to": "direct" },
                 { "from": "tree/obj", "to": "direct" },
                 { "from": "tree/notes.user", "to": "userfolder" },
-                { "from": "tree/old.pairing.json", "to": "pairingfolder" },
-                { "from": "tree/sub", "to": "parent", "include": ["../*.txt", "../../*.md"] }
+                { "from": "tree/old.pairing.json", "to": "pairingfolder" }
               ]
             }
             """);
@@ -386,7 +385,7 @@ public sealed class PackTests
               "readme": "PACKAGE-README.md",
               "payload": [
                 { "from": "app", "to": "app", "include": ["main.js", "uxp/*.js"] },
-                { "from": "web", "to": "web", "exclude": ["node_modules/**"] }
+                { "from": "web", "to": "web", "exclude": ["node_modules/**", "vendor/**"] }
               ]
             }
             """);
@@ -399,11 +398,150 @@ public sealed class PackTests
         Directory.CreateDirectory(project.Combine("web/node_modules"));
         CreateLink(project.Combine("app/node_modules/@scope/sdk"), outside.Combine("sdk"));
         CreateLink(project.Combine("web/node_modules/sdk"), outside.Combine("sdk"));
+
+        // vendor/** leaves out everything in vendor, so a link that is vendor itself is never reached either.
+        CreateLink(project.Combine("web/vendor"), outside.Combine("sdk"));
         var run = await ToolHarness.RunAsync(project.Path, "pack");
         Assert.True(run.ExitCode == 0, run.ToString());
         Assert.Equal(
             ["README.md", "extension.json", "extension.package.json", "payload/app/main.js", "payload/app/uxp/panel.js", "payload/web/index.js"],
             ReadPackage(project.Combine("artifacts/" + PackageName)).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task AQuestionMarkInAGlobMatchesOneCharacter()
+    {
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [
+                { "from": ".", "to": "one", "include": ["src/a?.js"] },
+                { "from": ".", "to": "single", "include": ["src/?.js"] },
+                { "from": "src", "to": "two", "include": ["??.js"], "exclude": ["?2.js"] }
+              ]
+            }
+            """);
+        foreach (var name in new[] { "a1.js", "a2.js", "b.js", "ab1.js" })
+        {
+            project.Write("src/" + name, "// " + name);
+        }
+
+        var run = await ToolHarness.RunAsync(project.Path, "pack");
+        Assert.True(run.ExitCode == 0, run.ToString());
+        Assert.Equal(
+            ["README.md", "extension.json", "extension.package.json", "payload/one/src/a1.js", "payload/one/src/a2.js", "payload/single/src/b.js",
+                "payload/two/a1.js"],
+            ReadPackage(project.Combine("artifacts/" + PackageName)).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task AGlobThatLeavesItsFolderIsReportedAtItsPosition()
+    {
+        // FileSystemGlobbing threw on a .. after the first segment, which reached the user as tool.internal-error (exit 4).
+        using var project = TestProject.Create(packConfig: """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [
+                { "from": "companion", "to": "companion", "include": ["a/../*.js", "*.cmd"], "exclude": ["vendor/../vendor/*.tgz"] },
+                { "from": "companion", "to": "more", "include": ["../outside/*", ""] }
+              ]
+            }
+            """);
+        foreach (var json in new[] { false, true })
+        {
+            var run = await ToolHarness.RunAsync(project.Path, json ? ["pack", "--json"] : ["pack"]);
+            Assert.True(run.ExitCode == 1, run.ToString());
+            Assert.DoesNotContain("internal", run.Out + run.Error, StringComparison.OrdinalIgnoreCase);
+            if (json)
+            {
+                using var document = JsonDocument.Parse(run.Out);
+                Assert.Equal(
+                    ["pack.config", "package.path", "package.path", "package.path", "package.path"],
+                    document.RootElement.GetProperty("diagnostics").EnumerateArray().Select(diagnostic => diagnostic.GetProperty("code").GetString()));
+                continue;
+            }
+
+            Assert.Equal(
+                ["extension.pack.json(5,59): error package.path: This entry name breaks the path grammar. [/payload/0/include/0]",
+                    "extension.pack.json(5,94): error package.path: This entry name breaks the path grammar. [/payload/0/exclude/0]",
+                    "extension.pack.json(6,54): error package.path: This entry name breaks the path grammar. [/payload/1/include/0]",
+                    "extension.pack.json(6,70): error package.path: This entry name breaks the path grammar. [/payload/1/include/1]",
+                    "extension.pack.json: error pack.config: extension.pack.json is invalid; its own diagnostics follow. []"],
+                ErrorLines(run).Order(StringComparer.Ordinal));
+        }
+
+        Assert.False(File.Exists(project.Combine("artifacts/" + PackageName)));
+    }
+
+    [Fact]
+    public async Task TheOutputFolderIsKnownByWhatItIsNotHowItIsSpelled()
+    {
+        // holder/alias is a junction to holder/real; the project and -o name one folder in two spellings.
+        using var holder = new TempFolder();
+        holder.Write("real/p20/extension.json", TestProject.Manifest(ActiveHost.Id));
+        holder.Write("real/p20/PACKAGE-README.md", "# Tool test\n");
+        holder.Write("real/p20/extension.pack.json", """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [ { "from": ".", "to": "c" } ]
+            }
+            """);
+        CreateLink(holder.Combine("alias"), holder.Combine("real"));
+        foreach (var (project, output) in new[] { ("alias/p20", "real/p20/out"), ("real/p20", "alias/p20/out2") })
+        {
+            string[] pack = ["pack", holder.Combine(project), "-o", holder.Combine(output)];
+            Assert.Equal(0, (await ToolHarness.RunAsync(holder.Path, pack)).ExitCode);
+            var packagePath = holder.Combine(output + "/" + PackageName);
+            var first = File.ReadAllBytes(packagePath);
+
+            var again = await ToolHarness.RunAsync(holder.Path, [.. pack, "--force"]);
+            Assert.True(again.ExitCode == 0, again.ToString());
+            Assert.Equal(first, File.ReadAllBytes(packagePath));
+            Assert.Equal(
+                ["README.md", "extension.json", "extension.package.json", "payload/c/PACKAGE-README.md", "payload/c/extension.json",
+                    "payload/c/extension.pack.json"],
+                ReadPackage(packagePath).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+
+            // The next spelling packs the same project, where this output folder is an ordinary folder.
+            Directory.Delete(holder.Combine(output), recursive: true);
+        }
+    }
+
+    [Fact]
+    public void AFinalPathSeesThroughJunctionsAndLetterCase()
+    {
+        using var holder = new TempFolder();
+        Directory.CreateDirectory(holder.Combine("real/inner"));
+        CreateLink(holder.Combine("alias"), holder.Combine("real"));
+        var final = FinalPath.Of(holder.Combine("real/inner"));
+        Assert.Equal(final, FinalPath.Of(holder.Combine("alias/inner")));
+        Assert.Equal(final, FinalPath.Of(holder.Combine("alias/inner") + Path.DirectorySeparatorChar));
+        Assert.Equal(final, FinalPath.Of(holder.Combine("alias/../real/inner")));
+        Assert.EndsWith(Path.Combine("real", "inner"), final, StringComparison.Ordinal);
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Assert.Equal(final, FinalPath.Of(holder.Combine("ALIAS/INNER")));
+
+        // An 8.3 short name, where the volume makes them.
+        var longFolder = holder.Combine("real/a-folder-with-a-long-name");
+        Directory.CreateDirectory(longFolder);
+        using var process = Process.Start(new ProcessStartInfo("cmd.exe", "/c for %I in (\"" + longFolder + "\") do @echo %~sI")
+        {
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+        })!;
+        var shortFolder = process.StandardOutput.ReadToEnd().Trim();
+        process.WaitForExit();
+        if (shortFolder.Length > 0 && !string.Equals(shortFolder, longFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Equal(FinalPath.Of(longFolder), FinalPath.Of(shortFolder));
+        }
     }
 
     [Fact]
@@ -501,13 +639,11 @@ public sealed class PackTests
         Assert.False(PackCommand.IsAlwaysExcluded(".github"));
         Assert.False(PackCommand.IsAlwaysExcluded("obj/pairing"));
 
-        // Package files directly in the output folder.
-        var output = Path.Combine(Path.GetTempPath(), "project", "artifacts");
-        Assert.True(PackCommand.IsOutputPackage(Path.Combine(output, "example.x-1.0.0" + ActiveHost.Extension), output));
-        Assert.True(PackCommand.IsOutputPackage(Path.Combine(output, "OLD" + ActiveHost.Extension.ToUpperInvariant()), output));
-        Assert.False(PackCommand.IsOutputPackage(Path.Combine(output, "nested", "example.x-1.0.0" + ActiveHost.Extension), output));
-        Assert.False(PackCommand.IsOutputPackage(Path.Combine(output, "notes.txt"), output));
-        Assert.False(PackCommand.IsOutputPackage(Path.Combine(Path.GetTempPath(), "project", "example.x-1.0.0" + ActiveHost.Extension), output));
+        // Package file names, which are never staged directly from the output folder.
+        Assert.True(PackCommand.IsPackageName("example.x-1.0.0" + ActiveHost.Extension));
+        Assert.True(PackCommand.IsPackageName("OLD" + ActiveHost.Extension.ToUpperInvariant()));
+        Assert.False(PackCommand.IsPackageName("notes.txt"));
+        Assert.False(PackCommand.IsPackageName("example.x-1.0.0" + ActiveHost.Extension + ".txt"));
         Assert.True(PackCommand.IsPairingName("Example.X.Pairing.JSON"));
         Assert.True(PackCommand.IsPairingName("pairing.json"));
         Assert.False(PackCommand.IsPairingName("pairing.json.txt"));

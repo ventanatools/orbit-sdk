@@ -11,6 +11,8 @@
     <ToolCommandName>orbit-ext</ToolCommandName>
     <!-- Only the English resources of System.CommandLine; the tool's own text is English. -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- FinalPath calls GetFinalPathNameByHandleW through LibraryImport, whose generated code is unsafe. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- The command name reaches the code only through this attribute (contract §2.8, §11.1). -->
@@ -20,7 +22,6 @@
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <ProjectReference Include="../VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj" />
   </ItemGroup>
 

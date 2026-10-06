@@ -15,6 +15,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="JsonSchema.Net" />
+    <!-- Only for PackGlobTests: copy rule globs select what FileSystemGlobbing, which earlier tool versions used, selected. -->
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <ProjectReference Include="../../src/VentanaTools.Orbit.Extensions.Tool/VentanaTools.Orbit.Extensions.Tool.csproj" />
   </ItemGroup>
 </Project>

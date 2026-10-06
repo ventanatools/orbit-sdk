@@ -3358,9 +3358,24 @@ Copy rule: `{ "from": path, "to": path, "include"?: [glob], "exclude"?: [glob] }
 Later rules replace earlier files of the same name. Names that differ only in
 case, or a file and a folder with one name, are `package.path-conflict`, and a
 staged name outside the entry grammar is `package.path`, both with the source
-file as `file`. Globs support `*`, `**` and `?`. The defaults are
-`include: ["**/*"]` and `exclude: []`. The default output folder is `artifacts/`
-in the project folder.
+file as `file`. The defaults are `include: ["**/*"]` and `exclude: []`. The
+default output folder is `artifacts/` in the project folder.
+
+Globs support `*`, `**` and `?`. A glob is a path below `from`, with `/` or `\`
+between segments, and matches without regard to case:
+
+- within a segment, `*` matches any run of characters and `?` exactly one;
+- `**` as a whole segment matches any number of folders, including none; at the
+  end of a glob it matches every file below (`src/**`), and so does a glob that
+  ends with a separator (`src/`);
+- `*.*` as a whole segment matches every name, a segment that starts with `**.`
+  matches in any folder below (`**.js` is `**/*.js`), and elsewhere in a segment
+  `**` is `*`;
+- leading separators, empty segments and `.` segments are ignored;
+- a glob with a `..` segment, or with no segment at all, is `package.path` at
+  its position in `extension.pack.json`, since a glob never leaves `from`;
+- an exclude glob that matches a folder, or that ends with `**` below it, leaves
+  out the folder with everything in it.
 
 The tool always:
 
@@ -3378,7 +3393,10 @@ The tool always:
   leaves it out, and no package file (a name ending in a package file extension
   of `hosts.json`) directly in the output folder is staged, even when a copy
   rule's `from` is the output folder or the output folder is the project
-  folder; a copy rule whose `from` lies inside the output folder still copies;
+  folder; a copy rule whose `from` lies inside the output folder still copies.
+  The output folder is the folder `-o` names, however it is spelled: a path
+  through a junction or symbolic link, a substituted drive or an 8.3 short name
+  is compared by the final path the file system resolves it to;
 - refuses (`pack.secret`) any staged file of at most 4,096 bytes that contains
   both a quoted `pipeName` and a quoted `secret` member, JSON or not;
 - refuses symbolic links and junctions (`pack.link`) on the way from the project
