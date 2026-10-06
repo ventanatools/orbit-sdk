@@ -1,18 +1,21 @@
 # Source provenance
 
-This repository starts with a curated export of the public SDK components from
-the Orbit schema-2/protocol-2 implementation, followed by portable repository
-scaffolding, independent tests and public author documentation. No application
-Git history, application source, signing material, credentials or proprietary
-host implementation is included.
+This repository is the canonical source of Orbit's extension SDK: the author
+package, the test kit, the tool, the templates, the Node SDK, the samples, the
+fixtures, the schemas and the contract. Changes to any of them are made here
+first.
 
-The initial runtime library behavior matches the implementation at Orbit source
-revision `4cadbb0c835ea7d6a0c4fbe53d9f092aa33d8e0a`. The package metadata changes
-to a preview version and Apache-2.0, source license headers and public test references
-are intentional; versioned wire identifiers remain unchanged. Sample source behavior is preserved, with consumer references,
-build instructions and license/notice metadata adapted for this repository.
+The Orbit app consumes this repository as a Git submodule pinned to a commit of
+it, and builds the author package from that source. The app keeps no copy of the
+SDK's source, and only its proprietary host implementation and its host-to-SDK
+interoperability tests stay in the app's own repository.
 
-The SDK and Protocol library copies in the application repository remain on the
-same public license. Changes to their shared runtime sources must be synchronized
-and verified against both standalone SDK tests and private host integration tests
-until the application consumes independently released SDK/Protocol packages.
+The repository began as a curated export of the public SDK components of the
+Orbit app's protocol-2 implementation, with portable build scaffolding,
+independent tests and author documentation added; contract generation 3 then
+rewrote it. It contains no application history, application source, signing
+material, credentials or proprietary host code, and no history from a private
+repository.
+
+Packages are built only from this public repository, so their SourceLink
+information always points here.

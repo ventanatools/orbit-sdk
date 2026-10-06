@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/ventanatools/orbit-sdk/security/advisories/new
+    about: Report vulnerabilities privately. Never put vulnerability details in a public issue.
+  - name: Developer documentation
+    url: https://dev.ventana.tools/
+    about: Guides for building, testing and packing extensions.

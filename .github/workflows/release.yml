@@ -1,0 +1,46 @@
+name: Release packages
+
+# Builds, tests, packs and validates the release packages with the version in
+# Directory.Build.props, and keeps them as a workflow artifact for 30 days. It publishes
+# nothing: no package push, tag, GitHub release or attestation (docs/releasing.md).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  packages:
+    name: Build, test, pack and validate
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+      # dotnet pack runs package validation (EnablePackageValidation) for every library.
+      - name: Build and pack
+        shell: powershell
+        run: ./tools/build.ps1 -RepositoryVersion
+      - name: Test and verify
+        shell: powershell
+        run: ./tools/verify.ps1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-packages
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+            artifacts/packages/*.tgz
+          if-no-files-found: error
+          retention-days: 30

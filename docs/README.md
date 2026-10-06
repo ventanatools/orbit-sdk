@@ -1,21 +1,23 @@
-# Orbit extension author guides
+# Notes in this repository
 
-The public developer site is [dev.ventana.tools](https://dev.ventana.tools/orbit/).
-These repository guides travel with the SDK source and describe the current
-protocol-2 preview:
+The author guides live on the developer site,
+[dev.ventana.tools](https://dev.ventana.tools/): getting started, the manifest,
+pairing, packaging, testing, the tool and the samples. This folder keeps only
+what travels with the source:
 
-- [SDK and handler lifecycle](extension-sdk.md)
-- [Manifest, pairing, sessions, and wire protocol](extension-protocol.md)
-- [Packaging, install, enable, and update](extension-distribution.md)
-- [Countdown and Photoshop examples](extension-examples.md)
-- [Preview availability and remaining release work](release-status.md)
+- [The extension contract, generation 3](design/contract-v3.md): the normative
+  specification of the manifest, diagnostics, package archive, pairing file,
+  wire protocol, reason codes, the .NET and Node SDK surfaces, the tool and the
+  versioning policy. When the code and the contract disagree, one of them has a
+  bug; the fixtures in `fixtures/` settle what the code does today.
+- [Release status](release-status.md): what this preview contains and what
+  remains before a release.
+- [Releasing](releasing.md): how a maintainer builds the release packages, and
+  what has to happen before anything is published.
 
-The SDK, tools, and samples are covered by [Apache-2.0](../LICENSE). Orbit
-application code remains proprietary and is not included here. Authors keep
-ownership of independently created extensions and choose their own license.
+The [changelog](../CHANGELOG.md) lists every change to the packages, including
+every break from the earlier preview.
 
-NuGet packages are currently built locally. Use an Orbit version with
-**Settings > Extensions** enabled; real Store-signed compatibility remains
-unverified. This repository supplies no application build. Companions start
-manually, and the packages are developer examples requiring the runtimes listed
-in their READMEs. Lollipop compatibility and a marketplace remain future work.
+To report a problem with the developer site or these notes, open a
+**Documentation** issue in this repository. Report vulnerabilities privately, as
+[SECURITY.md](../SECURITY.md) describes.

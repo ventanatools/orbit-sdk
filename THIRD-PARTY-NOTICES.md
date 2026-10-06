@@ -1,23 +1,45 @@
-# Third-party dependencies
+# Third-party notices
 
-The `VentanaTools.Orbit.Extensions` library has no third-party NuGet dependencies;
-it uses the .NET runtime supplied by the recipient. This repository's licenses
-(Apache-2.0, and MIT-0 for the samples) apply to its own code, not to
-dependencies or externally installed apps.
+This repository's licences (Apache-2.0, and MIT-0 for the samples and templates)
+cover its own code. Third-party packages keep their own licences, listed here.
 
-The public tests restore `xunit` 2.9.3, `xunit.runner.visualstudio` 4.0.0 and
-`Microsoft.NET.Test.Sdk` 18.10.1 from nuget.org, and the packable projects use the
-build-time analyzer `Microsoft.CodeAnalysis.PublicApiAnalyzers` 5.6.0. Their
-package licenses and notices remain applicable; they are build and test
-dependencies and are not included in the SDK NuGet packages. FluentAssertions is
-not a public test dependency.
+## In the packages
 
-The Photoshop example uses `ws` 8.22.0, `@noble/hashes` 2.4.0 and `esbuild` 0.28.2.
-Their MIT license texts are retained in
-[the example's notices](samples/photoshop-extension/THIRD-PARTY-NOTICES.md) and
-`samples/photoshop-extension/licenses/`. The UXP build also copies the noble
-license alongside its generated crypto bundle and preserves bundled notices.
-Example package staging includes the dependency notices and license texts.
+- **`VentanaTools.Orbit.Extensions`** and **`VentanaTools.Orbit.Extensions.Testing`**
+  have no third-party dependencies; they use the .NET runtime the recipient
+  installs.
+- **`VentanaTools.Orbit.Extensions.Tool`** carries, as a .NET tool does, the
+  assemblies it runs with: `System.CommandLine` 2.0.12 and
+  `Microsoft.Extensions.FileSystemGlobbing` 10.0.12, both © .NET Foundation and
+  Contributors, under the MIT licence
+  (<https://github.com/dotnet/command-line-api/blob/main/LICENSE.md> and
+  <https://github.com/dotnet/runtime/blob/main/LICENSE.TXT>). It also carries
+  this repository's own author, Testing and Templates packages and the Node SDK
+  tarball, under the licences stated in them.
+- **`VentanaTools.Orbit.Extensions.Templates`** contains only this repository's
+  MIT-0 template content. The projects it creates restore `xunit`,
+  `xunit.runner.visualstudio` and `Microsoft.NET.Test.Sdk` from nuget.org under
+  their own licences.
+- **`@ventanatools/orbit-extensions`** (the Node SDK) has no dependencies.
 
-Adobe Photoshop, its UXP tools, Node.js and .NET are separately obtained software
-with their own terms. No Adobe software or product artwork is distributed here.
+## Build and test dependencies
+
+These are restored from nuget.org or npm to build and test this repository and
+are not included in any package: `xunit` 2.9.3 and `xunit.runner.visualstudio`
+4.0.0 (Apache-2.0, .NET Foundation), `Microsoft.NET.Test.Sdk` 18.10.1,
+`Microsoft.CodeAnalysis.PublicApiAnalyzers` 5.6.0, `Microsoft.CodeAnalysis.CSharp`
+5.9.0 and `Microsoft.Extensions.TimeProvider.Testing` 10.10.0 (MIT, Microsoft and
+the .NET Foundation), and `JsonSchema.Net` 9.4.0 (MIT, Greg Dennis). The SDK's
+tests use xUnit's own assertions; FluentAssertions is not a dependency.
+
+## Samples
+
+The Photoshop sample uses `ws` 8.22.0, `@noble/hashes` 2.4.0 and `esbuild`
+0.28.2, all under the MIT licence. Their licence texts are in
+[the sample's notices](samples/photoshop-extension/THIRD-PARTY-NOTICES.md) and
+`samples/photoshop-extension/licenses/`; its UXP build copies the noble licence
+beside the crypto bundle it generates, and its package carries the notices and
+licence texts.
+
+Adobe Photoshop, its UXP tools, Node.js and .NET are obtained separately under
+their own terms. No Adobe software or product artwork is distributed here.
