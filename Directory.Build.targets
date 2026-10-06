@@ -1,0 +1,12 @@
+<Project>
+  <!-- Exact dependency ranges between sibling packages. The packages version in lockstep, and the
+       Testing package uses the author package's internals, so a packable project's references to
+       other projects of this repository are written to the nuspec as [version] instead of the
+       default minimum version (contract §9). -->
+  <Target Name="_VentanaExactProjectReferenceVersions" AfterTargets="_GetProjectReferenceVersions"
+          Condition="'$(IsPackable)' == 'true'">
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)" ProjectVersion="[$(Version)]" />
+    </ItemGroup>
+  </Target>
+</Project>

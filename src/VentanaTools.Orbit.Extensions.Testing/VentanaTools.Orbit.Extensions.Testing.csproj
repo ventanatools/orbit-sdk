@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\eng\Ventana.Package.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <AssemblyName>VentanaTools.Orbit.Extensions.Testing</AssemblyName>
+    <RootNamespace>VentanaTools.Orbit.Extensions.Testing</RootNamespace>
+    <PackageId>VentanaTools.Orbit.Extensions.Testing</PackageId>
+    <Description>Test kit for Orbit extension authors: recording sessions, an in-memory test host that runs the real companion client, and contract checks. Works with any test framework.</Description>
+    <IsPackable>true</IsPackable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Testing uses the author package's internal in-memory transport seam, so the package depends on
+         exactly the same version (Directory.Build.targets writes the range as [version]). -->
+    <ProjectReference Include="..\VentanaTools.Orbit.Extensions\VentanaTools.Orbit.Extensions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+</Project>

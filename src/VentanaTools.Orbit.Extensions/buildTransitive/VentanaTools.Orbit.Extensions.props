@@ -1,0 +1,7 @@
+<Project>
+  <!-- Opt-in global using of the author package's root namespace (contract §9.2). A project that sets
+       VentanaToolsImplicitUsings to true can drop the using directive; nothing else depends on it. -->
+  <ItemGroup Condition="'$(VentanaToolsImplicitUsings)' == 'true'">
+    <Using Include="VentanaTools.Orbit.Extensions" />
+  </ItemGroup>
+</Project>

@@ -1,4 +1,59 @@
 #nullable enable
+VentanaTools.Orbit.Extensions.CompanionApp
+VentanaTools.Orbit.Extensions.CompanionAppOptions
+VentanaTools.Orbit.Extensions.CompanionAppOptions.Client.get -> VentanaTools.Orbit.Extensions.CompanionClientOptions?
+VentanaTools.Orbit.Extensions.CompanionAppOptions.Client.init -> void
+VentanaTools.Orbit.Extensions.CompanionAppOptions.CompanionAppOptions() -> void
+VentanaTools.Orbit.Extensions.CompanionAppOptions.HandlerFaulted.get -> System.Action<VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs!>?
+VentanaTools.Orbit.Extensions.CompanionAppOptions.HandlerFaulted.init -> void
+VentanaTools.Orbit.Extensions.CompanionAppOptions.ManifestPath.get -> string?
+VentanaTools.Orbit.Extensions.CompanionAppOptions.ManifestPath.init -> void
+VentanaTools.Orbit.Extensions.CompanionAppOptions.Output.get -> System.IO.TextWriter?
+VentanaTools.Orbit.Extensions.CompanionAppOptions.Output.init -> void
+VentanaTools.Orbit.Extensions.CompanionAppOptions.PairingPath.get -> string?
+VentanaTools.Orbit.Extensions.CompanionAppOptions.PairingPath.init -> void
+VentanaTools.Orbit.Extensions.CompanionAppOptions.StatusChanged.get -> System.Action<VentanaTools.Orbit.Extensions.StatusChangedEventArgs!>?
+VentanaTools.Orbit.Extensions.CompanionAppOptions.StatusChanged.init -> void
+VentanaTools.Orbit.Extensions.CompanionAppOptions.WatchFiles.get -> bool
+VentanaTools.Orbit.Extensions.CompanionAppOptions.WatchFiles.init -> void
+VentanaTools.Orbit.Extensions.CompanionArguments
+VentanaTools.Orbit.Extensions.CompanionArguments.CompanionArguments() -> void
+VentanaTools.Orbit.Extensions.CompanionArguments.ManifestPath.get -> string?
+VentanaTools.Orbit.Extensions.CompanionArguments.ManifestPath.init -> void
+VentanaTools.Orbit.Extensions.CompanionArguments.PairingPath.get -> string?
+VentanaTools.Orbit.Extensions.CompanionArguments.PairingPath.init -> void
+VentanaTools.Orbit.Extensions.CompanionArguments.Remaining.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VentanaTools.Orbit.Extensions.CompanionArguments.Remaining.init -> void
+VentanaTools.Orbit.Extensions.CompanionArguments.Verbose.get -> bool
+VentanaTools.Orbit.Extensions.CompanionArguments.Verbose.init -> void
+VentanaTools.Orbit.Extensions.CompanionClient
+VentanaTools.Orbit.Extensions.CompanionClient.CompanionClient(VentanaTools.Orbit.Extensions.Pairing! pairing, VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.IContributionHandler! handler, VentanaTools.Orbit.Extensions.CompanionClientOptions? options = null) -> void
+VentanaTools.Orbit.Extensions.CompanionClient.HandlerFaulted -> System.EventHandler<VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs!>?
+VentanaTools.Orbit.Extensions.CompanionClient.RunAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.CompanionClient.State.get -> VentanaTools.Orbit.Extensions.ConnectionState
+VentanaTools.Orbit.Extensions.CompanionClient.StatusChanged -> System.EventHandler<VentanaTools.Orbit.Extensions.StatusChangedEventArgs!>?
+VentanaTools.Orbit.Extensions.CompanionClientOptions
+VentanaTools.Orbit.Extensions.CompanionClientOptions.CompanionClientOptions() -> void
+VentanaTools.Orbit.Extensions.CompanionClientOptions.HandlerStopTimeout.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.CompanionClientOptions.HandlerStopTimeout.init -> void
+VentanaTools.Orbit.Extensions.CompanionClientOptions.HostAbsentMaxRetryDelay.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.CompanionClientOptions.HostAbsentMaxRetryDelay.init -> void
+VentanaTools.Orbit.Extensions.CompanionClientOptions.InitialRetryDelay.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.CompanionClientOptions.InitialRetryDelay.init -> void
+VentanaTools.Orbit.Extensions.CompanionClientOptions.MaxRetryDelay.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.CompanionClientOptions.MaxRetryDelay.init -> void
+VentanaTools.Orbit.Extensions.CompanionClientOptions.RetryJitter.get -> double
+VentanaTools.Orbit.Extensions.CompanionClientOptions.RetryJitter.init -> void
+VentanaTools.Orbit.Extensions.CompanionClientOptions.StableConnection.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.CompanionClientOptions.StableConnection.init -> void
+VentanaTools.Orbit.Extensions.CompanionClientOptions.TimeProvider.get -> System.TimeProvider!
+VentanaTools.Orbit.Extensions.CompanionClientOptions.TimeProvider.init -> void
+VentanaTools.Orbit.Extensions.ConnectionState
+VentanaTools.Orbit.Extensions.ConnectionState.Connected = 3 -> VentanaTools.Orbit.Extensions.ConnectionState
+VentanaTools.Orbit.Extensions.ConnectionState.Connecting = 2 -> VentanaTools.Orbit.Extensions.ConnectionState
+VentanaTools.Orbit.Extensions.ConnectionState.NotStarted = 1 -> VentanaTools.Orbit.Extensions.ConnectionState
+VentanaTools.Orbit.Extensions.ConnectionState.Stopped = 5 -> VentanaTools.Orbit.Extensions.ConnectionState
+VentanaTools.Orbit.Extensions.ConnectionState.Waiting = 4 -> VentanaTools.Orbit.Extensions.ConnectionState
 VentanaTools.Orbit.Extensions.Contribution
 VentanaTools.Orbit.Extensions.Contribution.Contribution() -> void
 VentanaTools.Orbit.Extensions.Contribution.Description.get -> string!
@@ -13,6 +68,16 @@ VentanaTools.Orbit.Extensions.Contribution.Provides.get -> VentanaTools.Orbit.Ex
 VentanaTools.Orbit.Extensions.Contribution.Provides.init -> void
 VentanaTools.Orbit.Extensions.Contribution.Settings.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.Setting!>!
 VentanaTools.Orbit.Extensions.Contribution.Settings.init -> void
+VentanaTools.Orbit.Extensions.ContributionHandler
+VentanaTools.Orbit.Extensions.ContributionHandler.ContributionHandler() -> void
+VentanaTools.Orbit.Extensions.ContributionRouter
+VentanaTools.Orbit.Extensions.ContributionRouter.ContributionRouter() -> void
+VentanaTools.Orbit.Extensions.ContributionRouter.FindUnmapped(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest) -> System.Collections.Generic.IReadOnlyList<string!>!
+VentanaTools.Orbit.Extensions.ContributionRouter.InvokeAsync(VentanaTools.Orbit.Extensions.Invocation! invocation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.InvokeResult>!
+VentanaTools.Orbit.Extensions.ContributionRouter.Map(string! contributionId, VentanaTools.Orbit.Extensions.IContributionHandler! handler) -> VentanaTools.Orbit.Extensions.ContributionRouter!
+VentanaTools.Orbit.Extensions.ContributionRouter.MapInvoke(string! contributionId, System.Func<VentanaTools.Orbit.Extensions.Invocation!, System.Threading.CancellationToken, System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.InvokeResult>!>! invoke) -> VentanaTools.Orbit.Extensions.ContributionRouter!
+VentanaTools.Orbit.Extensions.ContributionRouter.MapSession(string! contributionId, System.Func<VentanaTools.Orbit.Extensions.Session!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! run) -> VentanaTools.Orbit.Extensions.ContributionRouter!
+VentanaTools.Orbit.Extensions.ContributionRouter.RunSessionAsync(VentanaTools.Orbit.Extensions.Session! session, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 VentanaTools.Orbit.Extensions.ContributionStrings
 VentanaTools.Orbit.Extensions.ContributionStrings.ContributionStrings() -> void
 VentanaTools.Orbit.Extensions.ContributionStrings.Description.get -> string?
@@ -100,6 +165,24 @@ VentanaTools.Orbit.Extensions.ExtensionStrings.Schema.get -> string?
 VentanaTools.Orbit.Extensions.ExtensionStrings.Schema.init -> void
 VentanaTools.Orbit.Extensions.ExtensionStrings.SchemaVersion.get -> int
 VentanaTools.Orbit.Extensions.ExtensionStrings.SchemaVersion.init -> void
+VentanaTools.Orbit.Extensions.Face
+VentanaTools.Orbit.Extensions.Face.<Clone>$() -> VentanaTools.Orbit.Extensions.Face!
+VentanaTools.Orbit.Extensions.Face.Detail.get -> string?
+VentanaTools.Orbit.Extensions.Face.Detail.init -> void
+VentanaTools.Orbit.Extensions.Face.Equals(VentanaTools.Orbit.Extensions.Face? other) -> bool
+VentanaTools.Orbit.Extensions.Face.Face() -> void
+VentanaTools.Orbit.Extensions.Face.GoodFor.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.Face.GoodFor.init -> void
+VentanaTools.Orbit.Extensions.Face.Line1.get -> VentanaTools.Orbit.Extensions.FaceLine?
+VentanaTools.Orbit.Extensions.Face.Line1.init -> void
+VentanaTools.Orbit.Extensions.Face.Line2.get -> VentanaTools.Orbit.Extensions.FaceLine?
+VentanaTools.Orbit.Extensions.Face.Line2.init -> void
+VentanaTools.Orbit.Extensions.Face.Picture.get -> VentanaTools.Orbit.Extensions.FacePicture!
+VentanaTools.Orbit.Extensions.Face.Picture.init -> void
+VentanaTools.Orbit.Extensions.Face.Renew.get -> bool
+VentanaTools.Orbit.Extensions.Face.Renew.init -> void
+VentanaTools.Orbit.Extensions.Face.State.get -> VentanaTools.Orbit.Extensions.FaceState
+VentanaTools.Orbit.Extensions.Face.State.init -> void
 VentanaTools.Orbit.Extensions.FaceLine
 VentanaTools.Orbit.Extensions.FaceLine.FaceLine(VentanaTools.Orbit.Extensions.FaceLine! original) -> void
 VentanaTools.Orbit.Extensions.FacePicture
@@ -121,6 +204,17 @@ VentanaTools.Orbit.Extensions.GlyphPicture.Equals(VentanaTools.Orbit.Extensions.
 VentanaTools.Orbit.Extensions.GlyphPicture.Glyph.get -> string!
 VentanaTools.Orbit.Extensions.GlyphPicture.Glyph.init -> void
 VentanaTools.Orbit.Extensions.GlyphPicture.GlyphPicture() -> void
+VentanaTools.Orbit.Extensions.HandlerFault
+VentanaTools.Orbit.Extensions.HandlerFault.Exception = 1 -> VentanaTools.Orbit.Extensions.HandlerFault
+VentanaTools.Orbit.Extensions.HandlerFault.IgnoredCancellation = 2 -> VentanaTools.Orbit.Extensions.HandlerFault
+VentanaTools.Orbit.Extensions.HandlerFault.InvalidResult = 4 -> VentanaTools.Orbit.Extensions.HandlerFault
+VentanaTools.Orbit.Extensions.HandlerFault.SessionCapacity = 3 -> VentanaTools.Orbit.Extensions.HandlerFault
+VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs
+VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs.ContributionId.get -> string!
+VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs.Exception.get -> System.Exception?
+VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs.Kind.get -> VentanaTools.Orbit.Extensions.HandlerFault
+VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs.RequestId.get -> string?
+VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs.SessionId.get -> string?
 VentanaTools.Orbit.Extensions.HostIdentity
 VentanaTools.Orbit.Extensions.HostIdentity.HostIdentity() -> void
 VentanaTools.Orbit.Extensions.HostIdentity.Id.get -> string!
@@ -143,9 +237,20 @@ VentanaTools.Orbit.Extensions.HostRegistry
 VentanaTools.Orbit.Extensions.HostStatus
 VentanaTools.Orbit.Extensions.HostStatus.Active = 1 -> VentanaTools.Orbit.Extensions.HostStatus
 VentanaTools.Orbit.Extensions.HostStatus.Reserved = 2 -> VentanaTools.Orbit.Extensions.HostStatus
+VentanaTools.Orbit.Extensions.IContributionHandler
+VentanaTools.Orbit.Extensions.IContributionHandler.InvokeAsync(VentanaTools.Orbit.Extensions.Invocation! invocation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.InvokeResult>!
+VentanaTools.Orbit.Extensions.IContributionHandler.RunSessionAsync(VentanaTools.Orbit.Extensions.Session! session, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 VentanaTools.Orbit.Extensions.IdOrigin
 VentanaTools.Orbit.Extensions.IdOrigin.FirstParty = 1 -> VentanaTools.Orbit.Extensions.IdOrigin
 VentanaTools.Orbit.Extensions.IdOrigin.ThirdParty = 2 -> VentanaTools.Orbit.Extensions.IdOrigin
+VentanaTools.Orbit.Extensions.Invocation
+VentanaTools.Orbit.Extensions.Invocation.RequestId.get -> string!
+VentanaTools.Orbit.Extensions.Invocation.Session.get -> VentanaTools.Orbit.Extensions.Session!
+VentanaTools.Orbit.Extensions.InvokeResult
+VentanaTools.Orbit.Extensions.InvokeResult.Equals(VentanaTools.Orbit.Extensions.InvokeResult other) -> bool
+VentanaTools.Orbit.Extensions.InvokeResult.Failure.get -> VentanaTools.Orbit.Extensions.Failure?
+VentanaTools.Orbit.Extensions.InvokeResult.InvokeResult() -> void
+VentanaTools.Orbit.Extensions.InvokeResult.Outcome.get -> VentanaTools.Orbit.Extensions.Outcome
 VentanaTools.Orbit.Extensions.ManifestReadOptions
 VentanaTools.Orbit.Extensions.ManifestReadOptions.AllowExperimentalCapabilities.get -> bool
 VentanaTools.Orbit.Extensions.ManifestReadOptions.AllowExperimentalCapabilities.init -> void
@@ -257,6 +362,9 @@ VentanaTools.Orbit.Extensions.Provides
 VentanaTools.Orbit.Extensions.Provides.Face = 2 -> VentanaTools.Orbit.Extensions.Provides
 VentanaTools.Orbit.Extensions.Provides.Invoke = 1 -> VentanaTools.Orbit.Extensions.Provides
 VentanaTools.Orbit.Extensions.Provides.None = 0 -> VentanaTools.Orbit.Extensions.Provides
+VentanaTools.Orbit.Extensions.PublishResult
+VentanaTools.Orbit.Extensions.PublishResult.Accepted = 1 -> VentanaTools.Orbit.Extensions.PublishResult
+VentanaTools.Orbit.Extensions.PublishResult.SessionEnded = 2 -> VentanaTools.Orbit.Extensions.PublishResult
 VentanaTools.Orbit.Extensions.Publisher
 VentanaTools.Orbit.Extensions.Publisher.Name.get -> string!
 VentanaTools.Orbit.Extensions.Publisher.Name.init -> void
@@ -290,6 +398,20 @@ VentanaTools.Orbit.Extensions.ReasonCodeInfo.IsViolation.init -> void
 VentanaTools.Orbit.Extensions.ReasonCodeInfo.PreAuthentication.get -> bool
 VentanaTools.Orbit.Extensions.ReasonCodeInfo.PreAuthentication.init -> void
 VentanaTools.Orbit.Extensions.ReasonCodeInfo.ReasonCodeInfo() -> void
+VentanaTools.Orbit.Extensions.Session
+VentanaTools.Orbit.Extensions.Session.ClearFace() -> VentanaTools.Orbit.Extensions.PublishResult
+VentanaTools.Orbit.Extensions.Session.ContributionId.get -> string!
+VentanaTools.Orbit.Extensions.Session.Fail(VentanaTools.Orbit.Extensions.Failure failure) -> VentanaTools.Orbit.Extensions.PublishResult
+VentanaTools.Orbit.Extensions.Session.HostCapabilities.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+VentanaTools.Orbit.Extensions.Session.Id.get -> string!
+VentanaTools.Orbit.Extensions.Session.IsActive.get -> bool
+VentanaTools.Orbit.Extensions.Session.Provides.get -> VentanaTools.Orbit.Extensions.Provides
+VentanaTools.Orbit.Extensions.Session.SetFace(VentanaTools.Orbit.Extensions.Face! face) -> VentanaTools.Orbit.Extensions.PublishResult
+VentanaTools.Orbit.Extensions.Session.Settings.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+VentanaTools.Orbit.Extensions.Session.Supports(string! capabilityId) -> bool
+VentanaTools.Orbit.Extensions.Session.Time.get -> System.TimeProvider!
+VentanaTools.Orbit.Extensions.Session.UiCulture.get -> System.Globalization.CultureInfo!
+VentanaTools.Orbit.Extensions.Session.UiLanguage.get -> string!
 VentanaTools.Orbit.Extensions.Setting
 VentanaTools.Orbit.Extensions.Setting.Choices.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.SettingChoice!>!
 VentanaTools.Orbit.Extensions.Setting.Choices.init -> void
@@ -320,6 +442,14 @@ VentanaTools.Orbit.Extensions.SettingStrings.Description.init -> void
 VentanaTools.Orbit.Extensions.SettingStrings.Name.get -> string?
 VentanaTools.Orbit.Extensions.SettingStrings.Name.init -> void
 VentanaTools.Orbit.Extensions.SettingStrings.SettingStrings() -> void
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs.Attempt.get -> int
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs.Host.get -> VentanaTools.Orbit.Extensions.HostIdentity?
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs.ProtocolVersion.get -> int?
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs.Reason.get -> VentanaTools.Orbit.Extensions.ReasonCode?
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs.RetryIn.get -> System.TimeSpan?
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs.ServerVerified.get -> bool
+VentanaTools.Orbit.Extensions.StatusChangedEventArgs.State.get -> VentanaTools.Orbit.Extensions.ConnectionState
 VentanaTools.Orbit.Extensions.StringsReadOptions
 VentanaTools.Orbit.Extensions.StringsReadOptions.KnownHosts.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.HostInfo!>!
 VentanaTools.Orbit.Extensions.StringsReadOptions.KnownHosts.init -> void
@@ -688,6 +818,9 @@ const VentanaTools.Orbit.Extensions.Wire.ProtocolVersions.Label = "Ventana.Exten
 const VentanaTools.Orbit.Extensions.Wire.ProtocolVersions.Max = 3 -> int
 const VentanaTools.Orbit.Extensions.Wire.ProtocolVersions.Min = 3 -> int
 override VentanaTools.Orbit.Extensions.Diagnostic.ToString() -> string!
+override VentanaTools.Orbit.Extensions.Face.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.Face.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.Face.ToString() -> string!
 override VentanaTools.Orbit.Extensions.FaceLine.Equals(object? obj) -> bool
 override VentanaTools.Orbit.Extensions.FaceLine.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.FaceLine.ToString() -> string!
@@ -698,6 +831,9 @@ override VentanaTools.Orbit.Extensions.GlyphPicture.<Clone>$() -> VentanaTools.O
 override VentanaTools.Orbit.Extensions.GlyphPicture.Equals(object? obj) -> bool
 override VentanaTools.Orbit.Extensions.GlyphPicture.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.GlyphPicture.ToString() -> string!
+override VentanaTools.Orbit.Extensions.InvokeResult.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.InvokeResult.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.InvokeResult.ToString() -> string!
 override VentanaTools.Orbit.Extensions.NoPicture.<Clone>$() -> VentanaTools.Orbit.Extensions.NoPicture!
 override VentanaTools.Orbit.Extensions.NoPicture.Equals(object? obj) -> bool
 override VentanaTools.Orbit.Extensions.NoPicture.GetHashCode() -> int
@@ -728,12 +864,16 @@ override VentanaTools.Orbit.Extensions.Wire.StopSessionMessage.Type.get -> strin
 override sealed VentanaTools.Orbit.Extensions.GlyphPicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
 override sealed VentanaTools.Orbit.Extensions.NoPicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
 override sealed VentanaTools.Orbit.Extensions.TextLine.Equals(VentanaTools.Orbit.Extensions.FaceLine? other) -> bool
+static VentanaTools.Orbit.Extensions.CompanionApp.ParseArguments(string![]! args) -> VentanaTools.Orbit.Extensions.CompanionArguments!
+static VentanaTools.Orbit.Extensions.CompanionApp.RunAsync(string![]! args, VentanaTools.Orbit.Extensions.IContributionHandler! handler, VentanaTools.Orbit.Extensions.CompanionAppOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 static VentanaTools.Orbit.Extensions.ExtensionIds.Classify(string? id, VentanaTools.Orbit.Extensions.IdOrigin origin, System.Collections.Generic.IReadOnlyCollection<string!>? reservedPublishers = null) -> string?
 static VentanaTools.Orbit.Extensions.ExtensionIds.IsInNamespace(string? id, string? root) -> bool
 static VentanaTools.Orbit.Extensions.ExtensionIds.IsSegment(System.ReadOnlySpan<char> value) -> bool
 static VentanaTools.Orbit.Extensions.ExtensionIds.IsValid(string? id, VentanaTools.Orbit.Extensions.IdOrigin origin, System.Collections.Generic.IReadOnlyCollection<string!>? reservedPublishers = null) -> bool
 static VentanaTools.Orbit.Extensions.ExtensionIds.OriginOf(string? id) -> VentanaTools.Orbit.Extensions.IdOrigin
 static VentanaTools.Orbit.Extensions.ExtensionIds.ReservedPublishers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static VentanaTools.Orbit.Extensions.Face.operator !=(VentanaTools.Orbit.Extensions.Face? left, VentanaTools.Orbit.Extensions.Face? right) -> bool
+static VentanaTools.Orbit.Extensions.Face.operator ==(VentanaTools.Orbit.Extensions.Face? left, VentanaTools.Orbit.Extensions.Face? right) -> bool
 static VentanaTools.Orbit.Extensions.FaceLine.implicit operator VentanaTools.Orbit.Extensions.FaceLine?(string? text) -> VentanaTools.Orbit.Extensions.FaceLine?
 static VentanaTools.Orbit.Extensions.FaceLine.operator !=(VentanaTools.Orbit.Extensions.FaceLine? left, VentanaTools.Orbit.Extensions.FaceLine? right) -> bool
 static VentanaTools.Orbit.Extensions.FaceLine.operator ==(VentanaTools.Orbit.Extensions.FaceLine? left, VentanaTools.Orbit.Extensions.FaceLine? right) -> bool
@@ -747,6 +887,12 @@ static VentanaTools.Orbit.Extensions.HostRegistry.Find(string! id) -> VentanaToo
 static VentanaTools.Orbit.Extensions.HostRegistry.FirstActive(System.Collections.Generic.IEnumerable<string!>! hostIds, System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.HostInfo!>? knownHosts = null) -> VentanaTools.Orbit.Extensions.HostInfo?
 static VentanaTools.Orbit.Extensions.HostRegistry.Known.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.HostInfo!>!
 static VentanaTools.Orbit.Extensions.HostRegistry.ReservedIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static VentanaTools.Orbit.Extensions.InvokeResult.Done.get -> VentanaTools.Orbit.Extensions.InvokeResult
+static VentanaTools.Orbit.Extensions.InvokeResult.Failed(VentanaTools.Orbit.Extensions.Failure? failure = null) -> VentanaTools.Orbit.Extensions.InvokeResult
+static VentanaTools.Orbit.Extensions.InvokeResult.Refused.get -> VentanaTools.Orbit.Extensions.InvokeResult
+static VentanaTools.Orbit.Extensions.InvokeResult.Unsupported.get -> VentanaTools.Orbit.Extensions.InvokeResult
+static VentanaTools.Orbit.Extensions.InvokeResult.operator !=(VentanaTools.Orbit.Extensions.InvokeResult left, VentanaTools.Orbit.Extensions.InvokeResult right) -> bool
+static VentanaTools.Orbit.Extensions.InvokeResult.operator ==(VentanaTools.Orbit.Extensions.InvokeResult left, VentanaTools.Orbit.Extensions.InvokeResult right) -> bool
 static VentanaTools.Orbit.Extensions.ManifestReader.Read(System.ReadOnlySpan<byte> utf8, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null) -> VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.ExtensionManifest!>!
 static VentanaTools.Orbit.Extensions.ManifestReader.ReadFileAsync(string! path, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.ExtensionManifest!>!>!
 static VentanaTools.Orbit.Extensions.ManifestReader.Validate(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null) -> VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.ExtensionManifest!>!
@@ -868,6 +1014,8 @@ static VentanaTools.Orbit.Extensions.Wire.PipeNames.TryParse(string? value, out 
 static VentanaTools.Orbit.Extensions.Wire.PipeNames.UserHash(string! userSid) -> string!
 static VentanaTools.Orbit.Extensions.Wire.TokenBucket.CostOf(int frameBytes) -> int
 static readonly VentanaTools.Orbit.Extensions.Wire.Framing.PartialFrameTimeout -> System.TimeSpan
+virtual VentanaTools.Orbit.Extensions.ContributionHandler.InvokeAsync(VentanaTools.Orbit.Extensions.Invocation! invocation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.InvokeResult>!
+virtual VentanaTools.Orbit.Extensions.ContributionHandler.RunSessionAsync(VentanaTools.Orbit.Extensions.Session! session, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 virtual VentanaTools.Orbit.Extensions.FaceLine.EqualityContract.get -> System.Type!
 virtual VentanaTools.Orbit.Extensions.FaceLine.Equals(VentanaTools.Orbit.Extensions.FaceLine? other) -> bool
 virtual VentanaTools.Orbit.Extensions.FaceLine.PrintMembers(System.Text.StringBuilder! builder) -> bool
