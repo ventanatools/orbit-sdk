@@ -1,0 +1,1010 @@
+{
+  "about": "The reason-code catalog of contract section 8.3, generated from the C# catalog. seenIn: L host log, R host registration row, D host developer details, E error frame, S SDK status. pre: may be sent to a peer that has not yet verified the sender's proof. violation: counts toward a host's penalty box. anchor: the help anchor, https://dev.ventana.tools/go/<host-id>/codes#<anchor>.",
+  "codes": [
+    {
+      "code": "auth.registration-mismatch",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "The hello names a different registration than this pipe's.",
+      "fix": "Save connection info again and use the new file.",
+      "anchor": "auth-registration-mismatch"
+    },
+    {
+      "code": "auth.proof-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "The companion's proof is wrong: its pairing is out of date or for another registration, or a per-launch credential was used up.",
+      "fix": "Save connection info again; restart the companion.",
+      "anchor": "auth-proof-invalid"
+    },
+    {
+      "code": "auth.server-proof-invalid",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host's proof failed verification: the pairing is out of date, or the pipe is not the host.",
+      "fix": "Save connection info again.",
+      "anchor": "auth-server-proof-invalid"
+    },
+    {
+      "code": "auth.server-unverified",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The pipe is not owned by the current user, so the SDK wrote nothing to it. Another program may hold the pipe name while the host is not running.",
+      "fix": "Start the host; if this persists, restart the PC.",
+      "anchor": "auth-server-unverified"
+    },
+    {
+      "code": "auth.host-mismatch",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The challenge's host id differs from the pairing's hostId.",
+      "fix": "Use connection info from this host.",
+      "anchor": "auth-host-mismatch"
+    },
+    {
+      "code": "auth.abandoned",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "The companion closed after the challenge without authenticating; most often an out-of-date pairing.",
+      "fix": "Save connection info again.",
+      "anchor": "auth-abandoned"
+    },
+    {
+      "code": "auth.timeout",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": false,
+      "meaning": "The handshake did not finish within 5 seconds.",
+      "fix": "Check the companion's handshake code.",
+      "anchor": "auth-timeout"
+    },
+    {
+      "code": "auth.identity-changed",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "A different program than the one this registration's identity pin trusts connected.",
+      "fix": "In the host, allow the new program or revoke access.",
+      "anchor": "auth-identity-changed"
+    },
+    {
+      "code": "auth.package-mismatch",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "Reserved: the connecting process's package family name differs from the registration's.",
+      "fix": null,
+      "anchor": "auth-package-mismatch"
+    },
+    {
+      "code": "frame.too-large",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "Frame length 0, over limits.maxFrameBytes, or over 8,192 bytes before ready.",
+      "fix": "Send smaller messages.",
+      "anchor": "frame-too-large"
+    },
+    {
+      "code": "frame.timeout",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "A frame did not finish within 5 seconds.",
+      "fix": "Write each frame in one go.",
+      "anchor": "frame-timeout"
+    },
+    {
+      "code": "frame.utf8-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "The frame is not valid UTF-8.",
+      "fix": "Encode JSON as UTF-8.",
+      "anchor": "frame-utf8-invalid"
+    },
+    {
+      "code": "frame.json-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "Not one JSON object within the depth limit.",
+      "fix": "Send one object per frame.",
+      "anchor": "frame-json-invalid"
+    },
+    {
+      "code": "frame.json-duplicate",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "A member name appears twice in one object.",
+      "fix": "Remove the duplicate.",
+      "anchor": "frame-json-duplicate"
+    },
+    {
+      "code": "frame.write-timeout",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "The peer stopped reading for 5 seconds.",
+      "fix": "Keep reading the pipe.",
+      "anchor": "frame-write-timeout"
+    },
+    {
+      "code": "protocol.version-unsupported",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "No protocol version both sides support; supported gives the host's range. Also raised locally when a challenge picks a version outside the companion's offer.",
+      "fix": "Update the SDK or the host.",
+      "anchor": "protocol-version-unsupported"
+    },
+    {
+      "code": "protocol.hello-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "The hello is malformed or missing a member.",
+      "fix": "Use an SDK, or follow the hello message definition.",
+      "anchor": "protocol-hello-invalid"
+    },
+    {
+      "code": "protocol.message-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "A known message failed validation, including a malformed challenge and a ready whose limits are out of range.",
+      "fix": "Check the message against the message table.",
+      "anchor": "protocol-message-invalid"
+    },
+    {
+      "code": "protocol.member-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "An unknown member with a name outside the member grammar, or a case variant of a known member.",
+      "fix": "Remove it, or fix its spelling.",
+      "anchor": "protocol-member-invalid"
+    },
+    {
+      "code": "protocol.variant-unknown",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "An unknown $type.",
+      "fix": "Use the documented variants.",
+      "anchor": "protocol-variant-unknown"
+    },
+    {
+      "code": "protocol.type-unknown",
+      "disposition": "ignore",
+      "seenIn": [
+        "D"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "An unknown message type after authentication was ignored.",
+      "fix": "None needed; check for typos.",
+      "anchor": "protocol-type-unknown"
+    },
+    {
+      "code": "protocol.unexpected",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": true,
+      "meaning": "A message in the wrong phase or direction, a known code without the Pre flag before verification, or a ping that broke the one-outstanding rule.",
+      "fix": "Follow the handshake order; ping only when idle.",
+      "anchor": "protocol-unexpected"
+    },
+    {
+      "code": "protocol.capability-not-negotiated",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "A feature of a capability that is not effective was used.",
+      "fix": "Check the effective capabilities in ready.",
+      "anchor": "protocol-capability-not-negotiated"
+    },
+    {
+      "code": "protocol.ping-timeout",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "No pong within the pong timeout.",
+      "fix": "Answer ping promptly; don't block the reader.",
+      "anchor": "protocol-ping-timeout"
+    },
+    {
+      "code": "protocol.pong-unknown",
+      "disposition": "ignore",
+      "seenIn": [
+        "D"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "A pong matched no outstanding ping and was ignored.",
+      "fix": "None needed; send pong only in answer to ping.",
+      "anchor": "protocol-pong-unknown"
+    },
+    {
+      "code": "face.lifetime-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "goodForSeconds is not 1 to 86,400.",
+      "fix": "Use a finite lifetime.",
+      "anchor": "face-lifetime-invalid"
+    },
+    {
+      "code": "face.glyph-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "The picture's glyph breaks the glyph rule.",
+      "fix": "Use one private-use glyph.",
+      "anchor": "face-glyph-invalid"
+    },
+    {
+      "code": "face.state-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "Unknown state token.",
+      "fix": "Use None, Playing, Paused, On or Off.",
+      "anchor": "face-state-invalid"
+    },
+    {
+      "code": "face.failure-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "Unknown failure token, or a capability-gated token whose capability is not effective.",
+      "fix": "Use a documented failure token.",
+      "anchor": "face-failure-invalid"
+    },
+    {
+      "code": "face.not-provided",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "A face for a contribution that does not provide face.",
+      "fix": "Add face to provides, or stop publishing.",
+      "anchor": "face-not-provided"
+    },
+    {
+      "code": "face.session-unknown",
+      "disposition": "ignore",
+      "seenIn": [
+        "D"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "A face for an ended or unknown session was ignored.",
+      "fix": "None needed after stopSession.",
+      "anchor": "face-session-unknown"
+    },
+    {
+      "code": "invoke.outcome-invalid",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "Unknown outcome token.",
+      "fix": "Use a documented outcome token.",
+      "anchor": "invoke-outcome-invalid"
+    },
+    {
+      "code": "invoke.failure-unexpected",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "failure with an outcome other than Failed.",
+      "fix": "Send failure only with Failed.",
+      "anchor": "invoke-failure-unexpected"
+    },
+    {
+      "code": "invoke.replay",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "An invoke reused a live or recent request id.",
+      "fix": "Hosts only.",
+      "anchor": "invoke-replay"
+    },
+    {
+      "code": "invoke.request-unknown",
+      "disposition": "ignore",
+      "seenIn": [
+        "D"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "A result for an unknown or completed request was ignored.",
+      "fix": "None needed after cancel.",
+      "anchor": "invoke-request-unknown"
+    },
+    {
+      "code": "invoke.timeout",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "D"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "No result within the host's deadline; cancel was sent.",
+      "fix": "Finish faster, or honour cancellation.",
+      "anchor": "invoke-timeout"
+    },
+    {
+      "code": "invoke.busy",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "maxPendingInvokes invocations were already pending; the person's request was refused.",
+      "fix": "Answer invocations promptly.",
+      "anchor": "invoke-busy"
+    },
+    {
+      "code": "invoke.not-connected",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The person picked an item while the companion was not connected.",
+      "fix": "Start the companion.",
+      "anchor": "invoke-not-connected"
+    },
+    {
+      "code": "rate.throttled",
+      "disposition": "advisory",
+      "seenIn": [
+        "D",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The soft budget is used up; faces are being coalesced.",
+      "fix": "Publish only on change.",
+      "anchor": "rate-throttled"
+    },
+    {
+      "code": "rate.exceeded",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "The hard budget is used up.",
+      "fix": "Publish far less often, and in smaller frames.",
+      "anchor": "rate-exceeded"
+    },
+    {
+      "code": "rate.queue-full",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "The receiver's output queue filled because the peer is not reading.",
+      "fix": "Keep reading the pipe.",
+      "anchor": "rate-queue-full"
+    },
+    {
+      "code": "manifest.mismatch",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The companion's manifest hash differs from the host's admitted manifest.",
+      "fix": "Reload the manifest in the host, or update the companion's extension.json.",
+      "anchor": "manifest-mismatch"
+    },
+    {
+      "code": "session.capacity",
+      "disposition": "refuse",
+      "seenIn": [
+        "L",
+        "D",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The companion refused a session: it is at its limit.",
+      "fix": "Make handlers end promptly when cancelled.",
+      "anchor": "session-capacity"
+    },
+    {
+      "code": "session.unknown-contribution",
+      "disposition": "refuse",
+      "seenIn": [
+        "L",
+        "D",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The companion refused a session for a contribution it does not know.",
+      "fix": "Align both manifests.",
+      "anchor": "session-unknown-contribution"
+    },
+    {
+      "code": "session.settings-invalid",
+      "disposition": "refuse",
+      "seenIn": [
+        "L",
+        "D",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The companion refused a session whose settings do not match its manifest.",
+      "fix": "Align both manifests.",
+      "anchor": "session-settings-invalid"
+    },
+    {
+      "code": "session.replay",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": true,
+      "meaning": "A startSession reused a live or recent session id.",
+      "fix": "Hosts only.",
+      "anchor": "session-replay"
+    },
+    {
+      "code": "session.host-limit",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host has maxSessions sessions open and did not start this one.",
+      "fix": "Fewer placements.",
+      "anchor": "session-host-limit"
+    },
+    {
+      "code": "session.handler-faulted",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The author's handler threw. A session handler's face is cleared; an invocation answers Failed.",
+      "fix": "Fix the exception (the SDK passes it to the author).",
+      "anchor": "session-handler-faulted"
+    },
+    {
+      "code": "session.handler-stalled",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "A handler did not end within 5 seconds of cancellation.",
+      "fix": "Pass the cancellation token to every await.",
+      "anchor": "session-handler-stalled"
+    },
+    {
+      "code": "pairing.missing",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "No pairing file was found in any searched location.",
+      "fix": "In the host, choose Save connection info.",
+      "anchor": "pairing-missing"
+    },
+    {
+      "code": "pairing.too-large",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The pairing file is over 4,096 bytes.",
+      "fix": "Save connection info again.",
+      "anchor": "pairing-too-large"
+    },
+    {
+      "code": "pairing.encoding",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The pairing file is not UTF-8 (often UTF-16 from a shell redirect).",
+      "fix": "Use the host's Save connection info.",
+      "anchor": "pairing-encoding"
+    },
+    {
+      "code": "pairing.version-unsupported",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "pairingVersion is not 3.",
+      "fix": "Save connection info from a current host.",
+      "anchor": "pairing-version-unsupported"
+    },
+    {
+      "code": "pairing.mode-unsupported",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "mode is not one this SDK implements.",
+      "fix": "Update the SDK.",
+      "anchor": "pairing-mode-unsupported"
+    },
+    {
+      "code": "pairing.extension-mismatch",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "extensionId differs from the manifest's id.",
+      "fix": "Use this extension's connection info.",
+      "anchor": "pairing-extension-mismatch"
+    },
+    {
+      "code": "pairing.host-not-listed",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "hostId is not in the manifest's hosts.",
+      "fix": "Add the host id to hosts.",
+      "anchor": "pairing-host-not-listed"
+    },
+    {
+      "code": "pairing.pipe-name-invalid",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "pipeName breaks the grammar or does not match.",
+      "fix": "Save connection info again.",
+      "anchor": "pairing-pipe-name-invalid"
+    },
+    {
+      "code": "pairing.registration-invalid",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "registrationId is not a GUID in wire form.",
+      "fix": "Save connection info again.",
+      "anchor": "pairing-registration-invalid"
+    },
+    {
+      "code": "pairing.secret-invalid",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "secret is not 32 bytes of canonical Base64.",
+      "fix": "Save connection info again.",
+      "anchor": "pairing-secret-invalid"
+    },
+    {
+      "code": "host.not-running",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The pipe does not exist, or did not accept within 5 seconds: the host is not running, or the extension is off.",
+      "fix": "Start the host and turn the extension on.",
+      "anchor": "host-not-running"
+    },
+    {
+      "code": "host.pipe-busy",
+      "disposition": "local",
+      "seenIn": [
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "Another companion is already connected to this registration.",
+      "fix": "Run one copy of the companion.",
+      "anchor": "host-pipe-busy"
+    },
+    {
+      "code": "host.listener-failed",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host could not create the pipe (its name is in use).",
+      "fix": "In the host, choose Retry.",
+      "anchor": "host-listener-failed"
+    },
+    {
+      "code": "host.listener-faulted",
+      "disposition": "local",
+      "seenIn": [
+        "L"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host's listener stopped unexpectedly and is restarting.",
+      "fix": "None; report if repeated.",
+      "anchor": "host-listener-faulted"
+    },
+    {
+      "code": "host.edition-unknown",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host could not identify its own installation, so it does not open extension pipes.",
+      "fix": "Restart or reinstall the host.",
+      "anchor": "host-edition-unknown"
+    },
+    {
+      "code": "host.inactive",
+      "disposition": "local",
+      "seenIn": [
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host started from a link and has not opened extension pipes yet.",
+      "fix": "Open the host normally.",
+      "anchor": "host-inactive"
+    },
+    {
+      "code": "host.registration-limit",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host already has its maximum number of extensions, developer-folder extensions included; this one was not added.",
+      "fix": "Remove an extension first.",
+      "anchor": "host-registration-limit"
+    },
+    {
+      "code": "host.paused",
+      "disposition": "close",
+      "seenIn": [
+        "L",
+        "R",
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": false,
+      "meaning": "The penalty box is refusing connections; see retryAfterMs.",
+      "fix": "Fix the violations shown; choose Retry in the host.",
+      "anchor": "host-paused"
+    },
+    {
+      "code": "host.shutting-down",
+      "disposition": "close",
+      "seenIn": [
+        "E",
+        "S"
+      ],
+      "pre": true,
+      "violation": false,
+      "meaning": "The host is closing.",
+      "fix": "None; the SDK reconnects.",
+      "anchor": "host-shutting-down"
+    },
+    {
+      "code": "host.turned-off",
+      "disposition": "close",
+      "seenIn": [
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The person turned the extension off. The credential stays valid.",
+      "fix": "None; it reconnects when turned on.",
+      "anchor": "host-turned-off"
+    },
+    {
+      "code": "host.access-revoked",
+      "disposition": "close",
+      "seenIn": [
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The person revoked access. The credential is gone.",
+      "fix": "Get new connection info after access is allowed again.",
+      "anchor": "host-access-revoked"
+    },
+    {
+      "code": "host.reloaded",
+      "disposition": "close",
+      "seenIn": [
+        "E",
+        "S"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host reloaded the manifest in developer mode and closed the connection to apply it.",
+      "fix": "None; the SDK reconnects at once.",
+      "anchor": "host-reloaded"
+    },
+    {
+      "code": "host.catalog-recovered",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The host's extension catalog was unreadable and was restored from its backup; every restored extension is off and needs consent again.",
+      "fix": "Turn each extension on again, and save new connection info.",
+      "anchor": "host-catalog-recovered"
+    },
+    {
+      "code": "host.catalog-unreadable",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "R"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The catalog and its backup are unreadable; extension management is read-only until reset.",
+      "fix": "In the host, choose Reset extensions.",
+      "anchor": "host-catalog-unreadable"
+    },
+    {
+      "code": "peer.unknown-code",
+      "disposition": "local",
+      "seenIn": [
+        "L",
+        "D"
+      ],
+      "pre": false,
+      "violation": false,
+      "meaning": "The peer sent an error code this receiver does not know. Logged in place of the received string.",
+      "fix": "Update the host or the SDK.",
+      "anchor": "peer-unknown-code"
+    }
+  ]
+}

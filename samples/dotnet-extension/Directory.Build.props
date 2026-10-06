@@ -2,7 +2,8 @@
   <!-- This folder is a standalone package consumer: it imports none of the repository's build
        settings or central package versions. -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- The companion transport is a Windows named pipe. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

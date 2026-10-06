@@ -2,8 +2,18 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <!-- The trimming and AOT analyzers run on every build. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- Published as one runtime-dependent executable, or natively with -p:PublishAot=true. -->
+    <PublishAot Condition="'$(PublishAot)' == ''">false</PublishAot>
+    <PublishSingleFile Condition="'$(PublishAot)' != 'true'">true</PublishSingleFile>
+    <SelfContained Condition="'$(PublishAot)' != 'true'">false</SelfContained>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="VentanaTools.Orbit.Extensions" Version="$(VentanaExtensionsVersion)" />
+    <Compile Remove="tests/**/*.cs" />
+    <None Remove="tests/**" />
+    <None Update="extension.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <InternalsVisibleTo Include="DotnetExtensionSample.Tests" />
   </ItemGroup>
 </Project>

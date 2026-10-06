@@ -1,0 +1,13 @@
+{
+  "about": "The host-id registry (contract section 2.3): the one definition of every host id, display name and package file extension. Implementations read these values from this file and never write them by hand. reservedIds lists every id no third party may claim; a reserved or former id never leaves it.",
+  "hosts": [
+    {
+      "id": "orbit",
+      "displayName": "Orbit",
+      "packageExtension": ".orbitextension",
+      "aliases": [],
+      "status": "Active"
+    }
+  ],
+  "reservedIds": ["orbit", "lollipop", "pinwheel"]
+}

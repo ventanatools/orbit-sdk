@@ -1,9 +1,0 @@
-{
-  "description": "Public deterministic test vector only; never a usable pairing credential.",
-  "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
-  "registrationId": "00112233445566778899aabbccddeeff",
-  "clientNonce": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=",
-  "serverNonce": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=",
-  "serverProof": "0zmLYbXxgPfwnXOwCiqzBh+uNcnVyq8Mp1KCkwJngp0=",
-  "clientProof": "WEva/9iPbvQaYmdZbncxkeZg10KKGuMwQVBUqzG3DEI="
-}

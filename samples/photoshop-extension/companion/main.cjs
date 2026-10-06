@@ -3,60 +3,58 @@
 
 "use strict";
 
-const fs = require("node:fs/promises");
-const path = require("node:path");
-const { parsePairing } = require("./protocol-v2.cjs");
-const { startBridgeV2 } = require("./bridge-v2.cjs");
+// The companion: the SDK connects to the host app with the pairing file the host saved, and the
+// bridge forwards sessions and picks to the Photoshop panel. Started with `npm start`; Ctrl+C stops it.
 
-async function main() {
-    const args = process.argv.slice(2);
-    if (args.length !== 4 || args[0] !== "--pairing" || args[2] !== "--bridge-file") {
-        console.error("Usage: npm start -- --pairing <Orbit.pairing.json> --bridge-file <Photoshop.bridge.json>");
-        process.exitCode = 1;
-        return;
-    }
-    if (process.platform !== "win32") throw new Error("platform");
-    const pairingPath = path.resolve(args[1]);
-    const bridgePath = path.resolve(args[3]);
-    if (pairingPath.toLowerCase() === bridgePath.toLowerCase()) throw new Error("path");
-    // Read only the user-selected file, and cap it before parsing. Neither path
-    // nor any secret is echoed. Pairing is never accepted on a command line.
-    const handle = await fs.open(pairingPath, "r");
-    let text;
-    try {
-        const stat = await handle.stat();
-        if (!stat.isFile() || stat.size > 4096) throw new Error("size");
-        const data = Buffer.alloc(4097);
-        const { bytesRead } = await handle.read(data, 0, data.length, 0);
-        if (bytesRead > 4096) throw new Error("size");
-        text = data.subarray(0, bytesRead).toString("utf8");
-    } finally { await handle.close(); }
-    const pairing = parsePairing(text);
-    const bridge = await startBridgeV2({ pairing, onStatus: message => console.log(message) });
-    try {
-        // Refuse to overwrite an existing file. On Windows the containing
-        // directory's ACL is authoritative; mode alone is not an ACL boundary.
-        await fs.writeFile(bridgePath, JSON.stringify(bridge.bridgeConfig, null, 2), { flag: "wx", mode: 0o600 });
-    } catch (error) {
-        await bridge.close();
-        throw error;
-    }
-    console.log("Bridge ready on local port 38475. In the Photoshop sample panel, choose the bridge file you requested.");
-    console.log("Keep both connection files private. Ctrl+C stops the companion; no commands are replayed.");
-    let closing = false;
-    async function stop() {
-        if (closing) return;
-        closing = true;
-        await bridge.close();
-        // Leave the explicitly chosen file for the user to remove. Its derived
-        // secret expires with this process and cannot authenticate to Orbit.
-        process.exitCode = 0;
-    }
-    process.once("SIGINT", () => void stop());
-    process.once("SIGTERM", () => void stop());
+const path = require("node:path");
+const { runCompanion, parseArguments, findHost } = require("@ventanatools/orbit-extensions");
+const constants = require("../uxp/constants.js");
+const { startBridge } = require("./bridge.cjs");
+const { bridgeFilePath, writeBridgeFile, removeBridgeFile } = require("./bridge-file.cjs");
+
+/** The host's display name, from the registry entry of the id the host proved in its challenge. */
+function hostName(status) {
+    const host = status.host ? findHost(status.host.id) : undefined;
+    return host ? host.displayName : "The host app";
 }
 
-main().catch(() => {
-    console.error("Could not start. Check the pairing file, Windows, port 38475, and a new bridge-file path in a private folder.");
+async function main(args) {
+    if (process.platform !== "win32") {
+        console.error("This sample needs Windows: the host app's companion transport is a named pipe.");
+        return 1;
+    }
+    let bridge;
+    try {
+        bridge = await startBridge({ onStatus: (text) => console.log(text) });
+    } catch (error) {
+        if (error && error.code === "EADDRINUSE") {
+            console.error(`Port ${constants.BRIDGE_PORT} is in use: another copy of this companion, or another program, is listening on it. Stop it, then start the companion again.`);
+        } else {
+            console.error(`The bridge could not start (${error && error.code ? error.code : "error"}).`);
+        }
+        return 1;
+    }
+    const file = bridgeFilePath();
+    try {
+        await writeBridgeFile(file, bridge.config);
+        console.log(`Bridge ready. In Photoshop, open the Photoshop bridge sample panel; the first time, choose ${file}. The panel reconnects by itself after that.`);
+        const options = {
+            onStatus: (status) => {
+                if (status.state === "Connected") console.log(`${hostName(status)} connected; waiting for sessions.`);
+            },
+        };
+        // The manifest sits next to package.json, one folder above this file.
+        if (!parseArguments(args).manifestPath) options.manifestPath = path.join(__dirname, "..", "extension.json");
+        return await runCompanion(args, bridge.handler, options);
+    } finally {
+        await bridge.close();
+        await removeBridgeFile(file);
+    }
+}
+
+main(process.argv.slice(2)).then((code) => {
+    process.exitCode = code;
+}, (error) => {
+    console.error(`The companion stopped unexpectedly (${error && error.name ? error.name : "Error"}).`);
     process.exitCode = 1;
 });

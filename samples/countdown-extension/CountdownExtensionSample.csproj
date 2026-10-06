@@ -2,11 +2,20 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <!-- Adds the SDK's namespace as a global using; the sources also name it explicitly. -->
+    <VentanaToolsImplicitUsings>true</VentanaToolsImplicitUsings>
+    <!-- The trimming and AOT analyzers run on every build. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- Published as one executable. The AOT CI job publishes with -p:PublishAot=true instead. -->
+    <PublishAot Condition="'$(PublishAot)' == ''">false</PublishAot>
+    <PublishSingleFile Condition="'$(PublishAot)' != 'true'">true</PublishSingleFile>
+    <SelfContained Condition="'$(PublishAot)' != 'true'">false</SelfContained>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="VentanaTools.Orbit.Extensions" Version="$(VentanaExtensionsVersion)" />
     <Compile Remove="tests/**/*.cs" />
-    <None Update="extension.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Remove="tests/**" />
+    <None Update="extension.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="CountdownExtensionSample.Tests" />
   </ItemGroup>
 </Project>

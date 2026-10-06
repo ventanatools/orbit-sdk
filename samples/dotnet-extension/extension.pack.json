@@ -1,0 +1,26 @@
+{
+  "$schema": "../../schemas/extensions/pack.v1.json",
+  "packVersion": 1,
+  "readme": "PACKAGE-README.md",
+  "build": {
+    "project": "DotnetExtensionSample.csproj"
+  },
+  "payload": [
+    {
+      "from": ".",
+      "to": "source",
+      "include": [
+        "*.cs",
+        "*.csproj",
+        "Directory.Build.props",
+        "extension.json",
+        "README.md",
+        "LICENSE",
+        "tests/*.cs",
+        "tests/*.csproj"
+      ]
+    },
+    { "from": "../../LICENSE", "to": "licenses/sdk" },
+    { "from": "../../NOTICE", "to": "licenses/sdk" }
+  ]
+}

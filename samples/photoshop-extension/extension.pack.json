@@ -1,0 +1,44 @@
+{
+  "$schema": "../../schemas/extensions/pack.v1.json",
+  "packVersion": 1,
+  "readme": "PACKAGE-README.md",
+  "payload": [
+    {
+      "from": ".",
+      "to": "samples/photoshop-extension",
+      "include": [
+        "companion/**",
+        "uxp/*.js",
+        "uxp/*.json",
+        "uxp/*.html",
+        "test/**",
+        "tools/**",
+        "licenses/**",
+        "package.json",
+        "package-lock.json",
+        "extension.json",
+        "README.md",
+        "LICENSE",
+        "THIRD-PARTY-NOTICES.md",
+        ".gitignore"
+      ]
+    },
+    {
+      "from": "../../node/orbit-extensions",
+      "to": "node/orbit-extensions",
+      "include": [
+        "index.js",
+        "index.d.ts",
+        "wire.js",
+        "wire.d.ts",
+        "testing.js",
+        "testing.d.ts",
+        "lib/**",
+        "package.json",
+        "package-lock.json",
+        "README.md",
+        "LICENSE"
+      ]
+    }
+  ]
+}

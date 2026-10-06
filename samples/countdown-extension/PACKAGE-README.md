@@ -1,29 +1,20 @@
 # Countdown sample package
 
-This local developer preview includes a runtime-dependent built companion in
-`payload/companion/` and the independent sample source in `payload/source/`.
-It requires Windows and the .NET 10 runtime. Orbit stores these files and starts
-nothing. Use only a package from an author you trust.
+A developer sample: one local countdown, shared by **Countdown** actions (Start or resume, Pause,
+Reset) and a passive **Countdown status** widget. It needs Windows and the .NET 10 runtime, no
+account and no network. Install only packages from authors you trust.
 
-Enable Countdown sample in Orbit Settings > Extensions and save Copy connection
-info to a private file outside this package. From this package folder:
+- `payload/companion/` holds the built companion, `CountdownExtensionSample.exe`, with its
+  `extension.json`.
+- `payload/source/` holds the sample's source (MIT-0, see `payload/source/LICENSE`), which builds
+  on its own with the .NET 10 SDK and the SDK's NuGet packages.
+- `payload/licenses/sdk/` holds the SDK's license and notice (Apache-2.0).
 
-```powershell
-dotnet payload/companion/CountdownExtensionSample.dll --manifest extension.json --pairing "C:\private-folder\Countdown.pairing.json"
-```
+After installing, turn the extension on in the host app's extension settings and save the
+connection info, then start `payload/companion/CountdownExtensionSample.exe`. It finds the pairing
+file in its default place (`--pairing <path>` for another one) and prints one status line per
+change; Ctrl+C stops it. The pairing file is a credential: never share it.
 
-Add Countdown action three times with Start, Pause and Reset choices, plus the
-passive Countdown status. Choices are per item; all items share one timer.
-Use one minute to try it. Start resumes paused time; Reset prepares its chosen
-duration without starting. Completion has no alarm. Restarting this companion
-starts Ready at 5:00. Ctrl+C stops it.
-
-After an update, enable again, copy fresh connection info and restart the
-companion. Do not share pairing files. Source/build instructions are at
-https://dev.ventana.tools/orbit/examples/countdown/ and in the public
-https://github.com/ventanatools/orbit-sdk repository. The extracted source can
-be built independently with .NET 10 and the local SDK packages from that repo;
-repository-relative README links/commands assume a complete checkout.
-SDK license terms are in `payload/LICENSE` and `payload/NOTICE`; the sample source
-is MIT-0 (`payload/source/LICENSE`).
-Store-signed extension support remains unverified; this is a developer example.
+Add **Countdown** with different choices and **Countdown status**. Settings belong to each
+placement; all placements share one countdown, which starts Ready at 5:00 each time the companion
+starts. Completion has no alarm.
