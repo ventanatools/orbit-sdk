@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 "use strict";
 const http = require("node:http");
 const net = require("node:net");

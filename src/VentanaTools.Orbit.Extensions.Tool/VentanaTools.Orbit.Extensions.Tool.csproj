@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\eng\Ventana.Package.props" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>VentanaTools.Orbit.Extensions.Tool</AssemblyName>
+    <RootNamespace>VentanaTools.Orbit.Extensions.Tool</RootNamespace>
+    <PackageId>VentanaTools.Orbit.Extensions.Tool</PackageId>
+    <Description>Packs and verifies Orbit extension packages.</Description>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>orbit-ext</ToolCommandName>
+    <!-- Temporary until the tool is rewritten for contract generation 3. -->
+    <NoWarn>$(NoWarn);CS1591;RS0016;RS0017</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj" />
+  </ItemGroup>
+</Project>

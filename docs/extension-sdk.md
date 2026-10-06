@@ -1,6 +1,6 @@
 # .NET extension SDK preview
 
-`Orbit.Extensions.Sdk` **0.1.0-preview.2** lets a separately started .NET companion
+`VentanaTools.Orbit.Extensions` **0.1.0-preview.1** lets a separately started .NET companion
 implement Orbit's v2 contributions without copying a sample's wire code or
 referencing `Orbit.Core`. `Orbit.Extensions.Protocol` is its transitive shared
 contract dependency. Both target .NET 10 without a Windows SDK or WinUI dependency;
@@ -121,7 +121,7 @@ From the repository root:
 
 ```powershell
 pwsh -File tools/build.ps1
-dotnet restore samples/dotnet-extension/DotnetExtensionSample.csproj --source artifacts/extension-sdk --packages artifacts/sdk-consumer-packages
+dotnet restore samples/dotnet-extension/DotnetExtensionSample.csproj --source artifacts/packages --packages artifacts/sdk-consumer-packages
 dotnet build samples/dotnet-extension/DotnetExtensionSample.csproj -c Release --no-restore
 ```
 

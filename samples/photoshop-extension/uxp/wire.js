@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 // Small grammar helpers shared by the strict v2 parser and Node bridge.
 "use strict";
 

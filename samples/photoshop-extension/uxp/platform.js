@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 "use strict";
 const { ACTION_ID, STATUS_ID, isStart, isInvoke, sameSettings } = require("./wire-v2.js");
 

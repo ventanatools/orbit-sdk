@@ -8,7 +8,7 @@ host implementation is included.
 
 The initial runtime library behavior matches the implementation at Orbit source
 revision `4cadbb0c835ea7d6a0c4fbe53d9f092aa33d8e0a`. The package metadata changes
-to `0.1.0-preview.2` and Apache-2.0, source license headers and public test references
+to a preview version and Apache-2.0, source license headers and public test references
 are intentional; versioned wire identifiers remain unchanged. Sample source behavior is preserved, with consumer references,
 build instructions and license/notice metadata adapted for this repository.
 

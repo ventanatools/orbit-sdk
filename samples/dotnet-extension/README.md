@@ -1,6 +1,6 @@
 # .NET companion sample
 
-This console application consumes `Orbit.Extensions.Sdk` **0.1.0-preview.2** as
+This console application consumes `VentanaTools.Orbit.Extensions` **0.1.0-preview.1** as
 a NuGet package. It has no source-project or `Orbit.Core` reference. Its own
 `Directory.Build.props` keeps it independent of Orbit's Windows SDK/MSIX build
 settings. The application targets .NET 10; its companion transport runs on Windows.
@@ -12,7 +12,8 @@ while all placements observe this one simulated state. No other app, document,
 device, registry setting or user file is changed. Restarting the process resets
 the state to Off; no command is replayed after a connection loss.
 
-This SDK and sample are public developer previews under [Apache-2.0](../../LICENSE).
+This SDK and sample are public developer previews; the sample is under [MIT-0](LICENSE)
+and the SDK under [Apache-2.0](../../LICENSE).
 The SDK packages are built locally; they have not been published to NuGet.
 The SDK's preview version is separate from this bundle's manifest version
 `0.1.0`; the current manifest grammar accepts three numeric components.
@@ -26,11 +27,11 @@ Run from the repository root with the .NET 10 SDK installed:
 
 ```powershell
 pwsh -File tools/build.ps1
-dotnet restore samples/dotnet-extension/DotnetExtensionSample.csproj --source artifacts/extension-sdk --packages artifacts/sdk-consumer-packages
+dotnet restore samples/dotnet-extension/DotnetExtensionSample.csproj --source artifacts/packages --packages artifacts/sdk-consumer-packages
 dotnet build samples/dotnet-extension/DotnetExtensionSample.csproj -c Release --no-restore
 ```
 
-The SDK package brings the Protocol package transitively. No package is pushed
+The one SDK package contains the declarations and the client. No package is pushed
 to a registry. To prove the consumer boundary independently, copy this sample
 folder to a separate directory and restore it from the absolute path of that
 local package feed; retain the sample's `Directory.Build.props`. A clean build

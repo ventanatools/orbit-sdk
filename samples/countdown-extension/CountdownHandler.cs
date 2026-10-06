@@ -1,5 +1,8 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 using System.Globalization;
-using Orbit.Extensions.Sdk;
+using VentanaTools.Orbit.Extensions;
 
 namespace CountdownExtensionSample;
 

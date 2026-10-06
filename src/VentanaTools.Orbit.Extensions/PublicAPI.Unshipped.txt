@@ -1,0 +1,273 @@
+#nullable enable
+const VentanaTools.Orbit.Extensions.ExtensionIds.Grammar = "id.grammar" -> string!
+const VentanaTools.Orbit.Extensions.ExtensionIds.MaxLength = 128 -> int
+const VentanaTools.Orbit.Extensions.ExtensionIds.Required = "id.required" -> string!
+const VentanaTools.Orbit.Extensions.ExtensionIds.RootDotted = "id.root-dotted" -> string!
+const VentanaTools.Orbit.Extensions.ExtensionIds.RootNotDotted = "id.root-not-dotted" -> string!
+const VentanaTools.Orbit.Extensions.ExtensionIds.RootReserved = "id.root-reserved" -> string!
+const VentanaTools.Orbit.Extensions.ExtensionIds.TooLong = "id.too-long" -> string!
+const VentanaTools.Orbit.Extensions.ExtensionPairing.MaxBytes = 4096 -> int
+const VentanaTools.Orbit.Extensions.ExtensionText.MaxElementUnits = 16 -> int
+const VentanaTools.Orbit.Extensions.ExtensionText.MaxSettingKeyLength = 32 -> int
+const VentanaTools.Orbit.Extensions.ExtensionWire.MaxFrameBytes = 65536 -> int
+const VentanaTools.Orbit.Extensions.ExtensionWire.ProtocolVersion = 2 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionManifest.SchemaVersion = 2 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader.MaxActions = 32 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader.MaxBytes = 65536 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptorReader.MaxBytes = 4096 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader.MaxArchiveBytes = 33554432 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader.MaxEntries = 128 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader.MaxExpandedBytes = 67108864 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader.MaxFileBytes = 16777216 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader.MaxPathLength = 240 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader.MaxReadmeBytes = 65536 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionSettings.MaxChoiceLength = 64 -> int
+const VentanaTools.Orbit.Extensions.ExternalExtensionSettings.MaxSettings = 16 -> int
+override VentanaTools.Orbit.Extensions.CompanionFace.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.CompanionFace.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.CompanionFace.ToString() -> string!
+override VentanaTools.Orbit.Extensions.CompanionInvocation.ToString() -> string!
+override VentanaTools.Orbit.Extensions.CompanionSession.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExtensionPairing.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionAction.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.ExternalExtensionAction.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.ExternalExtensionAction.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionChoice.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.ExternalExtensionChoice.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.ExternalExtensionChoice.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.ExternalExtensionManifest.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.ExternalExtensionManifest.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionPackage.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.ToString() -> string!
+override VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.ExternalExtensionSetting.GetHashCode() -> int
+override VentanaTools.Orbit.Extensions.ExternalExtensionSetting.ToString() -> string!
+static readonly VentanaTools.Orbit.Extensions.ExtensionWire.FrameTimeout -> System.TimeSpan
+static VentanaTools.Orbit.Extensions.CompanionFace.operator !=(VentanaTools.Orbit.Extensions.CompanionFace? left, VentanaTools.Orbit.Extensions.CompanionFace? right) -> bool
+static VentanaTools.Orbit.Extensions.CompanionFace.operator ==(VentanaTools.Orbit.Extensions.CompanionFace? left, VentanaTools.Orbit.Extensions.CompanionFace? right) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionIds.Classify(string? id, VentanaTools.Orbit.Extensions.ExtensionOrigin origin) -> string?
+static VentanaTools.Orbit.Extensions.ExtensionIds.Classify(string? id, VentanaTools.Orbit.Extensions.ExtensionOrigin origin, System.Collections.Generic.IReadOnlyCollection<string!>! reservedPublishers) -> string?
+static VentanaTools.Orbit.Extensions.ExtensionIds.IsFirstParty(string? id) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionIds.IsInNamespace(string? id, string? root) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionIds.IsSegment(System.ReadOnlySpan<char> value) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionIds.IsValid(string? id, VentanaTools.Orbit.Extensions.ExtensionOrigin origin) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionIds.IsValid(string? id, VentanaTools.Orbit.Extensions.ExtensionOrigin origin, System.Collections.Generic.IReadOnlyCollection<string!>! reservedPublishers) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionIds.OriginOf(string? id) -> VentanaTools.Orbit.Extensions.ExtensionOrigin
+static VentanaTools.Orbit.Extensions.ExtensionIds.ReservedPublishers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static VentanaTools.Orbit.Extensions.ExtensionIds.RootOf(string! id) -> string!
+static VentanaTools.Orbit.Extensions.ExtensionJson.HasFields(System.Text.Json.JsonElement element, System.Collections.Generic.IReadOnlyCollection<string!>! required, System.Collections.Generic.IReadOnlyCollection<string!>? optional = null) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionJson.ReadObject(System.ReadOnlyMemory<byte> bytes, int maxBytes = 65536, int maxDepth = 8) -> System.Text.Json.JsonDocument!
+static VentanaTools.Orbit.Extensions.ExtensionJson.RequireFields(System.Text.Json.JsonElement element, System.Collections.Generic.IReadOnlyCollection<string!>! required, System.Collections.Generic.IReadOnlyCollection<string!>? optional = null) -> void
+static VentanaTools.Orbit.Extensions.ExtensionPairing.Parse(System.ReadOnlySpan<byte> utf8, string! expectedExtensionId, int? expectedProtocolVersion = null) -> VentanaTools.Orbit.Extensions.ExtensionPairing!
+static VentanaTools.Orbit.Extensions.ExtensionText.Clean(string? text, int maxElements, int maxUnits) -> string?
+static VentanaTools.Orbit.Extensions.ExtensionText.IsDeclarationText(string? value, int maximum) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionText.IsGlyph(string? value) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionText.IsSettingKey(string? key) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionWire.MatchesProof(string? actual, string! expected) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionWire.Message(string! type, params (string! Name, string! Value)[]! values) -> byte[]!
+static VentanaTools.Orbit.Extensions.ExtensionWire.Proof(System.ReadOnlySpan<byte> secret, string! role, string! registrationId, string! clientNonce, string! serverNonce, int protocolVersion = 2) -> string!
+static VentanaTools.Orbit.Extensions.ExtensionWire.ReadAsync(System.IO.Stream! stream, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<byte[]?>!
+static VentanaTools.Orbit.Extensions.ExtensionWire.ReadMessage(byte[]! data, string! type, params string![]! members) -> System.Text.Json.JsonDocument!
+static VentanaTools.Orbit.Extensions.ExtensionWire.Text(System.Text.Json.JsonElement root, string! name) -> string!
+static VentanaTools.Orbit.Extensions.ExtensionWire.TryBytes(string? value, out byte[]! bytes) -> bool
+static VentanaTools.Orbit.Extensions.ExtensionWire.WriteAsync(System.IO.Stream! stream, System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static VentanaTools.Orbit.Extensions.ExternalExtensionAction.operator !=(VentanaTools.Orbit.Extensions.ExternalExtensionAction? left, VentanaTools.Orbit.Extensions.ExternalExtensionAction? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionAction.operator ==(VentanaTools.Orbit.Extensions.ExternalExtensionAction? left, VentanaTools.Orbit.Extensions.ExternalExtensionAction? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionChoice.operator !=(VentanaTools.Orbit.Extensions.ExternalExtensionChoice? left, VentanaTools.Orbit.Extensions.ExternalExtensionChoice? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionChoice.operator ==(VentanaTools.Orbit.Extensions.ExternalExtensionChoice? left, VentanaTools.Orbit.Extensions.ExternalExtensionChoice? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifest.operator !=(VentanaTools.Orbit.Extensions.ExternalExtensionManifest? left, VentanaTools.Orbit.Extensions.ExternalExtensionManifest? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifest.operator ==(VentanaTools.Orbit.Extensions.ExternalExtensionManifest? left, VentanaTools.Orbit.Extensions.ExternalExtensionManifest? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.operator !=(VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead? left, VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.operator ==(VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead? left, VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader.IsActionId(string? id) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader.IsActionId(string? id, System.Collections.Generic.IReadOnlyCollection<string!>! reservedPublishers) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader.Read(System.ReadOnlySpan<byte> bytes, System.Collections.Generic.IReadOnlyCollection<string!>? reservedPublishers = null) -> VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead!
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader.Serialize(VentanaTools.Orbit.Extensions.ExternalExtensionManifest! manifest) -> byte[]!
+static VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader.Snapshot(VentanaTools.Orbit.Extensions.ExternalExtensionManifest! manifest, System.Collections.Generic.IReadOnlyCollection<string!>? reservedPublishers = null) -> VentanaTools.Orbit.Extensions.ExternalExtensionManifest!
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.operator !=(VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor? left, VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.operator ==(VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor? left, VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptorReader.CoversManifest(VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor! descriptor, VentanaTools.Orbit.Extensions.ExternalExtensionManifest! manifest) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptorReader.Read(System.ReadOnlySpan<byte> bytes) -> VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor?
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptorReader.Serialize(VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor! descriptor) -> byte[]!
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptorReader.Snapshot(VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor! descriptor) -> VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor!
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.operator !=(VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead? left, VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.operator ==(VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead? left, VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader.Read(System.ReadOnlyMemory<byte> bytes) -> VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead!
+static VentanaTools.Orbit.Extensions.ExternalExtensionSetting.operator !=(VentanaTools.Orbit.Extensions.ExternalExtensionSetting? left, VentanaTools.Orbit.Extensions.ExternalExtensionSetting? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionSetting.operator ==(VentanaTools.Orbit.Extensions.ExternalExtensionSetting? left, VentanaTools.Orbit.Extensions.ExternalExtensionSetting? right) -> bool
+static VentanaTools.Orbit.Extensions.ExternalExtensionSettings.Resolve(VentanaTools.Orbit.Extensions.ExternalExtensionAction! action, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? settings) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+VentanaTools.Orbit.Extensions.CompanionClient
+VentanaTools.Orbit.Extensions.CompanionClient.CompanionClient() -> void
+VentanaTools.Orbit.Extensions.CompanionClient.RunAsync(VentanaTools.Orbit.Extensions.ExtensionPairing! pairing, VentanaTools.Orbit.Extensions.ExternalExtensionManifest! manifest, VentanaTools.Orbit.Extensions.IContributionHandler! handler, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.CompanionFace
+VentanaTools.Orbit.Extensions.CompanionFace.<Clone>$() -> VentanaTools.Orbit.Extensions.CompanionFace!
+VentanaTools.Orbit.Extensions.CompanionFace.CompanionFace(string! Line1, int GoodForSeconds) -> void
+VentanaTools.Orbit.Extensions.CompanionFace.Deconstruct(out string! Line1, out int GoodForSeconds) -> void
+VentanaTools.Orbit.Extensions.CompanionFace.Detail.get -> string?
+VentanaTools.Orbit.Extensions.CompanionFace.Detail.init -> void
+VentanaTools.Orbit.Extensions.CompanionFace.Equals(VentanaTools.Orbit.Extensions.CompanionFace? other) -> bool
+VentanaTools.Orbit.Extensions.CompanionFace.Glyph.get -> string?
+VentanaTools.Orbit.Extensions.CompanionFace.Glyph.init -> void
+VentanaTools.Orbit.Extensions.CompanionFace.GoodForSeconds.get -> int
+VentanaTools.Orbit.Extensions.CompanionFace.GoodForSeconds.init -> void
+VentanaTools.Orbit.Extensions.CompanionFace.Line1.get -> string!
+VentanaTools.Orbit.Extensions.CompanionFace.Line1.init -> void
+VentanaTools.Orbit.Extensions.CompanionFace.Line2.get -> string?
+VentanaTools.Orbit.Extensions.CompanionFace.Line2.init -> void
+VentanaTools.Orbit.Extensions.CompanionFace.State.get -> VentanaTools.Orbit.Extensions.CompanionFaceState
+VentanaTools.Orbit.Extensions.CompanionFace.State.init -> void
+VentanaTools.Orbit.Extensions.CompanionFaceState
+VentanaTools.Orbit.Extensions.CompanionFaceState.None = 0 -> VentanaTools.Orbit.Extensions.CompanionFaceState
+VentanaTools.Orbit.Extensions.CompanionFaceState.Off = 4 -> VentanaTools.Orbit.Extensions.CompanionFaceState
+VentanaTools.Orbit.Extensions.CompanionFaceState.On = 3 -> VentanaTools.Orbit.Extensions.CompanionFaceState
+VentanaTools.Orbit.Extensions.CompanionFaceState.Paused = 2 -> VentanaTools.Orbit.Extensions.CompanionFaceState
+VentanaTools.Orbit.Extensions.CompanionFaceState.Playing = 1 -> VentanaTools.Orbit.Extensions.CompanionFaceState
+VentanaTools.Orbit.Extensions.CompanionFailure
+VentanaTools.Orbit.Extensions.CompanionFailure.NeedsSetup = 0 -> VentanaTools.Orbit.Extensions.CompanionFailure
+VentanaTools.Orbit.Extensions.CompanionFailure.Network = 2 -> VentanaTools.Orbit.Extensions.CompanionFailure
+VentanaTools.Orbit.Extensions.CompanionFailure.NoData = 1 -> VentanaTools.Orbit.Extensions.CompanionFailure
+VentanaTools.Orbit.Extensions.CompanionFailure.Unsupported = 3 -> VentanaTools.Orbit.Extensions.CompanionFailure
+VentanaTools.Orbit.Extensions.CompanionInvocation
+VentanaTools.Orbit.Extensions.CompanionInvocation.RequestId.get -> string!
+VentanaTools.Orbit.Extensions.CompanionInvocation.Session.get -> VentanaTools.Orbit.Extensions.CompanionSession!
+VentanaTools.Orbit.Extensions.CompanionOutcome
+VentanaTools.Orbit.Extensions.CompanionOutcome.Done = 0 -> VentanaTools.Orbit.Extensions.CompanionOutcome
+VentanaTools.Orbit.Extensions.CompanionOutcome.Failed = 2 -> VentanaTools.Orbit.Extensions.CompanionOutcome
+VentanaTools.Orbit.Extensions.CompanionOutcome.Refused = 1 -> VentanaTools.Orbit.Extensions.CompanionOutcome
+VentanaTools.Orbit.Extensions.CompanionOutcome.Unsupported = 3 -> VentanaTools.Orbit.Extensions.CompanionOutcome
+VentanaTools.Orbit.Extensions.CompanionSession
+VentanaTools.Orbit.Extensions.CompanionSession.ActionId.get -> string!
+VentanaTools.Orbit.Extensions.CompanionSession.ClearFace() -> bool
+VentanaTools.Orbit.Extensions.CompanionSession.Fail(VentanaTools.Orbit.Extensions.CompanionFailure failure) -> bool
+VentanaTools.Orbit.Extensions.CompanionSession.IsActive.get -> bool
+VentanaTools.Orbit.Extensions.CompanionSession.SessionId.get -> string!
+VentanaTools.Orbit.Extensions.CompanionSession.SetFace(VentanaTools.Orbit.Extensions.CompanionFace! face) -> bool
+VentanaTools.Orbit.Extensions.CompanionSession.Settings.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+VentanaTools.Orbit.Extensions.ExtensionIds
+VentanaTools.Orbit.Extensions.ExtensionJson
+VentanaTools.Orbit.Extensions.ExtensionOrigin
+VentanaTools.Orbit.Extensions.ExtensionOrigin.FirstParty = 0 -> VentanaTools.Orbit.Extensions.ExtensionOrigin
+VentanaTools.Orbit.Extensions.ExtensionOrigin.ThirdParty = 1 -> VentanaTools.Orbit.Extensions.ExtensionOrigin
+VentanaTools.Orbit.Extensions.ExtensionPairing
+VentanaTools.Orbit.Extensions.ExtensionPairing.CreateProof(string! role, string! clientNonce, string! serverNonce) -> string!
+VentanaTools.Orbit.Extensions.ExtensionPairing.Dispose() -> void
+VentanaTools.Orbit.Extensions.ExtensionPairing.ExtensionId.get -> string!
+VentanaTools.Orbit.Extensions.ExtensionPairing.PipeName.get -> string!
+VentanaTools.Orbit.Extensions.ExtensionPairing.ProtocolVersion.get -> int
+VentanaTools.Orbit.Extensions.ExtensionPairing.RegistrationId.get -> string!
+VentanaTools.Orbit.Extensions.ExtensionPairing.VerifyProof(string? proof, string! role, string! clientNonce, string! serverNonce) -> bool
+VentanaTools.Orbit.Extensions.ExtensionText
+VentanaTools.Orbit.Extensions.ExtensionWire
+VentanaTools.Orbit.Extensions.ExternalExtensionAction
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.<Clone>$() -> VentanaTools.Orbit.Extensions.ExternalExtensionAction!
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.CanInvoke.get -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.CanInvoke.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Deconstruct(out string! Id, out string! Name, out string! Description, out string! Glyph) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Description.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Description.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Equals(VentanaTools.Orbit.Extensions.ExternalExtensionAction? other) -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.ExternalExtensionAction(string! Id, string! Name, string! Description, string! Glyph) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Glyph.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Glyph.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.HasFace.get -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.HasFace.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Id.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Id.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Name.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Name.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Settings.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionSetting!>!
+VentanaTools.Orbit.Extensions.ExternalExtensionAction.Settings.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.<Clone>$() -> VentanaTools.Orbit.Extensions.ExternalExtensionChoice!
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.Deconstruct(out string! Value, out string! Name) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.Equals(VentanaTools.Orbit.Extensions.ExternalExtensionChoice? other) -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.ExternalExtensionChoice(string! Value, string! Name) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.Name.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.Name.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.Value.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionChoice.Value.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.<Clone>$() -> VentanaTools.Orbit.Extensions.ExternalExtensionManifest!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Actions.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionAction!>!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Actions.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Deconstruct(out string! Id, out string! Name, out string! Description, out System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionAction!>! Actions) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Description.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Description.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Equals(VentanaTools.Orbit.Extensions.ExternalExtensionManifest? other) -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.ExternalExtensionManifest(string! Id, string! Name, string! Description, System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionAction!>! Actions) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Hosts.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Hosts.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Id.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Id.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.ManifestVersion.get -> int
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.ManifestVersion.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Name.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.Name.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.PackageVersion.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifest.PackageVersion.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.<Clone>$() -> VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead!
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.Deconstruct(out VentanaTools.Orbit.Extensions.ExternalExtensionManifest? Manifest, out string? Error) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.Equals(VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead? other) -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.Error.get -> string?
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.Error.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.ExternalExtensionManifestRead(VentanaTools.Orbit.Extensions.ExternalExtensionManifest? Manifest, string? Error) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.Manifest.get -> VentanaTools.Orbit.Extensions.ExternalExtensionManifest?
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestRead.Manifest.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionManifestReader
+VentanaTools.Orbit.Extensions.ExternalExtensionPackage
+VentanaTools.Orbit.Extensions.ExternalExtensionPackage.Descriptor.get -> VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackage.Files.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionPackageFile!>!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackage.Manifest.get -> VentanaTools.Orbit.Extensions.ExternalExtensionManifest!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackage.Readme.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackage.Sha256.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.<Clone>$() -> VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.Deconstruct(out int ProtocolVersion, out System.Collections.Generic.IReadOnlyList<string!>! RequiredCapabilities) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.Equals(VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor? other) -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.ExternalExtensionPackageDescriptor(int ProtocolVersion, System.Collections.Generic.IReadOnlyList<string!>! RequiredCapabilities) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.ProtocolVersion.get -> int
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.ProtocolVersion.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.RequiredCapabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptor.RequiredCapabilities.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageDescriptorReader
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageFile
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageFile.Length.get -> int
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageFile.OpenRead() -> System.IO.Stream!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageFile.Path.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.<Clone>$() -> VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead!
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.Deconstruct(out VentanaTools.Orbit.Extensions.ExternalExtensionPackage? Package, out string? Error) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.Equals(VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead? other) -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.Error.get -> string?
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.Error.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.ExternalExtensionPackageRead(VentanaTools.Orbit.Extensions.ExternalExtensionPackage? Package, string? Error) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.Package.get -> VentanaTools.Orbit.Extensions.ExternalExtensionPackage?
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageRead.Package.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionPackageReader
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.<Clone>$() -> VentanaTools.Orbit.Extensions.ExternalExtensionSetting!
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Choices.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionChoice!>!
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Choices.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Deconstruct(out string! Id, out string! Name, out string! DefaultValue, out System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionChoice!>! Choices) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.DefaultValue.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.DefaultValue.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Equals(VentanaTools.Orbit.Extensions.ExternalExtensionSetting? other) -> bool
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.ExternalExtensionSetting(string! Id, string! Name, string! DefaultValue, System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.ExternalExtensionChoice!>! Choices) -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Id.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Id.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Name.get -> string!
+VentanaTools.Orbit.Extensions.ExternalExtensionSetting.Name.init -> void
+VentanaTools.Orbit.Extensions.ExternalExtensionSettings
+VentanaTools.Orbit.Extensions.IContributionHandler
+VentanaTools.Orbit.Extensions.IContributionHandler.InvokeAsync(VentanaTools.Orbit.Extensions.CompanionInvocation! invocation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.CompanionOutcome>!
+VentanaTools.Orbit.Extensions.IContributionHandler.RunSessionAsync(VentanaTools.Orbit.Extensions.CompanionSession! session, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!

@@ -1,9 +1,12 @@
-Orbit Extensions SDK
-Copyright 2026 Seth Cottle
+VentanaTools Orbit Extensions SDK
+Copyright 2026 Ventana Tools LLC
 
 This repository contains the public extension SDK, protocol, developer tools,
-tests and examples for Orbit. Orbit and Lollipop applications remain proprietary
-and are not included or licensed by this repository.
+tests and examples for Orbit. The libraries, tools, tests, fixtures and schemas
+are licensed under Apache-2.0 (LICENSE). The samples are licensed under MIT-0
+(LICENSES/MIT-0.txt and the LICENSE file in each sample folder). Orbit and
+Lollipop applications remain proprietary and are not included or licensed by
+this repository.
 
 Product names and logos are not covered by a general trademark license.
 Third-party dependencies retain their own licenses; see THIRD-PARTY-NOTICES.md.

@@ -33,7 +33,8 @@ Start with a disposable Photoshop document/layer. Add Selected layer visibility
 items with Toggle, Show and Hide choices, plus a passive Layer status display.
 Never package/share pairing or bridge files. After an Orbit package update,
 re-enable and copy fresh connection info; restart Node, reload changed UXP code
-and select its fresh bridge file. License terms are in `payload/LICENSE` and `payload/NOTICE`.
+and select its fresh bridge file. SDK license terms are in `payload/LICENSE` and `payload/NOTICE`;
+the sample source is MIT-0 (`payload/source/LICENSE`).
 Third-party licenses are documented in the source README and copied next to
 the generated UXP bundle. Public setup instructions are at
 https://dev.ventana.tools/orbit/examples/photoshop/.

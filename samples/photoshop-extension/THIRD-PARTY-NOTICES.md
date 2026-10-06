@@ -1,6 +1,6 @@
 # Photoshop sample dependency notices
 
-The sample source is covered by the repository's Apache-2.0 license. Its npm
+The sample source is licensed under MIT-0 (see [LICENSE](LICENSE)). Its npm
 dependencies retain their own licenses and copyright notices. The checked-in
 lockfile pins these versions:
 

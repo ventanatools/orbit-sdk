@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 "use strict";
 // Real C# host -> Node bridge -> UXP client, with only Photoshop's DOM replaced.
 const fs = require("node:fs/promises");

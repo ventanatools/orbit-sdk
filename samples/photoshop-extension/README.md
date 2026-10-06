@@ -313,7 +313,7 @@ Lollipop support, a marketplace, public NuGet publication, richer settings
 inspectors, and other contribution types remain separately versioned work.
 This sample is a source developer example, not a ready-to-install consumer
 extension. Visit the [developer site](https://dev.ventana.tools/orbit/examples/photoshop/)
-for the public walkthrough. SDK/sample source uses [Apache-2.0](../../LICENSE);
+for the public walkthrough. Sample source uses [MIT-0](LICENSE) and the SDK [Apache-2.0](../../LICENSE);
 Orbit remains proprietary. The dependency licenses below remain applicable.
 
 ## Dependencies

@@ -1,16 +1,18 @@
 # Preview release status
 
-The public SDK source preview is **0.1.0-preview.2**, using manifest schema 2
-and wire protocol 2. The SDK, tools, tests, and examples use [Apache-2.0](../LICENSE)
-with the repository [NOTICE](../NOTICE) and applicable third-party licenses.
+The public SDK source preview is **0.1.0-preview.1** of `VentanaTools.Orbit.Extensions`,
+using manifest schema 2 and wire protocol 2. The SDK, tools and tests use
+[Apache-2.0](../LICENSE) and the samples [MIT-0](../LICENSES/MIT-0.txt), with the
+repository [NOTICE](../NOTICE) and applicable third-party licenses.
 Orbit and Lollipop application source remains proprietary and is not included.
 Authors retain ownership of independently created extensions and select their
 own extension license.
 
 ## Available in this repository
 
-- Independent .NET 10 SDK and protocol projects, without proprietary host or
-  WinUI dependencies. The .NET companion transport runs on Windows.
+- One independent .NET 10 SDK project (declarations, wire primitives and the
+  companion client), without proprietary host or WinUI dependencies. The .NET
+  companion transport runs on Windows.
 - Local NuGet packing, package validation, public tests, and standalone samples.
 - Actions, passive live displays, contributions with both capabilities, and
   native per-placement choices through protocol 2.
@@ -60,6 +62,17 @@ Photoshop, Adobe developer tooling, and explicit local setup.
 - Obtain outside-author feedback and independent authentication review.
 - Design publisher verification, signing, discovery, and marketplace terms.
 
-Lollipop host compatibility, a shared marketplace, richer settings inspectors,
-image faces, and additional contribution types are future work. Changing a
-product display name must not silently change namespaces or wire identifiers.
+A shared marketplace, richer settings inspectors, image faces, and additional
+contribution types are future work. Lollipop has a separate SDK that follows the
+same Ventana conventions ([contract
+§2.7](design/contract-v3.md#27-ventana-conventions)); these packages do not
+target it. This repository is the source of truth for Orbit's extension SDK,
+contract, samples and fixtures.
+
+Naming follows the product-name rule. Wire and file-format identifiers are
+product-neutral. The product name appears only in (a) the package family
+`VentanaTools.<Product>.Extensions*` and its namespaces, assembly, folder and
+solution names, (b) the tool command and template short names, (c)
+`fixtures/hosts.json` (host id, display name, package file extension), and (d)
+display text. Before the first release, renaming Orbit to Pinwheel is a
+scripted, mechanical rename.

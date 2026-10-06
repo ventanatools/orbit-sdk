@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\eng\Ventana.Package.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <AssemblyName>VentanaTools.Orbit.Extensions</AssemblyName>
+    <RootNamespace>VentanaTools.Orbit.Extensions</RootNamespace>
+    <PackageId>VentanaTools.Orbit.Extensions</PackageId>
+    <Description>Orbit extension declarations, authenticated wire primitives and the out-of-process .NET companion client.</Description>
+    <IsPackable>true</IsPackable>
+    <!-- Temporary until the v3 rewrite documents and tracks every public member. -->
+    <NoWarn>$(NoWarn);CS1591;RS0016;RS0017</NoWarn>
+  </PropertyGroup>
+</Project>

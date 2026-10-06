@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 #Requires -Version 7.0
 param(
     [Parameter(Mandatory)][ValidateSet('countdown', 'photoshop')][string]$Sample,
@@ -7,6 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $taskRepo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $taskSource = Join-Path $taskRepo "samples/$Sample-extension"
+$taskTool = Join-Path $taskRepo 'src/VentanaTools.Orbit.Extensions.Tool/VentanaTools.Orbit.Extensions.Tool.csproj'
 $taskOutput = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) }
     else { Join-Path $taskRepo 'artifacts/extension-distribution' }
 $taskStage = Join-Path $taskOutput ("stage-" + $Sample + '-' + [guid]::NewGuid().ToString('N'))
@@ -28,7 +30,7 @@ Copy-StagedFile (Join-Path $taskRepo 'LICENSE') 'payload/LICENSE'
 Copy-StagedFile (Join-Path $taskRepo 'NOTICE') 'payload/NOTICE'
 
 if ($Sample -eq 'countdown') {
-    $taskFiles = @('README.md', 'Directory.Build.props', 'CountdownExtensionSample.csproj',
+    $taskFiles = @('README.md', 'LICENSE', 'Directory.Build.props', 'CountdownExtensionSample.csproj',
         'Program.cs', 'Countdown.cs', 'CountdownHandler.cs', 'extension.json',
         'tests/CountdownExtensionSample.Tests.csproj', 'tests/Program.cs')
     $taskBuilt = Join-Path $taskSource 'bin/Release/net10.0'
@@ -37,13 +39,13 @@ if ($Sample -eq 'countdown') {
     }
     foreach ($taskRuntimeFile in @('CountdownExtensionSample.dll',
             'CountdownExtensionSample.deps.json', 'CountdownExtensionSample.runtimeconfig.json',
-            'Orbit.Extensions.Protocol.dll', 'Orbit.Extensions.Sdk.dll')) {
+            'VentanaTools.Orbit.Extensions.dll')) {
         Copy-StagedFile (Join-Path $taskBuilt $taskRuntimeFile) ("payload/companion/" + $taskRuntimeFile)
     }
 } else {
     # Explicit source allowlist: never sweep credentials, local fixtures or
     # generated bundles into an archive when packaging a developer's checkout.
-    $taskFiles = @('README.md', 'extension.json', 'package.json', 'package-lock.json',
+    $taskFiles = @('README.md', 'LICENSE', 'extension.json', 'package.json', 'package-lock.json',
         'THIRD-PARTY-NOTICES.md', 'licenses/ws-MIT.txt', 'licenses/noble-hashes-MIT.txt',
         'licenses/esbuild-MIT.txt', 'companion/main.cjs', 'companion/bridge-v2.cjs',
         'companion/protocol-v2.cjs', 'companion/protocol.cjs', 'uxp/client-v2.js',
@@ -60,8 +62,8 @@ foreach ($taskFile in $taskFiles) {
 }
 $taskVersion = (Get-Content -LiteralPath (Join-Path $taskSource 'extension.json') -Raw | ConvertFrom-Json).version
 $taskDestination = Join-Path $taskOutput ("example." + $Sample + '-' + $taskVersion + '.orbitextension')
-& dotnet run --project (Join-Path $PSScriptRoot 'ExtensionPackageTool.csproj') -c Release -- pack $taskStage $taskDestination
+& dotnet run --project $taskTool -c Release -- pack $taskStage $taskDestination
 if ($LASTEXITCODE -ne 0) { throw 'Example packaging failed. Existing output is never replaced.' }
-& dotnet run --project (Join-Path $PSScriptRoot 'ExtensionPackageTool.csproj') -c Release -- verify $taskDestination
+& dotnet run --project $taskTool -c Release -- verify $taskDestination
 if ($LASTEXITCODE -ne 0) { throw 'Example validation failed.' }
 Write-Output $taskDestination

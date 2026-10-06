@@ -24,5 +24,6 @@ https://dev.ventana.tools/orbit/examples/countdown/ and in the public
 https://github.com/ventanatools/orbit-sdk repository. The extracted source can
 be built independently with .NET 10 and the local SDK packages from that repo;
 repository-relative README links/commands assume a complete checkout.
-License terms are in `payload/LICENSE` and `payload/NOTICE`.
+SDK license terms are in `payload/LICENSE` and `payload/NOTICE`; the sample source
+is MIT-0 (`payload/source/LICENSE`).
 Store-signed extension support remains unverified; this is a developer example.

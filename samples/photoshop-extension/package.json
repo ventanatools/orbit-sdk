@@ -2,7 +2,7 @@
   "name": "orbit-photoshop-extension-sample",
   "version": "0.1.0",
   "private": true,
-  "license": "Apache-2.0",
+  "license": "MIT-0",
   "description": "Explicit local command bridge from Orbit to an Adobe Photoshop UXP plugin.",
   "engines": { "node": ">=22" },
   "scripts": {

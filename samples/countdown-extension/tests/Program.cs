@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 using System.Threading.Channels;
-using Orbit.Extensions.Protocol;
-using Orbit.Extensions.Sdk;
+using VentanaTools.Orbit.Extensions;
 
 namespace CountdownExtensionSample.Tests;
 

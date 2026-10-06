@@ -1,7 +1,7 @@
 # Countdown companion sample
 
-A small .NET 10 companion consuming the local `Orbit.Extensions.Sdk`
-**0.1.0-preview.2** NuGet package. It owns one countdown in memory, supplies
+A small .NET 10 companion consuming the local `VentanaTools.Orbit.Extensions`
+**0.1.0-preview.1** NuGet package. It owns one countdown in memory, supplies
 live text faces, and needs no account or external network service. The SDK
 owns authenticated Windows named pipes, pairing and reconnect.
 
@@ -27,7 +27,7 @@ From the repository root with .NET 10:
 
 ```powershell
 pwsh -File tools/build.ps1
-dotnet restore samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj --source artifacts/extension-sdk --packages artifacts/countdown-consumer-packages
+dotnet restore samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj --source artifacts/packages --packages artifacts/countdown-consumer-packages
 dotnet build samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj -c Release --no-restore
 dotnet run --project samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj -c Release --no-build
 ```
@@ -91,7 +91,7 @@ as root `README.md`. Prerequisite .NET installation remains the user's step.
 See the [SDK guide](../../docs/extension-sdk.md),
 [example walkthroughs](../../docs/extension-examples.md), and
 [developer site](https://dev.ventana.tools/orbit/examples/countdown/).
-The SDK and sample use [Apache-2.0](../../LICENSE); Orbit remains proprietary.
+The sample uses [MIT-0](LICENSE) and the SDK [Apache-2.0](../../LICENSE); Orbit remains proprietary.
 SDK NuGet publication and real Store-signed extension verification remain open.
 Use an Orbit version with **Settings > Extensions** enabled; this repository
 does not include an application build.

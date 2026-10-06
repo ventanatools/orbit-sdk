@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 #Requires -Version 7.0
 param([ValidateSet('Debug', 'Release')][string]$Configuration = 'Release')
 $ErrorActionPreference = 'Stop'
@@ -11,7 +12,7 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 
 Push-Location $taskRepository
 try {
-    Invoke-Checked -Program dotnet -Arguments @('test', 'Orbit.Extensions.slnx', '-c', $Configuration, '--no-build', '--no-restore')
+    Invoke-Checked -Program dotnet -Arguments @('test', 'VentanaTools.Orbit.Extensions.slnx', '-c', $Configuration, '--no-build', '--no-restore')
     Invoke-Checked -Program dotnet -Arguments @('run', '--project', 'samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj',
         '-c', $Configuration, '--no-build', '--no-restore')
     Push-Location (Join-Path $taskRepository 'samples/photoshop-extension')

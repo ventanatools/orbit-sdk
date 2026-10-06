@@ -103,7 +103,7 @@ recipient prepares explicitly. Node dependencies and generated UXP bundles are
 not included. The Photoshop npm `package.json` stays under payload; its separate
 `orbit-package.json` becomes the root compatibility descriptor.
 
-The [package tool](../tools/extension-package/README.md) can pack your own
+The [package tool](../src/VentanaTools.Orbit.Extensions.Tool/README.md) can pack your own
 explicit staging directory and verify a received package. It validates before
 writing, preserves an existing output, and is reproducible with identical input
 and the same runtime. Keep staging stable while packing.

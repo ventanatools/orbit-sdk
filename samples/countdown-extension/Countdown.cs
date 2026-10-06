@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 namespace CountdownExtensionSample;
 
 internal enum CountdownPhase { Ready, Running, Paused, Finished }

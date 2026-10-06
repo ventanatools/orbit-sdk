@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 #Requires -Version 7.0
 param([ValidateSet('Debug', 'Release')][string]$Configuration = 'Release')
 $ErrorActionPreference = 'Stop'
 $taskRepository = Split-Path $PSScriptRoot -Parent
-$taskFeed = Join-Path $taskRepository 'artifacts/extension-sdk'
+$taskFeed = Join-Path $taskRepository 'artifacts/packages'
 New-Item -ItemType Directory -Path $taskFeed -Force | Out-Null
 
 function Invoke-Dotnet([string[]]$Arguments) {
@@ -13,10 +14,9 @@ function Invoke-Dotnet([string[]]$Arguments) {
 
 Push-Location $taskRepository
 try {
-    Invoke-Dotnet -Arguments @('restore', 'Orbit.Extensions.slnx')
-    Invoke-Dotnet -Arguments @('build', 'Orbit.Extensions.slnx', '-c', $Configuration, '--no-restore')
-    foreach ($taskProject in @('src/Orbit.Extensions.Protocol/Orbit.Extensions.Protocol.csproj',
-            'src/Orbit.Extensions.Sdk/Orbit.Extensions.Sdk.csproj')) {
+    Invoke-Dotnet -Arguments @('restore', 'VentanaTools.Orbit.Extensions.slnx')
+    Invoke-Dotnet -Arguments @('build', 'VentanaTools.Orbit.Extensions.slnx', '-c', $Configuration, '--no-restore')
+    foreach ($taskProject in @('src/VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj')) {
         Invoke-Dotnet -Arguments @('pack', $taskProject, '-c', $Configuration, '--no-build', '-o', $taskFeed)
     }
     foreach ($taskProject in @('samples/dotnet-extension/DotnetExtensionSample.csproj',

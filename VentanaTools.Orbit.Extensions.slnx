@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VentanaTools.Orbit.Extensions.Tests/VentanaTools.Orbit.Extensions.Tests.csproj" />
+  </Folder>
+</Solution>

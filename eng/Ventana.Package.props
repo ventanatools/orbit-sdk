@@ -1,0 +1,57 @@
+<Project>
+  <!-- Shared package metadata. Every packable project imports this file. -->
+  <PropertyGroup>
+    <Authors>Ventana Tools</Authors>
+    <Company>Ventana Tools LLC</Company>
+    <Copyright>© 2026 Ventana Tools LLC</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://dev.ventana.tools/</PackageProjectUrl>
+    <!-- The one place the repository's address is written. RepositoryUrl and SourceLink both
+         take it from here, so renaming the repository is a one-line change. -->
+    <VentanaRepositoryUrl>https://github.com/ventanatools/orbit-sdk</VentanaRepositoryUrl>
+    <RepositoryUrl>$(VentanaRepositoryUrl)</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>windows;extensions;ventana;companion;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EnableSourceLink>true</EnableSourceLink>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <!-- The package icon is added once eng/icon.png exists (128 x 128). -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)icon.png')">
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)\README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)..\NOTICE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false"
+          Condition="Exists('$(MSBuildThisFileDirectory)icon.png')" />
+  </ItemGroup>
+
+  <!-- Public API tracking. The analyzer package reads PublicAPI.Shipped.txt and
+       PublicAPI.Unshipped.txt beside the project. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all"
+                      IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+  </ItemGroup>
+
+  <!-- SourceLink maps the repository root to VentanaRepositoryUrl, not to the clone's remote. -->
+  <Target Name="_VentanaSetSourceLinkRepositoryUrl" BeforeTargets="SourceControlManagerPublishTranslatedUrls">
+    <ItemGroup>
+      <SourceRoot Update="@(SourceRoot)"
+                  Condition="'%(SourceRoot.SourceControl)' == 'git' and '%(SourceRoot.NestedRoot)' == ''">
+        <RepositoryUrl>$(VentanaRepositoryUrl)</RepositoryUrl>
+      </SourceRoot>
+    </ItemGroup>
+  </Target>
+</Project>

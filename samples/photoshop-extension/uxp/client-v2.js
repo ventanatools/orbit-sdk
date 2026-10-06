@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 "use strict";
 const { parseRecordV2, fields, isRequestId, isOutcome, isStart, isInvoke } = require("./wire-v2.js");
 const { bridgeProof, randomNonce, matchesProof } = require("./vendor/bridge-crypto.js");

@@ -1,9 +1,13 @@
 <Project>
-  <!-- Keep this package consumer independent of Orbit's Windows SDK/MSIX props. -->
+  <!-- This folder is a standalone package consumer: it imports none of the repository's build
+       settings or central package versions. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImportDirectoryPackagesProps>false</ImportDirectoryPackagesProps>
+    <!-- The SDK package version; a build may pass -p:VentanaExtensionsVersion=<version>. -->
+    <VentanaExtensionsVersion Condition="'$(VentanaExtensionsVersion)' == ''">0.1.0-preview.1</VentanaExtensionsVersion>
   </PropertyGroup>
 </Project>
