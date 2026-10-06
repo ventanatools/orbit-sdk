@@ -1,0 +1,15 @@
+exit 3
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "validate",
+  "ok": false,
+  "diagnostics": [],
+  "summary": {
+    "errors": 0,
+    "warnings": 0
+  }
+}
+--- error
+{tool}: error: The current folder contains no extension.json.

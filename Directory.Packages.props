@@ -13,4 +13,11 @@
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The tool: argument parsing, and the include and exclude globs of extension.pack.json. -->
+    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.12" />
+    <!-- Test-only: the schema tests validate the fixtures with JSON Schema 2020-12. -->
+    <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
+  </ItemGroup>
 </Project>

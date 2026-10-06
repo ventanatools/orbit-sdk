@@ -18,3 +18,5 @@ artifacts/
 *connection-info*.json
 *bridge-credentials*.json
 *bridge-info*.json
+# The pairing-file JSON Schema is not a pairing file.
+!schemas/extensions/pairing.v*.json

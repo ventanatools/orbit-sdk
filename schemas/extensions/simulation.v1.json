@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.ventana.tools/schemas/extensions/simulation.v1.json",
+  "title": "Extension simulation script, version 1",
+  "description": "A script for the tool's simulate --script (contract §11.2): steps run in order against a fake host; a failed expectation stops the script and exits 1. Sessions and requests get the names in \"as\", else s1, s2, … and r1, r2, ….",
+  "type": "array",
+  "maxItems": 1000,
+  "items": {
+    "oneOf": [
+      {
+        "description": "Start a session once the companion is connected, with the contribution's defaults and these settings.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["start"],
+        "properties": {
+          "start": { "description": "A contribution id.", "type": "string" },
+          "settings": { "type": "object", "additionalProperties": { "type": "string" } },
+          "as": { "description": "The session's name.", "type": "string" }
+        }
+      },
+      {
+        "description": "Invoke a session and, unless wait is false, wait for its result.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["invoke"],
+        "properties": {
+          "invoke": { "description": "A session name.", "type": "string" },
+          "as": { "description": "The request's name.", "type": "string" },
+          "expect": { "enum": ["Done", "Refused", "Failed", "Unsupported", "Cancelled", "TimedOut"] },
+          "failure": { "enum": ["UnsupportedInput", "NeedsSetup", "Network", "NoResult", "AppUnavailable"] },
+          "wait": { "type": "boolean" }
+        }
+      },
+      {
+        "description": "Cancel a pending request.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cancel"],
+        "properties": { "cancel": { "description": "A request name.", "type": "string" } }
+      },
+      {
+        "description": "Stop a session.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stop"],
+        "properties": { "stop": { "description": "A session name.", "type": "string" } }
+      },
+      {
+        "description": "Expect the session to have, or receive within the time, a face matching the given parts.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["expectFace"],
+        "properties": {
+          "expectFace": { "description": "A session name.", "type": "string" },
+          "within": { "$ref": "#/$defs/duration" },
+          "line1": { "type": "string" },
+          "line2": { "type": "string" },
+          "state": { "enum": ["None", "Playing", "Paused", "On", "Off"] }
+        }
+      },
+      {
+        "description": "Close the connection with this reason code, as a host does; the companion reconnects.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["disconnect"],
+        "properties": {
+          "disconnect": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+          }
+        }
+      },
+      {
+        "description": "Wait.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["wait"],
+        "properties": { "wait": { "$ref": "#/$defs/duration" } }
+      }
+    ]
+  },
+  "$defs": {
+    "duration": {
+      "description": "A duration such as 2s or 500ms.",
+      "type": "string",
+      "pattern": "^[0-9]{1,7}(ms|s)$"
+    }
+  }
+}

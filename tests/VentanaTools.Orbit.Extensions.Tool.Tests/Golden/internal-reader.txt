@@ -1,0 +1,7 @@
+exit 4
+--- out
+{tool}: error json.internal-error: The reader failed in a way the contract does not describe; the file is refused. []
+  fix: Report it; the file is still refused.
+{tool}: 1 error, 0 warnings
+--- error
+{tool}: error: reader defect: System.FormatException (0x80131537)

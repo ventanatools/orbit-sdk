@@ -1,0 +1,6 @@
+exit 1
+--- out
+fixtures/packages/zip64-sizes.zip!/payload/companion.txt: error package.zip64: The archive uses ZIP64. []
+  fix: Rebuild it with {tool} pack.
+{tool}: 1 error, 0 warnings
+--- error

@@ -1,0 +1,6 @@
+exit 3
+--- out
+artifacts/example.tool-test-1.2.3{ext}: error pack.output-exists: The output file exists. []
+  fix: Remove it, or pass --force.
+{tool}: 1 error, 0 warnings
+--- error

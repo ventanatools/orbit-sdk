@@ -1,0 +1,22 @@
+exit 4
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "validate",
+  "ok": false,
+  "diagnostics": [
+    {
+      "code": "tool.internal-error",
+      "path": "",
+      "message": "The tool failed in a way it does not describe.",
+      "severity": "Error"
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 0
+  }
+}
+--- error
+{tool}: error: internal error: System.InvalidOperationException (0x80131509)

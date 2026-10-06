@@ -1,30 +1,128 @@
 # VentanaTools.Orbit.Extensions.Tool
 
-This standalone .NET 10 tool packs an explicit staging directory or verifies
-an existing `.orbitextension`. It uses only the `VentanaTools.Orbit.Extensions` library.
-
-Stage exactly `extension.json`, `package.json`, `README.md`, and optional
-`payload/` companion/source files. Root names and case are exact. Do not point
-it at a checkout; copy only intended files, excluding credentials and runtime
-data. Links/reparse points, including ancestors, are rejected.
+`orbit-ext`, the author tool for Orbit extensions. It creates projects from the
+templates, validates manifests, packs and verifies packages, runs a project's
+tests, simulates Orbit on a real named pipe, runs a companion with restart on
+change, and checks where a companion finds its pairing.
 
 ```powershell
-dotnet run --project src/VentanaTools.Orbit.Extensions.Tool/VentanaTools.Orbit.Extensions.Tool.csproj -c Release -- pack "C:\extension-stage" "C:\extension-output\example.orbitextension"
-dotnet run --project src/VentanaTools.Orbit.Extensions.Tool/VentanaTools.Orbit.Extensions.Tool.csproj -c Release -- verify "C:\extension-output\example.orbitextension"
+dotnet tool install --global VentanaTools.Orbit.Extensions.Tool --prerelease
+orbit-ext new widget -n MyWidget --extension-id contoso.my-widget
+cd MyWidget
+dotnet tool restore
+dotnet orbit-ext test
 ```
 
-The output directory must exist outside staging, and the output file must not
-exist. Keep staging unchanged during packing. The shared reader validates
-paths, attributes, size/count limits, compatibility, README and ZIP integrity.
-The completed archive is validated before a flushed temporary file moves into
-place without overwriting an existing package. Verify never extracts files.
+The packages are not published yet. Until they are, install the tool from a
+folder of locally built packages (`--add-source <folder>`). The tool carries the
+packages a new project needs, so `orbit-ext new` works offline: it copies them,
+with its own package, into `%LOCALAPPDATA%\VentanaTools\packages\<version>\`
+(or the folder you give with `--feed`), and the project it creates restores
+from there.
 
-Sorted ordinal names, fixed 1980 timestamps and normalized attributes produce
-reproducible packages for identical bytes with the same tool/runtime. Deflate
-changes between runtimes can change compressed bytes.
+## Commands
 
-Exit 0 prints `extension-package.packed` or `extension-package.verified`.
-Exit 1 prints `extension-package.failed`; exit 2 prints usage. Errors expose
-no raw exceptions, paths or file content. See the
-[distribution guide](../../docs/extension-distribution.md)
-for the package format and Orbit's separate review/install/update workflow.
+| Command | What it does |
+|---|---|
+| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same options and `--package-source <feed>`. When the template pack is not installed, prints the command that installs it from the feed and exits 3. |
+| `orbit-ext validate [<path>] [--host <id>] [--json] [--warnings-as-errors]` | Validates an `extension.json`, a folder that contains one (with its `strings/` folder), or a package. |
+| `orbit-ext pack [<project-dir>] [-o <output-dir>] [--host <id>] [--force] [--json]` | Builds `<id>-<version>.orbitextension` from `extension.pack.json`, running its `build` step first. The default output folder is `artifacts/` in the project. |
+| `orbit-ext verify <package> [--host <id>] [--json]` | Verifies a package and prints its id, version, hosts, contributions, file count, size and package hash. |
+| `orbit-ext test [<project-dir>] [--host <id>] [-- <args…>]` | Validates `extension.json`, then runs `dotnet test`, or `npm test` for a project with a `package.json`. |
+| `orbit-ext simulate [--manifest <path>] [--script <file>] [--json] -- <command> [args…]` | Runs a fake Orbit on a real named pipe with a temporary registration and pairing file, starts the companion with `--manifest` and `--pairing` appended, and drives it from a prompt or a script. Windows only. |
+| `orbit-ext run [--watch] -- <command> [args…]` | Runs the companion and prints its status lines; with `--watch`, restarts it when `extension.json`, the pairing file or the sources change. |
+| `orbit-ext link [<path>] [--host <id>] [--json]` | Shows where the companion looks for its pairing, whether a valid one is there, and the Orbit action that writes it. Never prints the secret. |
+| `orbit-ext schema [--kind <manifest\|strings\|package\|pairing\|pack\|simulation>] [--host <id>] [-o <file>]` | Writes a bundled JSON Schema, for editors that work offline. |
+
+`--host` defaults to the first id in the manifest's `hosts` that is an active
+host. A `dotnet run` companion needs a trailing `--`:
+`orbit-ext simulate -- dotnet run --project src/MyWidget --`.
+
+## Output
+
+Each diagnostic is one line in the MSBuild form that Visual Studio, VS Code
+problem matchers and CI annotations recognize, followed by the fix; a summary
+line ends the output:
+
+```text
+extension.json(12,9): error json.member-renamed: This member was renamed in schema 3 (capabilities is now provides; manifestVersion is now schemaVersion). [/contributions/0/capabilities]
+  fix: Use the new name.
+orbit-ext: 1 error, 0 warnings
+```
+
+A finding inside a package names the entry after `!/`, for example
+`example.countdown-0.3.0.orbitextension!/extension.json(4,11)`. With `--json`,
+the tool writes one object: `tool`, `version`, `command`, `ok`, `diagnostics`
+(`code`, `path`, `message`, `severity`, `file`, `line`, `column`) and `summary`;
+`pack` and `verify` add `package`, `link` adds `pairing`. `simulate --json`
+writes one transcript entry per line.
+
+The tool prints diagnostic messages, paths and your own file names. It never
+prints file contents, pairing secrets, nonces or proofs.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Success. |
+| 1 | Error diagnostics (or warnings with `--warnings-as-errors`); a failed simulation expectation; no valid pairing (`link`); a failed test (`test`). |
+| 2 | Usage error. |
+| 3 | A path is missing or unreadable, the output exists, or the template pack is missing. |
+| 4 | Internal error: `json.internal-error` from a reader, `tool.internal-error` otherwise. |
+| 5 | `simulate`, `run` or `test` could not start the program. |
+
+Without `--watch`, `run` exits with the companion's own exit code.
+
+## Packing
+
+`extension.pack.json` lists what goes into a package:
+
+```json
+{
+  "$schema": ".schemas/pack.v1.json",
+  "packVersion": 1,
+  "readme": "PACKAGE-README.md",
+  "strings": "strings",
+  "build": { "project": "src/MyWidget/MyWidget.csproj" },
+  "payload": [
+    { "from": "assets", "to": "companion/assets", "include": ["**/*.png"] }
+  ]
+}
+```
+
+The `build` step runs `dotnet publish <project> -c Release -r win-x64` into a
+temporary folder and copies the output to `payload/companion/` (`configuration`,
+`runtime` and `to` change those). Copy rules then copy files or folders, relative
+to the pack file, into folders under `payload/`. The tool always copies
+`extension.json`, generates `extension.package.json`, leaves out `.git`, `.vs`,
+`obj`, `node_modules/.cache`, `*.user`, `*.pairing.json` and `pairing.json`,
+refuses links and pairing files among the staged files, writes the package
+atomically and verifies it before it reports success. Packing the same files
+twice gives the same bytes.
+
+## Simulation scripts
+
+A script is a JSON array of steps, run in order (schema:
+`orbit-ext schema --kind simulation`):
+
+```json
+[
+  { "start": "contoso.my-widget/tally", "as": "s1" },
+  { "expectFace": "s1", "within": "2s" },
+  { "invoke": "s1", "expect": "Done" },
+  { "expectFace": "s1", "within": "2s", "line1": "1" },
+  { "stop": "s1" },
+  { "disconnect": "host.reloaded" }
+]
+```
+
+Steps: `start` (with `settings` and `as`), `invoke` (with `expect`, `failure`,
+`as` and `wait`), `cancel`, `stop`, `expectFace` (with `within`, `line1`,
+`line2` and `state`), `disconnect` and `wait`. A failed expectation exits 1.
+The simulated host creates its pipe as Orbit does: for the current user only,
+as the first and only instance of its name. Its temporary pairing file is
+readable only by you and is deleted when the simulation ends.
+
+## Licence
+
+Apache-2.0. Copyright 2026 Ventana Tools LLC.

@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\eng\Ventana.Package.props" />
+  <PropertyGroup>
+    <PackageId>VentanaTools.Orbit.Extensions.Templates</PackageId>
+    <AssemblyName>VentanaTools.Orbit.Extensions.Templates</AssemblyName>
+    <Title>Extension project templates</Title>
+    <Description>dotnet new templates for extension companions built on VentanaTools.Orbit.Extensions: a .NET action, a .NET widget and a Node companion, each with its manifest, pack configuration, tests and a local tool manifest.</Description>
+    <PackageType>Template</PackageType>
+    <PackageTags>$(PackageTags);dotnet-new;templates</PackageTags>
+    <!-- Template content is MIT-0, so authors own what the templates generate (contract §2.6). -->
+    <PackageLicenseExpression>MIT-0</PackageLicenseExpression>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <EnablePackageValidation>false</EnablePackageValidation>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <!-- The repository's Apache-2.0 files describe the libraries; this package carries the MIT-0 licence instead. -->
+  <ItemGroup>
+    <None Remove="$(MSBuildThisFileDirectory)..\LICENSE;$(MSBuildThisFileDirectory)..\NOTICE;$(MSBuildThisFileDirectory)..\THIRD-PARTY-NOTICES.md" />
+    <None Include="LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- The template content, except each template.json, which gets this package's version at pack time.
+       NuGet appends each file's folder below content\ to PackagePath. -->
+  <ItemGroup>
+    <None Include="content\**\*" Exclude="content\**\.template.config\template.json;content\**\bin\**;content\**\obj\**;content\**\node_modules\**"
+          Pack="true" PackagePath="content" />
+    <_VentanaTemplate Include="action-csharp;widget-csharp;node" />
+  </ItemGroup>
+
+  <UsingTask TaskName="_VentanaReplaceToken" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Source ParameterType="System.String" Required="true" />
+      <Destination ParameterType="System.String" Required="true" />
+      <Token ParameterType="System.String" Required="true" />
+      <Value ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var text = System.IO.File.ReadAllText(Source).Replace(Token, Value);
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Destination));
+        System.IO.File.WriteAllText(Destination, text, new System.Text.UTF8Encoding(false));
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+    Staged at pack time: each template.json with this package's version, which the templates write into the
+    projects they create (the SDK packages and the local tool), and each template's copies of the manifest and
+    pack configuration schemas (contract §11.4). The schema wildcard names no host.
+  -->
+  <Target Name="_VentanaStageTemplates" BeforeTargets="_GetPackageFiles">
+    <PropertyGroup>
+      <_VentanaStage>$(IntermediateOutputPath)templates\</_VentanaStage>
+    </PropertyGroup>
+    <ItemGroup>
+      <_VentanaTemplateJson Include="content\**\.template.config\template.json" />
+      <_VentanaSchema Include="..\schemas\extensions\*\manifest.v3.json;..\schemas\extensions\pack.v1.json" />
+    </ItemGroup>
+    <RemoveDir Directories="$(_VentanaStage)" />
+    <_VentanaReplaceToken Source="%(_VentanaTemplateJson.FullPath)" Token="@VENTANA_VERSION@" Value="$(Version)"
+                          Destination="$(_VentanaStage)%(_VentanaTemplateJson.RecursiveDir)template.json" />
+    <Copy SourceFiles="@(_VentanaSchema)" DestinationFolder="$(_VentanaStage)%(_VentanaTemplate.Identity)\.schemas\" />
+    <ItemGroup>
+      <None Include="$(_VentanaStage)**\*" Pack="true" PackagePath="content" />
+    </ItemGroup>
+  </Target>
+</Project>

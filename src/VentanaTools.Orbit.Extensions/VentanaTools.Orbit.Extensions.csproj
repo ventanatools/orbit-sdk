@@ -25,6 +25,9 @@
   <ItemGroup>
     <!-- The Testing package uses the in-memory transport seam. Package names come from the assembly name, never a literal. -->
     <InternalsVisibleTo Include="$(AssemblyName).Testing" />
+    <!-- The tool reads extension.pack.json and simulation scripts with the same strict JSON reader and
+         diagnostic catalog. Its package carries this exact assembly, so the two never mix versions. -->
+    <InternalsVisibleTo Include="$(AssemblyName).Tool" />
     <InternalsVisibleTo Include="$(AssemblyName).Tests" />
   </ItemGroup>
 </Project>

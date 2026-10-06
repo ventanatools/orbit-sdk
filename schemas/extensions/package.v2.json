@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.ventana.tools/schemas/extensions/package.v2.json",
+  "title": "Extension package descriptor, archive version 2",
+  "description": "extension.package.json at the root of a package archive (contract §5.6). Tools generate it; authors never write it. Readers also check that the inventory matches the archive and that manifestHash is the manifest's hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["archiveVersion", "manifestHash", "files"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "archiveVersion": {
+      "const": 2
+    },
+    "manifestHash": {
+      "description": "The manifest hash of extension.json: 64 lowercase hexadecimal digits.",
+      "$ref": "#/$defs/sha256"
+    },
+    "files": {
+      "description": "One row per file in the archive except this descriptor, sorted by path ordinally.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 240,
+            "pattern": "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "createdBy": {
+      "description": "The tool that wrote the package. Informational.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 32
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

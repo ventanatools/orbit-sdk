@@ -178,17 +178,11 @@ public sealed class PublicShapeTests
 /// <summary>The product-name rule (contract §2.1), enforced with the exact rule of contract §2.8.</summary>
 public sealed class ProductNameConfinementTests
 {
-    /// <summary>
-    /// Folders still being rewritten by a later stage. The stage-1 tool keeps its protocol-2
-    /// behaviour until stage S4a rewrites it, which removes this exemption.
-    /// </summary>
-    private static readonly string[] PendingRewrite = [Family() + ".Tool/"];
-
     [Fact]
     public void NoCSharpSourceUnderSrcNamesAProduct()
     {
         var failures = new List<string>();
-        foreach (var path in TrackedFiles("src").Where(path => path.EndsWith(".cs", StringComparison.Ordinal) && !IsPending(path)))
+        foreach (var path in TrackedFiles("src").Where(path => path.EndsWith(".cs", StringComparison.Ordinal)))
         {
             failures.AddRange(CheckCSharp(path, File.ReadAllText(Path.Combine(Fixtures.Root, path))));
         }
@@ -200,7 +194,7 @@ public sealed class ProductNameConfinementTests
     public void NoOtherFileUnderSrcNamesAProductOutsideTheAllowedPlaces()
     {
         var failures = new List<string>();
-        foreach (var path in TrackedFiles("src").Where(path => !path.EndsWith(".cs", StringComparison.Ordinal) && !IsPending(path)))
+        foreach (var path in TrackedFiles("src").Where(path => !path.EndsWith(".cs", StringComparison.Ordinal)))
         {
             if (Path.GetFileName(path) == "README.md")
             {
@@ -366,8 +360,6 @@ public sealed class ProductNameConfinementTests
 
         return stripped;
     }
-
-    private static bool IsPending(string path) => PendingRewrite.Any(folder => path.StartsWith("src/" + folder, StringComparison.Ordinal));
 
     /// <summary>The package family name, from the author package's assembly name; never a literal.</summary>
     private static string Family() => typeof(ExtensionManifest).Assembly.GetName().Name!;

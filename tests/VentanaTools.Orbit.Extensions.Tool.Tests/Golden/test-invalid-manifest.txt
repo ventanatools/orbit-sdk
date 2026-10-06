@@ -1,0 +1,16 @@
+exit 1
+--- out
+extension.json(1,1): error id.required: The id is missing or blank. [/id]
+  fix: Add it.
+extension.json(1,1): error json.required-missing: A required member is missing. [/name]
+  fix: Add it.
+extension.json(1,1): error json.required-missing: A required member is missing. [/description]
+  fix: Add it.
+extension.json(1,1): error json.required-missing: A required member is missing. [/version]
+  fix: Add it.
+extension.json(1,1): error json.required-missing: A required member is missing. [/hosts]
+  fix: Add it.
+extension.json(1,1): error json.required-missing: A required member is missing. [/contributions]
+  fix: Add it.
+{tool}: 6 errors, 0 warnings
+--- error

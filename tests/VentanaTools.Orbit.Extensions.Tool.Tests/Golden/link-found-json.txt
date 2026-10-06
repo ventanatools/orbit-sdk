@@ -1,0 +1,27 @@
+exit 0
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "link",
+  "ok": true,
+  "diagnostics": [],
+  "summary": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "pairing": {
+    "searched": [
+      {
+        "path": "{profile}/.ventana/pairings/example-host/{id}.pairing.json",
+        "state": "Missing"
+      },
+      {
+        "path": "{id}.pairing.json",
+        "state": "Valid"
+      }
+    ],
+    "found": "{id}.pairing.json"
+  }
+}
+--- error

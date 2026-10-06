@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.ventana.tools/schemas/extensions/orbit/strings.v3.json",
+  "title": "Extension strings file, schema 3",
+  "description": "strings/<language-tag>.json: translations of a manifest's text, addressed by id (contract §3.10). Readers also check that every key names an item of the manifest and that language equals the file name's tag.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "language"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "schemaVersion": {
+      "const": 3
+    },
+    "language": {
+      "description": "The file's language tag; equal, ignoring case, to the file name's.",
+      "$ref": "#/$defs/languageTag"
+    },
+    "name": { "$ref": "#/$defs/name" },
+    "description": { "$ref": "#/$defs/longText" },
+    "publisher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" }
+      }
+    },
+    "contributions": {
+      "description": "Keys are contribution ids.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/contributionId" },
+      "additionalProperties": { "$ref": "#/$defs/contribution" }
+    }
+  },
+  "$defs": {
+    "contributionId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+(/[a-z0-9]+(-[a-z0-9]+)*)*$"
+    },
+    "settingId": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z][A-Za-z0-9]*$"
+    },
+    "choiceValue": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "languageTag": {
+      "type": "string",
+      "maxLength": 35,
+      "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "allOf": [
+        { "pattern": "^\\S(.*\\S)?$" },
+        { "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029\\u202A-\\u202E\\u2066-\\u2069\\uFEFF\\uFFFD]*$" }
+      ]
+    },
+    "name": {
+      "$ref": "#/$defs/text",
+      "maxLength": 80
+    },
+    "longText": {
+      "$ref": "#/$defs/text",
+      "maxLength": 512
+    },
+    "contribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "description": { "$ref": "#/$defs/longText" },
+        "settings": {
+          "description": "Keys are setting ids.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/settingId" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/name" },
+              "description": { "$ref": "#/$defs/longText" },
+              "choices": {
+                "description": "Keys are choice values.",
+                "type": "object",
+                "propertyNames": { "$ref": "#/$defs/choiceValue" },
+                "additionalProperties": { "$ref": "#/$defs/name" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

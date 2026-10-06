@@ -1,0 +1,4 @@
+exit 2
+--- out
+--- error
+{tool}: error: id.grammar: The id contains characters, segments or slashes the id grammar does not allow. [--extension-id]

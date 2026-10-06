@@ -1,0 +1,4 @@
+exit 0
+--- out
+{tool}: 0 errors, 0 warnings
+--- error

@@ -1,0 +1,10 @@
+exit 1
+--- out
+extension.json(8,13): warning manifest.host-unknown: This host id is not an active host in the registry. [/hosts/0]
+  fix: Check the spelling.
+script.json(1,31): error enum.undefined: The value is not one of the documented values. [/0/expect]
+  fix: Use a documented value.
+script.json(1,52): error json.type-mismatch: The value has the wrong JSON type, or is a number that is not an integer. [/1/wait]
+  fix: Use the documented type.
+{tool}: 2 errors, 1 warning
+--- error

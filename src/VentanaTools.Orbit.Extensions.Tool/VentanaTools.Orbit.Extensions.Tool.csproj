@@ -5,14 +5,63 @@
     <AssemblyName>VentanaTools.Orbit.Extensions.Tool</AssemblyName>
     <RootNamespace>VentanaTools.Orbit.Extensions.Tool</RootNamespace>
     <PackageId>VentanaTools.Orbit.Extensions.Tool</PackageId>
-    <Description>Packs and verifies Orbit extension packages.</Description>
+    <Description>The Orbit extension author tool: create projects from the templates, validate manifests, pack and verify packages, run tests, simulate a host and check pairings.</Description>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>orbit-ext</ToolCommandName>
-    <!-- Temporary until the tool is rewritten for contract generation 3. -->
-    <NoWarn>$(NoWarn);CS1591;RS0016;RS0017</NoWarn>
+    <!-- Only the English resources of System.CommandLine; the tool's own text is English. -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
+
+  <!-- The command name reaches the code only through this attribute (contract §2.8, §11.1). -->
   <ItemGroup>
+    <AssemblyMetadata Include="ToolCommandName" Value="$(ToolCommandName)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <ProjectReference Include="../VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+
+  <!-- The JSON Schemas of contract §11.5, embedded for `schema`. The wildcard keeps every host id out of this file. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\schemas\extensions\**\*.json" LogicalName="schemas/extensions/%(RecursiveDir)%(Filename)%(Extension)"
+                      Link="Schemas\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!--
+    The packages a new project needs (contract §11.1): the same-version author, Testing and Templates
+    packages and the Node SDK tarball, carried in the tool package under packages/ so `new` can copy them
+    into a per-user feed. Their names derive from this assembly's name. tools/build.ps1 packs them into
+    artifacts/packages before it packs the tool; pass -p:VentanaBundleDirectory=<folder> to use another folder.
+  -->
+  <PropertyGroup>
+    <!-- NuGet leaves .nupkg files out of a package unless default excludes are off. -->
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <VentanaBundleDirectory Condition="'$(VentanaBundleDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\packages\</VentanaBundleDirectory>
+    <_VentanaBundleDirectory>$([MSBuild]::EnsureTrailingSlash('$(VentanaBundleDirectory)'))</_VentanaBundleDirectory>
+    <_VentanaPackageFamily>$(AssemblyName.Substring(0, $(AssemblyName.LastIndexOf('.'))))</_VentanaPackageFamily>
+    <_VentanaNodeTarball>$(_VentanaPackageFamily.ToLowerInvariant().Replace('.', '-'))-$(Version).tgz</_VentanaNodeTarball>
+  </PropertyGroup>
+  <ItemGroup>
+    <_VentanaRequiredBundle Include="$(_VentanaBundleDirectory)$(_VentanaPackageFamily).$(Version).nupkg" />
+    <_VentanaRequiredBundle Include="$(_VentanaBundleDirectory)$(_VentanaPackageFamily).Testing.$(Version).nupkg" />
+    <_VentanaRequiredBundle Include="$(_VentanaBundleDirectory)$(_VentanaPackageFamily).Templates.$(Version).nupkg" />
+    <_VentanaOptionalBundle Include="$(_VentanaBundleDirectory)$(_VentanaNodeTarball)" />
+  </ItemGroup>
+  <Target Name="_VentanaAddBundle" BeforeTargets="ComputeResolvedFilesToPublishList" Condition="'$(PackAsTool)' == 'true'">
+    <ItemGroup>
+      <_VentanaBundleFile Include="@(_VentanaRequiredBundle);@(_VentanaOptionalBundle)" Condition="Exists('%(FullPath)')" />
+      <ResolvedFileToPublish Include="@(_VentanaBundleFile)" RelativePath="packages\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+  <Target Name="_VentanaRequireBundle" BeforeTargets="GenerateNuspec" Condition="'$(PackAsTool)' == 'true'">
+    <Error Condition="!Exists('%(_VentanaRequiredBundle.FullPath)')" Code="VENTANA0001"
+           Text="The tool package carries %(_VentanaRequiredBundle.Filename)%(_VentanaRequiredBundle.Extension), which is not in $(_VentanaBundleDirectory). Pack the libraries and templates with the same version first (tools/build.ps1 does), or pass -p:VentanaBundleDirectory=&lt;folder&gt;." />
+  </Target>
 </Project>

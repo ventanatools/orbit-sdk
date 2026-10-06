@@ -1,0 +1,8 @@
+exit 1
+--- out
+extension.pack.json(3,13): error pack.source-missing: A from path does not exist. [/readme]
+  fix: Correct the path, or add a build step.
+extension.pack.json(4,26): error pack.source-missing: A from path does not exist. [/payload/0/from]
+  fix: Correct the path, or add a build step.
+{tool}: 2 errors, 0 warnings
+--- error

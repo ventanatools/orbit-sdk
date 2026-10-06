@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.ventana.tools/schemas/extensions/orbit/manifest.v3.json",
+  "title": "Extension manifest, schema 3",
+  "description": "extension.json: the declaration of an extension and its contributions (contract §3). Readers also check rules a schema cannot express: reserved publishers, ids inside the extension's namespace, unique ids and values, default among the choices, format characters and the full URL rule.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "description", "version", "hosts", "contributions"],
+  "properties": {
+    "$schema": {
+      "description": "The schema URL or a relative path to a local copy. Ignored by hosts.",
+      "type": "string",
+      "maxLength": 512
+    },
+    "schemaVersion": {
+      "description": "The manifest schema version.",
+      "const": 3
+    },
+    "id": {
+      "description": "The extension id: publisher.name, lowercase letters, digits and single hyphens in dot-separated segments.",
+      "$ref": "#/$defs/extensionId"
+    },
+    "name": {
+      "description": "The extension's name, shown to people.",
+      "$ref": "#/$defs/name"
+    },
+    "description": {
+      "description": "What the extension does, shown to people.",
+      "$ref": "#/$defs/longText"
+    },
+    "version": {
+      "description": "MAJOR.MINOR.PATCH, compared numerically part by part.",
+      "type": "string",
+      "maxLength": 29,
+      "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$"
+    },
+    "hosts": {
+      "description": "The ids of the hosts this extension is for.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/hostId" }
+    },
+    "glyph": {
+      "description": "One private-use glyph for the extension as a whole; write it as an escape such as \\uE916.",
+      "$ref": "#/$defs/glyph"
+    },
+    "publisher": {
+      "description": "Who made the extension. Hosts show it as unverified text supplied by the extension.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "url": { "$ref": "#/$defs/url" }
+      }
+    },
+    "supportUrl": {
+      "description": "Where people get help.",
+      "$ref": "#/$defs/url"
+    },
+    "defaultLanguage": {
+      "description": "The language of the manifest's own text. Default: en-US.",
+      "$ref": "#/$defs/languageTag"
+    },
+    "disclosures": {
+      "description": "The author's statement about the companion. Declarative only; never enforced.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network"],
+      "properties": {
+        "network": {
+          "description": "Whether the companion contacts other computers.",
+          "enum": ["None", "LocalNetwork", "Internet"]
+        },
+        "privacyUrl": { "$ref": "#/$defs/url" }
+      }
+    },
+    "requires": {
+      "description": "Optional protocol capabilities the extension needs. Leave it out when only baseline features are used.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capabilities"],
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/dottedCode" }
+        }
+      }
+    },
+    "contributions": {
+      "description": "The actions and widgets the extension provides.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/contribution" }
+    }
+  },
+  "$defs": {
+    "segment": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "extensionId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$",
+      "not": { "pattern": "^(con|prn|aux|nul|com[1-9]|lpt[1-9])\\." }
+    },
+    "contributionId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+(/[a-z0-9]+(-[a-z0-9]+)*)*$"
+    },
+    "hostId": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "settingId": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z][A-Za-z0-9]*$"
+    },
+    "choiceValue": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "dottedCode": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+    },
+    "languageTag": {
+      "type": "string",
+      "maxLength": 35,
+      "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$"
+    },
+    "glyph": {
+      "type": "string",
+      "pattern": "^[\\uE000-\\uF8FF]$"
+    },
+    "url": {
+      "description": "An absolute https URL of printable ASCII, without user information, of at most 512 characters.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^[Hh][Tt][Tt][Pp][Ss]://[!-~]+$"
+    },
+    "text": {
+      "description": "Declaration text: no leading or trailing white space, and no control, separator, bidirectional or byte-order-mark characters.",
+      "type": "string",
+      "minLength": 1,
+      "allOf": [
+        { "pattern": "^\\S(.*\\S)?$" },
+        { "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029\\u202A-\\u202E\\u2066-\\u2069\\uFEFF\\uFFFD]*$" }
+      ]
+    },
+    "name": {
+      "$ref": "#/$defs/text",
+      "maxLength": 80
+    },
+    "longText": {
+      "$ref": "#/$defs/text",
+      "maxLength": 512
+    },
+    "contribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "glyph", "provides"],
+      "properties": {
+        "id": {
+          "description": "The extension id, a slash and one or more segments; or the extension id itself when the manifest has one contribution.",
+          "$ref": "#/$defs/contributionId"
+        },
+        "name": { "$ref": "#/$defs/name" },
+        "description": { "$ref": "#/$defs/longText" },
+        "glyph": { "$ref": "#/$defs/glyph" },
+        "provides": {
+          "description": "[\"invoke\"] makes an action; [\"face\"] a passive widget; both a widget that can also be invoked.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["invoke", "face"] }
+        },
+        "settings": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/setting" }
+        }
+      }
+    },
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name", "default", "choices"],
+      "properties": {
+        "id": { "$ref": "#/$defs/settingId" },
+        "kind": {
+          "description": "The setting kind. Schema 3 has Choice only.",
+          "const": "Choice"
+        },
+        "name": { "$ref": "#/$defs/name" },
+        "description": { "$ref": "#/$defs/longText" },
+        "default": {
+          "description": "One of the choice values.",
+          "type": "string"
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "name"],
+            "properties": {
+              "value": { "$ref": "#/$defs/choiceValue" },
+              "name": { "$ref": "#/$defs/name" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

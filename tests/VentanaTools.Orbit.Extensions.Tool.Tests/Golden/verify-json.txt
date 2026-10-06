@@ -1,0 +1,25 @@
+exit 0
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "verify",
+  "ok": true,
+  "diagnostics": [],
+  "summary": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "package": {
+    "path": "example.tool-test-1.2.3{ext}",
+    "sha256": "{sha256}",
+    "id": "example.tool-test",
+    "version": "1.2.3",
+    "hosts": [
+      "{host}"
+    ],
+    "files": 7,
+    "bytes": {bytes}
+  }
+}
+--- error

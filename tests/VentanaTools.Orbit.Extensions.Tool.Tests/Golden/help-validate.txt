@@ -1,0 +1,18 @@
+exit 0
+--- out
+Description:
+  Validate a manifest, a project folder or a package.
+
+Usage:
+  {tool} validate [<path>] [options]
+
+Arguments:
+  <path>  An extension.json, a folder that contains one, or a package. Default: the current folder.
+
+Options:
+  --host <id>           Validate for this host. Default: the first active host in hosts.
+  --json                Write one JSON object to standard output.
+  --warnings-as-errors  Fail on warnings too.
+  -?, -h, --help        Show help and usage information
+
+--- error
