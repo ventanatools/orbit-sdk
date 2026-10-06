@@ -138,7 +138,11 @@ folder (by default `artifacts/` in the project folder) leaves it out, and packag
 files directly in the output folder are never copied, even by a copy rule of the
 output folder itself or, with `-o .`, of the project folder. The output folder is
 recognized however `-o` spells it, including through a junction or symbolic
-link, a substituted drive or an 8.3 short name.
+link, a substituted drive or an 8.3 short name. When the output folder is itself
+a junction or symbolic link inside a copied folder (an `artifacts` folder
+redirected to a Dev Drive, say), it is left out like any other output folder
+rather than refused as a link. A link that only contains the output folder is
+still refused.
 
 ## Simulation scripts
 

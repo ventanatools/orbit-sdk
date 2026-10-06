@@ -3396,7 +3396,10 @@ The tool always:
   folder; a copy rule whose `from` lies inside the output folder still copies.
   The output folder is the folder `-o` names, however it is spelled: a path
   through a junction or symbolic link, a substituted drive or an 8.3 short name
-  is compared by the final path the file system resolves it to;
+  is compared by the final path the file system resolves it to. A junction or
+  symbolic link inside a copied folder that resolves to the output folder (an
+  `artifacts` folder redirected to another drive, say) is the output folder, so
+  it is left out, not refused as a link;
 - refuses (`pack.secret`) any staged file of at most 4,096 bytes that contains
   both a quoted `pipeName` and a quoted `secret` member, JSON or not;
 - refuses symbolic links and junctions (`pack.link`) on the way from the project
@@ -3406,8 +3409,10 @@ The tool always:
   folder it never looks into a link and decides on the link itself, before the
   globs filter its contents: a link to a file is refused when the globs select
   it, and a link to a folder when the globs could select anything inside it,
-  even if nothing there would match; a link the globs cannot reach (such as the
-  junction npm makes under a `node_modules` folder no glob reaches) is left out;
+  even if nothing there would match. A link that resolves to the output folder
+  is left out (above), but a link to a folder that merely contains the output
+  folder is refused. A link the globs cannot reach (such as the junction npm
+  makes under a `node_modules` folder no glob reaches) is left out;
 - checks per-file size, entry count and expanded size before it reads any
   content (`package.file-too-large`, `package.entries`,
   `package.expanded-too-large`);

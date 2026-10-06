@@ -184,7 +184,8 @@ internal static class PackCommand
     /// output folder is never staged: a copied folder that holds it leaves it out, and no package
     /// file directly in it is staged. The output folder is told by its final path
     /// (<see cref="FinalPath"/>), so another spelling of it (through a junction, a substituted
-    /// drive or a short name) is still the output folder.
+    /// drive or a short name) is still the output folder, and so is a junction or symbolic link
+    /// inside a copied folder that leads to it.
     /// </remarks>
     private sealed class Staging(ToolConsole console, DiagnosticReport report, PackConfig config, string configPath, string outputFolder)
     {
@@ -457,9 +458,10 @@ internal static class PackCommand
         /// Walks one folder of a copied folder (contract §11.3). It leaves out the always-excluded
         /// names, the output folder, the packages directly in it, and every folder an exclude glob
         /// leaves out or no include glob reaches into. It never enters a link: a link is decided on
-        /// itself, before its contents are filtered, and refused when the globs select it (a file)
-        /// or could select anything inside it (a folder), even if nothing inside would match.
-        /// <paramref name="path"/> holds the names from the copied folder down to
+        /// itself, before its contents are filtered. A link to a folder that resolves to the output
+        /// folder is the output folder, and is left out; any other link is refused when the globs
+        /// select it (a file) or could select anything inside it (a folder), even if nothing inside
+        /// would match. <paramref name="path"/> holds the names from the copied folder down to
         /// <paramref name="folder"/>, and <paramref name="final"/> is the folder's final path: the
         /// root's, extended by name, since the walk never follows a link.
         /// </summary>
@@ -477,17 +479,22 @@ internal static class PackCommand
                 path.Add(info.Name);
                 if ((info.Attributes & FileAttributes.Directory) != 0)
                 {
-                    var childFinal = Path.Join(final, info.Name);
-                    if (!IsOutputFolder(childFinal) && !rule.Exclude.Any(glob => glob.LeavesOutFolder(path))
-                        && rule.Include.Any(glob => glob.CouldMatchBelow(path)))
+                    if (!rule.Exclude.Any(glob => glob.LeavesOutFolder(path)) && rule.Include.Any(glob => glob.CouldMatchBelow(path)))
                     {
-                        if (IsLink(info))
+                        // A link the globs reach is resolved only to be compared, never entered: one that leads to the
+                        // output folder (an artifacts folder redirected by a junction, say) is the output folder, left out.
+                        var isLink = IsLink(info);
+                        var childFinal = isLink ? FinalPath.Of(info.FullName) : Path.Join(final, info.Name);
+                        if (!IsOutputFolder(childFinal))
                         {
-                            links.Add(new CopiedItem(string.Join('/', path), info.FullName));
-                        }
-                        else
-                        {
-                            Walk(rule, info.FullName, childFinal, info.Name, path, files, links);
+                            if (isLink)
+                            {
+                                links.Add(new CopiedItem(string.Join('/', path), info.FullName));
+                            }
+                            else
+                            {
+                                Walk(rule, info.FullName, childFinal, info.Name, path, files, links);
+                            }
                         }
                     }
                 }

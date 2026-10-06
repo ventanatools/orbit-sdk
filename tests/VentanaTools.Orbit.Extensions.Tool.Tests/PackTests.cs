@@ -511,6 +511,59 @@ public sealed class PackTests
     }
 
     [Fact]
+    public async Task AnOutputFolderThatIsALinkInACopiedFolderIsLeftOutNotRefused()
+    {
+        // artifacts/ redirected elsewhere by a junction (to a Dev Drive, say), under a copy rule of the whole project.
+        string[] expected =
+        [
+            "README.md", "extension.json", "extension.package.json", "payload/src/PACKAGE-README.md", "payload/src/extension.json",
+            "payload/src/extension.pack.json", "payload/src/strings/de-DE.json",
+        ];
+        const string WholeProject = """
+            {
+              "packVersion": 1,
+              "readme": "PACKAGE-README.md",
+              "payload": [ { "from": ".", "to": "src", "exclude": ["companion/**"] } ]
+            }
+            """;
+        using var project = TestProject.Create(packConfig: WholeProject);
+        using var elsewhere = new TempFolder();
+        elsewhere.Write("out/notes.txt", "never packed: in the output folder");
+        CreateLink(project.Combine("artifacts"), elsewhere.Combine("out"));
+        var packagePath = project.Combine("artifacts/" + PackageName);
+        byte[]? first = null;
+        string[][] packs = [["pack"], ["pack", "--force"], ["pack", "-o", "artifacts", "--force"]];
+        foreach (var pack in packs)
+        {
+            var run = await ToolHarness.RunAsync(project.Path, pack);
+            Assert.True(run.ExitCode == 0, run.ToString());
+            Assert.Equal(first ??= File.ReadAllBytes(packagePath), File.ReadAllBytes(packagePath));
+            Assert.Equal(expected, ReadPackage(packagePath).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+        }
+
+        Assert.True(File.Exists(elsewhere.Combine("out/" + PackageName)));
+
+        // Another link to an ordinary output folder is the output folder too, however the walk reaches it.
+        using var aliased = TestProject.Create(packConfig: WholeProject);
+        Directory.CreateDirectory(aliased.Combine("artifacts"));
+        CreateLink(aliased.Combine("alias"), aliased.Combine("artifacts"));
+        Assert.Equal(0, (await ToolHarness.RunAsync(aliased.Path, "pack")).ExitCode);
+        var again = await ToolHarness.RunAsync(aliased.Path, "pack", "--force");
+        Assert.True(again.ExitCode == 0, again.ToString());
+        Assert.Equal(expected, ReadPackage(aliased.Combine("artifacts/" + PackageName)).Files.Select(file => file.Path).Order(StringComparer.Ordinal));
+
+        // A link that only holds the output folder is not the output folder, and the link rule applies to it.
+        using var holding = TestProject.Create(packConfig: WholeProject);
+        using var outside = new TempFolder();
+        Directory.CreateDirectory(outside.Combine("packages"));
+        CreateLink(holding.Combine("out"), outside.Path);
+        var refused = await ToolHarness.RunAsync(holding.Path, "pack", "-o", "out/packages");
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Equal(["out: error pack.link: A staged file or folder is a symbolic link or junction. []"], ErrorLines(refused));
+        Assert.False(File.Exists(outside.Combine("packages/" + PackageName)));
+    }
+
+    [Fact]
     public void AFinalPathSeesThroughJunctionsAndLetterCase()
     {
         using var holder = new TempFolder();
