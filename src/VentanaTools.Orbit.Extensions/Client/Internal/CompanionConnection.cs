@@ -898,7 +898,7 @@ internal sealed class CompanionConnection : ISessionSink, IDisposable
                 _hostPinged = true;
                 _lastHostPing = now;
                 _pongOwed = true;
-                _control.Enqueue(new OutboundFrame(MessageWriter.Write(new PongMessage { Id = id }), PongWritten));
+                _control.Enqueue(new OutboundFrame(MessageWriter.Write(new PongMessage { Id = id }), IsPong: true));
             }
         }
 
@@ -909,14 +909,6 @@ internal sealed class CompanionConnection : ISessionSink, IDisposable
         }
 
         _writeSignal.Set();
-    }
-
-    private void PongWritten()
-    {
-        lock (_gate)
-        {
-            _pongOwed = false;
-        }
     }
 
     private void HostPong(int id)
@@ -1013,6 +1005,11 @@ internal sealed class CompanionConnection : ISessionSink, IDisposable
                     if (_control.Count > 0)
                     {
                         frame = _control.Dequeue();
+                        if (frame.Value.IsPong)
+                        {
+                            // A pong stops being "unsent" (§7.9) when it leaves the queue: the peer may read it before the write returns.
+                            _pongOwed = false;
+                        }
                     }
                     else if (_closing)
                     {
@@ -1031,7 +1028,6 @@ internal sealed class CompanionConnection : ISessionSink, IDisposable
                         return;
                     }
 
-                    next.Written?.Invoke();
                     continue;
                 }
 
@@ -1230,7 +1226,7 @@ internal sealed class CompanionConnection : ISessionSink, IDisposable
 
     // ---------------------------------------------------------------- types
 
-    private readonly record struct OutboundFrame(byte[] Bytes, Action? Written = null);
+    private readonly record struct OutboundFrame(byte[] Bytes, bool IsPong = false);
 
     private readonly record struct ReadOutcome
     {

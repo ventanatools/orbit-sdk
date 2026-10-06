@@ -425,7 +425,7 @@ public sealed class StatusAndBackoffTests
         var ping = await peer.ReadAsync<PingMessage>();
         Assert.Equal(1, ping.Id);
         await peer.SendAsync(new PongMessage { Id = 1 });
-        await Task.Delay(50);
+        await ClientHarness.WaitForAsync(() => harness.Observer.FramesProcessed.Contains("pong"), "pong handled");
         clock.Advance(TimeSpan.FromSeconds(30.1));
         var second = await peer.ReadAsync<PingMessage>();
         Assert.Equal(2, second.Id);

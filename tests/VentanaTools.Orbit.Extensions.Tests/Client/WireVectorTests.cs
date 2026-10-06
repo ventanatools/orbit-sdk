@@ -41,25 +41,34 @@ public sealed class WireVectorTests
         var peer = await harness.NextPeerAsync();
         await peer.ReadHelloAsync();
         ChallengeMessage? challenge = null;
+        var readySent = false;
+        var authenticatedSent = 0;
         foreach (var step in item.GetProperty("steps").EnumerateArray().Skip(1))
         {
             var frame = step.GetProperty("frame").GetString()!;
             if (step.TryGetProperty("atMs", out var at) && at.GetInt64() > (long)clock.Elapsed.TotalMilliseconds)
             {
-                // The SDK pings after 30 idle seconds too; its pong must be read before the clock moves on.
-                await ClientHarness.WaitForAsync(() => harness.Observer.FramesProcessed.Count(type => type == "pong") >= peer.PingsReceived.Count,
-                    "pongs processed");
+                // The clock moves only once the SDK has read every frame sent so far: before that, its own
+                // timers (the handshake deadline, its idle ping, its pong timeout) would fire on a frame in flight.
+                await HostFramesProcessedAsync(harness, peer, readySent, authenticatedSent);
                 await clock.AdvanceAsync(TimeSpan.FromMilliseconds(at.GetInt64()) - clock.Elapsed, TimeSpan.FromSeconds(5));
             }
 
+            var phase = Enum.Parse<ConnectionPhase>(step.GetProperty("phase").GetString()!);
             if (step.GetProperty("from").GetString() == "Companion")
             {
-                var read = await peer.ReadAsync(Enum.Parse<ConnectionPhase>(step.GetProperty("phase").GetString()!));
+                var read = await peer.ReadAsync(phase);
                 Assert.Equal(JsonDocument.Parse(frame).RootElement.GetProperty("type").GetString(), read?.Type);
                 continue;
             }
 
-            var parsed = MessageReader.Read(Encoding.UTF8.GetBytes(frame), Sender.Host, Enum.Parse<ConnectionPhase>(step.GetProperty("phase").GetString()!));
+            readySent |= phase == ConnectionPhase.PeerVerified;
+            if (phase == ConnectionPhase.Authenticated)
+            {
+                authenticatedSent++;
+            }
+
+            var parsed = MessageReader.Read(Encoding.UTF8.GetBytes(frame), Sender.Host, phase);
             if (parsed.Message is ChallengeMessage fixture && challengeValid)
             {
                 // The SDK's hello carries its own nonce and manifest hash, so a valid proof is recomputed over it.
@@ -93,6 +102,24 @@ public sealed class WireVectorTests
             Assert.NotNull(status.RetryIn);
             Assert.InRange(status.RetryIn!.Value.TotalMilliseconds, 0, most.GetInt64());
         }
+    }
+
+    /// <summary>
+    /// Waits until the SDK has handled every host frame sent so far: the handshake once <c>ready</c>
+    /// went out (the connection is then up, its idle-ping timer started), and each authenticated frame,
+    /// counting the pongs the peer sent for SDK pings it read. A connection that has already closed
+    /// handles nothing more.
+    /// </summary>
+    private static async Task HostFramesProcessedAsync(ClientHarness harness, ScriptedPeer peer, bool readySent, int authenticatedSent)
+    {
+        bool Closed() => harness.Client.State is ConnectionState.Waiting or ConnectionState.Stopped;
+        if (readySent)
+        {
+            await ClientHarness.WaitForAsync(() => harness.Client.State == ConnectionState.Connected || Closed(), "ready handled");
+        }
+
+        await ClientHarness.WaitForAsync(() => harness.Observer.FramesProcessed.Count >= authenticatedSent + peer.PingsReceived.Count || Closed(),
+            "host frames handled");
     }
 
     public static TheoryData<string> HostInvalidCases()

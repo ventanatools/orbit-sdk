@@ -416,6 +416,27 @@ internal sealed class ScriptedPeer : IAsyncDisposable
     public async Task<T> ReadAsync<T>(TimeSpan? timeout = null)
         where T : WireMessage => Assert.IsType<T>(await ReadAsync(ConnectionPhase.Authenticated, timeout));
 
+    /// <summary>
+    /// Reads the companion's next message, moving <paramref name="clock"/> on by <paramref name="nudge"/>
+    /// whenever nothing arrives for 100 ms of real time (at most 50 times). The SDK's writer measures
+    /// a wait and then starts its timer; a clock moved between the two starts that timer late.
+    /// </summary>
+    public async Task<T> ReadNudgingAsync<T>(TestClock clock, TimeSpan nudge)
+        where T : WireMessage
+    {
+        for (var nudges = 0; ; nudges++)
+        {
+            try
+            {
+                return await ReadAsync<T>(TimeSpan.FromMilliseconds(100));
+            }
+            catch (OperationCanceledException) when (nudges < 50)
+            {
+                clock.Advance(nudge);
+            }
+        }
+    }
+
     /// <summary>Whether the companion sends nothing (but SDK pings) for <paramref name="window"/> of real time.</summary>
     public async Task<bool> SilentForAsync(TimeSpan window)
     {

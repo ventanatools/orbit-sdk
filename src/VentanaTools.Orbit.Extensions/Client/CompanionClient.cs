@@ -392,11 +392,13 @@ public sealed class CompanionClient
 
             if (decision.Kind == RetryKind.Wait)
             {
+                // The delay starts before Waiting is raised, so RetryIn counts from a timer that already runs.
+                var wait = _wake.WaitAsync(decision.Delay, _options.TimeProvider, cancellationToken);
                 SetState(ConnectionState.Waiting, outcome.Reason, decision.Delay, attempt, outcome.ServerVerified, outcome.Host,
                     outcome.Version, outcome.PeerMessage);
                 try
                 {
-                    await _wake.WaitAsync(decision.Delay, _options.TimeProvider, cancellationToken).ConfigureAwait(false);
+                    await wait.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {

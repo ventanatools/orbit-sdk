@@ -45,9 +45,14 @@ public sealed class SessionTests
         var sessionId = await StartAsync(peer, Widget);
         await published.Task.WaitAsync(TimeSpan.FromSeconds(10));
         var frames = new List<SetFaceMessage> { await peer.ReadAsync<SetFaceMessage>() };
-        Assert.True(await peer.SilentForAsync(TimeSpan.FromMilliseconds(100)));
-        clock.Advance(TimeSpan.FromMilliseconds(500));
-        frames.Add(await peer.ReadAsync<SetFaceMessage>());
+        if (Line1(frames[0]) != "99")
+        {
+            // The writer sent an earlier face while the loop ran; the last one waits for the face spacing.
+            Assert.True(await peer.SilentForAsync(TimeSpan.FromMilliseconds(100)));
+            clock.Advance(TimeSpan.FromMilliseconds(500));
+            frames.Add(await peer.ReadNudgingAsync<SetFaceMessage>(clock, TimeSpan.FromMilliseconds(100)));
+        }
+
         clock.Advance(TimeSpan.FromSeconds(2));
         Assert.True(await peer.SilentForAsync(TimeSpan.FromMilliseconds(100)));
         Assert.InRange(frames.Count, 1, 2);
@@ -203,11 +208,15 @@ public sealed class SessionTests
     public async Task ASessionHandlerThatThrowsRaisesAFaultClearsItsFaceAndStaysInvocable()
     {
         var clock = new TestClock();
+        var shown = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var handler = new TestHandler
         {
-            OnSession = (session, _) =>
+            OnSession = async (session, _) =>
             {
                 session.SetFace(new Face { Line1 = "up", GoodFor = TimeSpan.FromSeconds(5) });
+
+                // A session keeps one pending face, so a clear that came first would replace the face unsent.
+                await shown.Task;
                 throw new InvalidOperationException("author bug");
             },
         };
@@ -215,9 +224,10 @@ public sealed class SessionTests
         var peer = await harness.ConnectAsync();
         var sessionId = await StartAsync(peer, Both);
         Assert.Equal("up", Assert.IsType<TextLine>((await peer.ReadAsync<SetFaceMessage>()).Face.Line1).Text);
+        shown.SetResult();
         await ClientHarness.WaitForAsync(() => harness.Faults.Count == 1, "fault");
-        clock.Advance(TimeSpan.FromMilliseconds(500));
-        Assert.Equal(sessionId, (await peer.ReadAsync<ClearFaceMessage>()).SessionId);
+        clock.Advance(TimeSpan.FromMilliseconds(500)); // one face per session per 1/faceChangesPerSecond
+        Assert.Equal(sessionId, (await peer.ReadNudgingAsync<ClearFaceMessage>(clock, TimeSpan.FromMilliseconds(100))).SessionId);
         var fault = harness.Faults.Single();
         Assert.Equal(HandlerFault.Exception, fault.Kind);
         Assert.Equal("author bug", fault.Exception!.Message);
@@ -422,7 +432,7 @@ public sealed class SessionTests
         Assert.Equal("kept", Line1(await peer.ReadAsync<SetFaceMessage>()));
         live!.SetFace(new Face { Line1 = "newer", GoodFor = TimeSpan.FromSeconds(10) });
         clock.Advance(TimeSpan.FromMilliseconds(500)); // one face per session per 1/faceChangesPerSecond
-        Assert.Equal("newer", Line1(await peer.ReadAsync<SetFaceMessage>()));
+        Assert.Equal("newer", Line1(await peer.ReadNudgingAsync<SetFaceMessage>(clock, TimeSpan.FromMilliseconds(100))));
         clock.Advance(TimeSpan.FromSeconds(20));
         Assert.True(await peer.SilentForAsync(TimeSpan.FromMilliseconds(150)));
     }
@@ -490,7 +500,8 @@ public sealed class SessionTests
                     continue;
                 }
 
-                Assert.Equal(id, Assert.IsType<PongMessage>(message).Id);
+                Assert.True(message is PongMessage, "Expected the pong to ping " + id + ", got " + Describe(message));
+                Assert.Equal(id, ((PongMessage)message).Id);
                 break;
             }
 
@@ -500,10 +511,18 @@ public sealed class SessionTests
         await peer.SendAsync(new PingMessage { Id = ++id });
         for (var message = await peer.ReadAsync(); message is not PongMessage; message = await peer.ReadAsync())
         {
-            faces.Add(Assert.IsType<SetFaceMessage>(message));
+            Assert.True(message is SetFaceMessage, "Expected a face or the last pong, got " + Describe(message));
+            faces.Add((SetFaceMessage)message);
         }
 
         return faces;
+
+        static string Describe(WireMessage? message) => message switch
+        {
+            null => "the end of the stream",
+            ErrorMessage error => "error " + error.Code.Value,
+            _ => message.Type,
+        };
     }
 
     [Fact]

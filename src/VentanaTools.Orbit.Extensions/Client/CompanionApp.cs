@@ -273,12 +273,13 @@ internal sealed class AppRunner
         var manifestPath = _options.ManifestPath ?? _arguments.ManifestPath ?? FindManifest();
         while (true)
         {
-            var manifest = await LoadManifestAsync(manifestPath, cancellationToken).ConfigureAwait(false);
-            if (manifest is null)
+            var loadedManifest = await LoadManifestAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            if (loadedManifest is not { } manifestFile)
             {
                 return 3;
             }
 
+            var (manifest, manifestStamp) = manifestFile;
             PrintUnmapped(manifest);
             var loaded = await LoadPairingAsync(manifest, manifestPath, cancellationToken).ConfigureAwait(false);
             if (loaded is not { } found)
@@ -289,7 +290,8 @@ internal sealed class AppRunner
             ClientEnd end;
             using (found.Pairing)
             {
-                end = await RunClientAsync(manifest, manifestPath, found.Pairing, found.Path, cancellationToken).ConfigureAwait(false);
+                end = await RunClientAsync(manifest, new WatchedFile(manifestPath, manifestStamp), found.Pairing,
+                    new WatchedFile(found.Path, found.Stamp), cancellationToken).ConfigureAwait(false);
             }
 
             switch (end)
@@ -299,7 +301,8 @@ internal sealed class AppRunner
                 case ClientEnd.Stopped when !_options.WatchFiles:
                     return 4;
                 case ClientEnd.Stopped:
-                    await WaitForChangeAsync([found.Path, manifestPath], cancellationToken).ConfigureAwait(false);
+                    // Measured from when the files were read: a change made while the client ran counts.
+                    await WaitForChangeAsync([found.Path, manifestPath], [found.Stamp, manifestStamp], cancellationToken).ConfigureAwait(false);
                     break;
             }
         }
@@ -315,14 +318,17 @@ internal sealed class AppRunner
         return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
     }
 
-    private async Task<ExtensionManifest?> LoadManifestAsync(string path, CancellationToken cancellationToken)
+    /// <summary>Reads the manifest, waiting for it to change while it is missing or invalid; returns it with its stamp from before the read.</summary>
+    private async Task<(ExtensionManifest Manifest, FileStamp Stamp)?> LoadManifestAsync(string path, CancellationToken cancellationToken)
     {
         while (true)
         {
+            // Stamped before reading, so a write that lands during the read is still a change.
+            var stamp = FileStamp.Of(path);
             var manifest = await ReadManifestAsync(path, report: true, cancellationToken).ConfigureAwait(false);
             if (manifest is not null)
             {
-                return manifest;
+                return (manifest, stamp);
             }
 
             if (!_options.WatchFiles)
@@ -331,7 +337,7 @@ internal sealed class AppRunner
             }
 
             _output.WriteLine("ventana: watching " + path);
-            await WaitForChangeAsync([path], cancellationToken).ConfigureAwait(false);
+            await WaitForChangeAsync([path], [stamp], cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -382,16 +388,21 @@ internal sealed class AppRunner
         }
     }
 
-    private async Task<(Pairing Pairing, string Path)?> LoadPairingAsync(ExtensionManifest manifest, string manifestPath,
+    /// <summary>Reads the first pairing candidate that exists, waiting while none is valid; returns it with its stamp from before the read.</summary>
+    private async Task<(Pairing Pairing, string Path, FileStamp Stamp)?> LoadPairingAsync(ExtensionManifest manifest, string manifestPath,
         CancellationToken cancellationToken)
     {
         var explicitPath = _options.PairingPath ?? _arguments.PairingPath;
         var candidates = explicitPath is not null ? [explicitPath] : PairingCandidates(manifest);
+        string[] watchedPaths = [.. candidates, manifestPath];
         var watched = candidates[0];
         var hostId = HostIdFor(manifest, null);
         while (true)
         {
-            var path = candidates.FirstOrDefault(File.Exists);
+            // Stamped before looking, so a pairing saved while it is being read is still a change.
+            var stamps = watchedPaths.Select(FileStamp.Of).ToArray();
+            var index = Array.FindIndex(candidates, File.Exists);
+            var path = index >= 0 ? candidates[index] : null;
             ReasonCode code = ReasonCode.PairingMissing;
             string? detail = null;
             if (path is not null)
@@ -403,7 +414,7 @@ internal sealed class AppRunner
                         .ConfigureAwait(false);
                     if (read.Value is { } pairing)
                     {
-                        return (pairing, path);
+                        return (pairing, path, stamps[index]);
                     }
 
                     var first = read.Diagnostics.First(item => item.Severity == DiagnosticSeverity.Error);
@@ -432,7 +443,7 @@ internal sealed class AppRunner
             }
 
             _output.WriteLine("ventana: watching " + watched);
-            await WaitForChangeAsync([.. candidates, manifestPath], cancellationToken).ConfigureAwait(false);
+            await WaitForChangeAsync(watchedPaths, stamps, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -452,7 +463,7 @@ internal sealed class AppRunner
         return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private async Task<ClientEnd> RunClientAsync(ExtensionManifest manifest, string manifestPath, Pairing pairing, string pairingPath,
+    private async Task<ClientEnd> RunClientAsync(ExtensionManifest manifest, WatchedFile manifestFile, Pairing pairing, WatchedFile pairingFile,
         CancellationToken cancellationToken)
     {
         using var run = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -464,7 +475,7 @@ internal sealed class AppRunner
 
         async Task<ExtensionManifest?> ReloadAsync(CancellationToken token)
         {
-            var reread = await ReadManifestAsync(manifestPath, report: false, token).ConfigureAwait(false);
+            var reread = await ReadManifestAsync(manifestFile.Path, report: false, token).ConfigureAwait(false);
             if (reread is null || string.Equals(ManifestWriter.ComputeHash(reread), ManifestWriter.ComputeHash(current), StringComparison.Ordinal))
             {
                 return null;
@@ -511,7 +522,7 @@ internal sealed class AppRunner
 
         using var watchStop = CancellationTokenSource.CreateLinkedTokenSource(run.Token);
         var watch = _options.WatchFiles
-            ? WatchAsync(pairingPath, manifestPath, () => Volatile.Read(ref waitingOnPerson) == 1, client, () =>
+            ? WatchAsync(pairingFile, manifestFile, () => Volatile.Read(ref waitingOnPerson) == 1, client, () =>
             {
                 Volatile.Write(ref restart, 1);
                 run.Cancel();
@@ -545,43 +556,39 @@ internal sealed class AppRunner
     /// <summary>
     /// While the client waits on a person (<c>manifest.mismatch</c>, <c>auth.identity-changed</c>):
     /// a changed manifest retries at once (the client re-reads it), and a changed pairing restarts
-    /// the client with it.
+    /// the client with it. Changes count from when the files were read, so one made while the
+    /// client was connected is acted on as soon as it waits on a person.
     /// </summary>
-    private async Task WatchAsync(string pairingPath, string manifestPath, Func<bool> waitingOnPerson, CompanionClient client,
+    private async Task WatchAsync(WatchedFile pairingFile, WatchedFile manifestFile, Func<bool> waitingOnPerson, CompanionClient client,
         Action restart, CancellationToken cancellationToken)
     {
-        var pairing = FileStamp.Of(pairingPath);
-        var manifest = FileStamp.Of(manifestPath);
+        var manifest = manifestFile.Stamp;
         while (!cancellationToken.IsCancellationRequested)
         {
             await Task.Delay(PollInterval, _time, cancellationToken).ConfigureAwait(false);
-            var nextPairing = FileStamp.Of(pairingPath);
-            var nextManifest = FileStamp.Of(manifestPath);
-            var pairingChanged = nextPairing != pairing;
-            var manifestChanged = nextManifest != manifest;
-            pairing = nextPairing;
-            manifest = nextManifest;
             if (!waitingOnPerson())
             {
                 continue;
             }
 
-            if (pairingChanged)
+            if (FileStamp.Of(pairingFile.Path) != pairingFile.Stamp)
             {
                 restart();
                 return;
             }
 
-            if (manifestChanged)
+            var nextManifest = FileStamp.Of(manifestFile.Path);
+            if (nextManifest != manifest)
             {
+                manifest = nextManifest;
                 client.RetryNow();
             }
         }
     }
 
-    private async Task WaitForChangeAsync(IReadOnlyList<string> paths, CancellationToken cancellationToken)
+    /// <summary>Polls until a file's stamp differs from <paramref name="initial"/>, stamps taken before the files were last read.</summary>
+    private async Task WaitForChangeAsync(IReadOnlyList<string> paths, IReadOnlyList<FileStamp> initial, CancellationToken cancellationToken)
     {
-        var initial = paths.Select(FileStamp.Of).ToArray();
         while (true)
         {
             await Task.Delay(PollInterval, _time, cancellationToken).ConfigureAwait(false);
@@ -663,6 +670,9 @@ internal sealed class AppRunner
     };
 
     private static string PrintableAscii(string text) => new(text.Where(c => c is >= ' ' and <= '~').Take(256).ToArray());
+
+    /// <summary>A watched file and its stamp from before it was read.</summary>
+    private readonly record struct WatchedFile(string Path, FileStamp Stamp);
 
     /// <summary>What polling compares: whether a file exists, its last write time and its length.</summary>
     private readonly record struct FileStamp(bool Exists, DateTime LastWriteUtc, long Length)
