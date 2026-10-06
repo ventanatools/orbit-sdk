@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "manifest.version-invalid",
+      "path": "/version",
+      "severity": "Error",
+      "line": 6,
+      "column": 14
+    }
+  ]
+}

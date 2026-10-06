@@ -1,0 +1,752 @@
+{
+  "about": "Scripted handshakes and liveness exchanges (contract sections 7.3, 7.9 and 9.2). secret is the pairing secret of every case. Each step is one frame with the reader result expected for it (read: message type, or violation code). proofs.challengeValid says whether the challenge's server proof verifies for the preceding hello. sdk gives the state and reason an SDK reaches, run against a verified server (the operating system confirmed its owner) and an unverified one; retryAtMostMs bounds the next retry. host gives the code a host closes with. atMs is a monotonic time where pacing matters; the ping interval is the ready value, 30000 ms.",
+  "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "cases": [
+    {
+      "name": "success",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        },
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"authenticate\",\"proof\":\"/UEufRCAUwJZWK0QCrk6/tMoSGLasVQxQEMWxnLWE4w=\"}",
+          "read": {
+            "message": "authenticate"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "PeerVerified",
+          "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+          "read": {
+            "message": "ready"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Connected",
+          "reason": null
+        },
+        "unverified": {
+          "state": "Connected",
+          "reason": null
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "version mismatch with supported",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":4,\"maxVersion\":5,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"error\",\"code\":\"protocol.version-unsupported\",\"supported\":{\"minVersion\":3,\"maxVersion\":3}}",
+          "read": {
+            "message": "error"
+          }
+        }
+      ],
+      "sdk": {
+        "verified": {
+          "state": "Stopped",
+          "reason": "protocol.version-unsupported"
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "protocol.version-unsupported",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": {
+        "closeCode": "protocol.version-unsupported"
+      }
+    },
+    {
+      "name": "a challenge whose version lies outside the offer",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":4,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"LPhsA6zqWmM6MgQMMm9V5nI1ejt3nwEh2cOpDZM5Fxo=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Stopped",
+          "reason": "protocol.version-unsupported"
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "protocol.version-unsupported",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a stale proof",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"edmTy0Xu+GQNOZbhTP/iT5KkYuuZrimd1LsSA7n++Mc=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": false
+      },
+      "sdk": {
+        "verified": {
+          "state": "Stopped",
+          "reason": "auth.server-proof-invalid"
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "auth.server-proof-invalid",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a host mismatch",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"other-host\",\"version\":\"1.0.0\"},\"proof\":\"HvPA8eggERP4ZLx9UxkLxV2o8RDLdf4VcST9mm0pg2M=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Stopped",
+          "reason": "auth.host-mismatch"
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "auth.host-mismatch",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a manifest mismatch",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"268214b1ade60000000000000000000000000000000000000000000000000000\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"w3OrQROZF8v2L8RMjr+bIJPINKuT3w5viBohmwofCEU=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        },
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"authenticate\",\"proof\":\"DXphb6OGZVmZX2Ef3nx+pmX9qF+P0Y7CZLZYV1c5VC4=\"}",
+          "read": {
+            "message": "authenticate"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "PeerVerified",
+          "frame": "{\"type\":\"error\",\"code\":\"manifest.mismatch\"}",
+          "read": {
+            "message": "error"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Waiting",
+          "reason": "manifest.mismatch",
+          "retryAtMostMs": 30000
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "manifest.mismatch",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": {
+        "closeCode": "manifest.mismatch"
+      }
+    },
+    {
+      "name": "an identity change",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        },
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"authenticate\",\"proof\":\"/UEufRCAUwJZWK0QCrk6/tMoSGLasVQxQEMWxnLWE4w=\"}",
+          "read": {
+            "message": "authenticate"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "PeerVerified",
+          "frame": "{\"type\":\"error\",\"code\":\"auth.identity-changed\"}",
+          "read": {
+            "message": "error"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Waiting",
+          "reason": "auth.identity-changed",
+          "retryAtMostMs": 30000
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "auth.identity-changed",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": {
+        "closeCode": "auth.identity-changed"
+      }
+    },
+    {
+      "name": "a handshake timeout",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "atMs": 0,
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"error\",\"code\":\"auth.timeout\"}",
+          "atMs": 5000,
+          "read": {
+            "message": "error"
+          }
+        }
+      ],
+      "sdk": null,
+      "host": {
+        "closeCode": "auth.timeout"
+      }
+    },
+    {
+      "name": "a ping flood",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        },
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"authenticate\",\"proof\":\"/UEufRCAUwJZWK0QCrk6/tMoSGLasVQxQEMWxnLWE4w=\"}",
+          "read": {
+            "message": "authenticate"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "PeerVerified",
+          "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+          "read": {
+            "message": "ready"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Authenticated",
+          "frame": "{\"type\":\"ping\",\"id\":1}",
+          "atMs": 30000,
+          "read": {
+            "message": "ping"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Authenticated",
+          "frame": "{\"type\":\"ping\",\"id\":2}",
+          "atMs": 30001,
+          "read": {
+            "message": "ping"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a ping sooner than half the interval",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        },
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"authenticate\",\"proof\":\"/UEufRCAUwJZWK0QCrk6/tMoSGLasVQxQEMWxnLWE4w=\"}",
+          "read": {
+            "message": "authenticate"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "PeerVerified",
+          "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+          "read": {
+            "message": "ready"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Authenticated",
+          "frame": "{\"type\":\"ping\",\"id\":1}",
+          "atMs": 30000,
+          "read": {
+            "message": "ping"
+          }
+        },
+        {
+          "from": "Companion",
+          "phase": "Authenticated",
+          "frame": "{\"type\":\"pong\",\"id\":1}",
+          "atMs": 30001,
+          "read": {
+            "message": "pong"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Authenticated",
+          "frame": "{\"type\":\"ping\",\"id\":2}",
+          "atMs": 44999,
+          "read": {
+            "message": "ping"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a stray pong is ignored",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        },
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"authenticate\",\"proof\":\"/UEufRCAUwJZWK0QCrk6/tMoSGLasVQxQEMWxnLWE4w=\"}",
+          "read": {
+            "message": "authenticate"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "PeerVerified",
+          "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+          "read": {
+            "message": "ready"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Authenticated",
+          "frame": "{\"type\":\"pong\",\"id\":7}",
+          "read": {
+            "message": "pong"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": true
+      },
+      "sdk": {
+        "verified": {
+          "state": "Connected",
+          "reason": null
+        },
+        "unverified": {
+          "state": "Connected",
+          "reason": null
+        }
+      },
+      "ignoredCode": "protocol.pong-unknown",
+      "host": null
+    },
+    {
+      "name": "a squatter sends auth.proof-invalid before the challenge",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"error\",\"code\":\"auth.proof-invalid\"}",
+          "read": {
+            "violation": "protocol.unexpected"
+          }
+        }
+      ],
+      "sdk": {
+        "verified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a squatter sends host.access-revoked before the challenge",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"error\",\"code\":\"host.access-revoked\"}",
+          "read": {
+            "violation": "protocol.unexpected"
+          }
+        }
+      ],
+      "sdk": {
+        "verified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "protocol.unexpected",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a squatter sends auth.registration-mismatch before the challenge",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"error\",\"code\":\"auth.registration-mismatch\"}",
+          "read": {
+            "message": "error"
+          }
+        }
+      ],
+      "sdk": {
+        "verified": {
+          "state": "Stopped",
+          "reason": "auth.registration-mismatch"
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "auth.registration-mismatch",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a squatter sends protocol.version-unsupported before the challenge",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"error\",\"code\":\"protocol.version-unsupported\"}",
+          "read": {
+            "message": "error"
+          }
+        }
+      ],
+      "sdk": {
+        "verified": {
+          "state": "Stopped",
+          "reason": "protocol.version-unsupported"
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "protocol.version-unsupported",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a squatter sends host.paused with retryAfterMs 300000",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"error\",\"code\":\"host.paused\",\"retryAfterMs\":300000}",
+          "read": {
+            "message": "error"
+          }
+        }
+      ],
+      "sdk": {
+        "verified": {
+          "state": "Waiting",
+          "reason": "host.paused",
+          "retryAtMostMs": 300000
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "host.paused",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    },
+    {
+      "name": "a squatter sends a challenge with a garbage proof",
+      "steps": [
+        {
+          "from": "Companion",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+          "read": {
+            "message": "hello"
+          }
+        },
+        {
+          "from": "Host",
+          "phase": "Handshake",
+          "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eVtpBOVPgkEd9LDiejc6Ve6j+dZtrFqbzh3ZL3tAHaU=\"}",
+          "read": {
+            "message": "challenge"
+          }
+        }
+      ],
+      "proofs": {
+        "challengeValid": false
+      },
+      "sdk": {
+        "verified": {
+          "state": "Stopped",
+          "reason": "auth.server-proof-invalid"
+        },
+        "unverified": {
+          "state": "Waiting",
+          "reason": "auth.server-proof-invalid",
+          "retryAtMostMs": 30000
+        }
+      },
+      "host": null
+    }
+  ]
+}

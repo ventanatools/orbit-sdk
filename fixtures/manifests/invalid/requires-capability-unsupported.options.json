@@ -1,0 +1,6 @@
+{
+  "supportedCapabilities": [
+    "x.test-echo"
+  ],
+  "allowExperimentalCapabilities": false
+}

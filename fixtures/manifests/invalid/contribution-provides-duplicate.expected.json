@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "contribution.provides-duplicate",
+      "path": "/contributions/1/provides/1",
+      "severity": "Error",
+      "line": 79,
+      "column": 9
+    }
+  ]
+}

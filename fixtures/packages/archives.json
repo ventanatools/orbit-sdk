@@ -1,0 +1,1545 @@
+{
+  "about": "Package archive fixtures (contract section 5). Each archive is built from its description by the generator in the .NET test project and must equal the committed .zip byte for byte. Entries are written in order: a local header (version 20, the given flags and method, time 0, date 1980-01-01, CRC-32, sizes, the name, any local extra field), the data, and a data descriptor when dataDescriptor is set; then the central directory (version made by 20 unless madeBy is set, external attributes 0 for files and 16 for folders unless externalAttributes is set) and the end-of-central-directory record. method 8 is raw deflate. content names an entry of contents, or $descriptor for an extension.package.json the generator computes from the archive's files (sorted ordinally, with manifestHash computed from extension.json), changed by descriptor (add, drop, sha256, size, manifestHash, archiveVersion). local overrides the local header (name, method, flags, crc, uncompressedSize, extra); crc overrides both records; zip64Sizes writes 0xFFFFFFFF sizes in the central record; centralExtra is a central extra field; localOffsetOf points a central record at another entry's local header; gapBefore inserts bytes before a local record; prefix, trailing and afterEnd insert bytes before the first record, before the central directory and after the end record; eocd overrides diskNumber or entriesOnDisk; zip64Locator writes a ZIP64 end-of-central-directory locator; raw is the whole file. expected lists the diagnostics (code, path, file) a reader reports with the manifest read for example-host. generated describes the archive at every limit of section 5.3 at once, which is built at test time and not committed.",
+  "contents": {
+    "readme": {
+      "text": "Start the companion yourself, then choose Save connection info in the host.\n"
+    },
+    "readme-nul": {
+      "text": "Start\u0000here.\n"
+    },
+    "manifest": {
+      "fixture": "manifests/valid/countdown.json"
+    },
+    "manifest-unknown-member": {
+      "fixture": "manifests/invalid/json-unknown-member.json"
+    },
+    "companion": {
+      "text": "This file stands for the companion program.\n"
+    },
+    "strings-de": {
+      "fixture": "strings/valid/de-DE.json"
+    },
+    "strings-unknown": {
+      "fixture": "strings/invalid/target-unknown-contribution/de-DE.json"
+    }
+  },
+  "archives": [
+    {
+      "file": "valid.zip",
+      "description": "A valid package: manifest, descriptor, readme and one payload file, all stored.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": []
+    },
+    {
+      "file": "valid-with-strings.zip",
+      "description": "A valid package with a strings file.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "strings/",
+          "folder": true
+        },
+        {
+          "name": "strings/de-DE.json",
+          "content": "strings-de"
+        }
+      ],
+      "expected": []
+    },
+    {
+      "file": "valid-deflated.zip",
+      "description": "A valid package whose files are deflated.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme",
+          "method": 8
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest",
+          "method": 8
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor",
+          "method": 8
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "method": 8
+        }
+      ],
+      "expected": []
+    },
+    {
+      "file": "valid-data-descriptor.zip",
+      "description": "A valid package whose payload entry uses a data descriptor (flag bit 3) with its signature.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "dataDescriptor": true
+        }
+      ],
+      "expected": []
+    },
+    {
+      "file": "valid-no-folders.zip",
+      "description": "A valid package without folder entries.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": []
+    },
+    {
+      "file": "zip64-central-extra.zip",
+      "description": "A ZIP64 extra field in a central record.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "centralExtra": "01000000"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.zip64",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "zip64-local-extra.zip",
+      "description": "A ZIP64 extra field in a local header only.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "local": {
+            "extra": "0100100000000000000000000000000000000000"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.zip64",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "zip64-sizes.zip",
+      "description": "Central sizes of 0xFFFFFFFF.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "zip64Sizes": true
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.zip64",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "zip64-locator.zip",
+      "description": "A ZIP64 end-of-central-directory locator.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "zip64Locator": true,
+      "expected": [
+        {
+          "code": "package.zip64",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "encrypted.zip",
+      "description": "An entry with the encryption flag.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "flags": 1
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.encrypted",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "symlink.zip",
+      "description": "An entry marked as a Unix symbolic link.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "madeBy": 798,
+          "externalAttributes": 2717843456
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.link",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "traversal.zip",
+      "description": "An entry name that climbs out of the archive.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "payload/../outside.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path",
+          "path": "",
+          "file": "payload/../outside.txt"
+        }
+      ]
+    },
+    {
+      "file": "case-conflict.zip",
+      "description": "Two entries that differ only in case.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "payload/Companion.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path-conflict",
+          "path": "",
+          "file": "payload/Companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "reserved-root.zip",
+      "description": "A root entry that is not allowed.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "notes.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path-reserved",
+          "path": "",
+          "file": "notes.txt"
+        }
+      ]
+    },
+    {
+      "file": "local-name.zip",
+      "description": "A local header whose name differs from its central record.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "local": {
+            "name": "payload/companiom.txt"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "local-method.zip",
+      "description": "A local header whose compression method differs from its central record.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "local": {
+            "method": 8
+          }
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "local-flags.zip",
+      "description": "A local header whose flags differ from its central record.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "local": {
+            "flags": 2048
+          }
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "local-crc.zip",
+      "description": "A local header whose CRC-32 differs from its central record.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "local": {
+            "crc": 305419896
+          }
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "local-sizes.zip",
+      "description": "A local header whose sizes differ from its central record.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "local": {
+            "uncompressedSize": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "overlap.zip",
+      "description": "Two central records that point at overlapping local records.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "payload/second.txt",
+          "content": "companion",
+          "localOffsetOf": 4
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/second.txt"
+        }
+      ]
+    },
+    {
+      "file": "prefix-bytes.zip",
+      "description": "Bytes before the first local header.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "prefix": "4d5a90000300000004000000",
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "gap-bytes.zip",
+      "description": "Bytes between two local records.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "gapBefore": "00000000"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "trailing-bytes.zip",
+      "description": "Bytes between the last local record and the central directory.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "trailing": "00",
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "comment-not-at-end.zip",
+      "description": "Bytes after the end-of-central-directory comment.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "afterEnd": "00",
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "crc.zip",
+      "description": "An entry whose CRC-32 does not match its data, in both records.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "crc": 305419896
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.crc",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "method.zip",
+      "description": "An unsupported compression method.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion",
+          "method": 12
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "folder-content.zip",
+      "description": "A folder entry with data.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "payload/folder/",
+          "content": "companion",
+          "folder": true
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path",
+          "path": "",
+          "file": "payload/folder/"
+        }
+      ]
+    },
+    {
+      "file": "device-name.zip",
+      "description": "An entry named after a Windows device.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "payload/CON.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path",
+          "path": "",
+          "file": "payload/CON.txt"
+        }
+      ]
+    },
+    {
+      "file": "non-ascii-name.zip",
+      "description": "A UTF-8 entry name outside the path grammar.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "payload/caf\u00e9.txt",
+          "content": "companion",
+          "flags": 2048
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "strings-subfolder.zip",
+      "description": "A strings file in a subfolder.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "strings/de/de-DE.json",
+          "content": "strings-de"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path-reserved",
+          "path": "",
+          "file": "strings/de/de-DE.json"
+        }
+      ]
+    },
+    {
+      "file": "strings-invalid.zip",
+      "description": "A strings file that names a contribution the manifest does not have.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "strings/de-DE.json",
+          "content": "strings-unknown"
+        }
+      ],
+      "expected": [
+        {
+          "code": "strings.target-unknown",
+          "path": "/contributions/example.countdown~1missing",
+          "file": "strings/de-DE.json"
+        }
+      ]
+    },
+    {
+      "file": "inventory-missing.zip",
+      "description": "The descriptor lists a file the archive does not contain.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "add": {
+          "path": "payload/missing.txt",
+          "size": 1,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "expected": [
+        {
+          "code": "package.inventory-missing",
+          "path": "/files/3",
+          "file": "extension.package.json"
+        }
+      ]
+    },
+    {
+      "file": "inventory-extra.zip",
+      "description": "The archive contains a file the descriptor does not list.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "drop": "payload/companion.txt"
+      },
+      "expected": [
+        {
+          "code": "package.inventory-extra",
+          "path": "",
+          "file": "payload/companion.txt"
+        }
+      ]
+    },
+    {
+      "file": "hash-mismatch.zip",
+      "description": "A file's SHA-256 differs from the descriptor.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "sha256": {
+          "path": "payload/companion.txt",
+          "value": "1111111111111111111111111111111111111111111111111111111111111111"
+        }
+      },
+      "expected": [
+        {
+          "code": "package.hash-mismatch",
+          "path": "/files/2",
+          "file": "extension.package.json"
+        }
+      ]
+    },
+    {
+      "file": "size-mismatch.zip",
+      "description": "A file's size differs from the descriptor.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "size": {
+          "path": "payload/companion.txt",
+          "value": 3
+        }
+      },
+      "expected": [
+        {
+          "code": "package.hash-mismatch",
+          "path": "/files/2",
+          "file": "extension.package.json"
+        }
+      ]
+    },
+    {
+      "file": "manifest-hash.zip",
+      "description": "The descriptor's manifestHash differs from the manifest's.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "manifestHash": "268214b1ade6cbb7a74a12b6b26e1b76a8d2ce5b4fe85f4a6b6dc5c11d1e4f7c"
+      },
+      "expected": [
+        {
+          "code": "package.manifest-hash",
+          "path": "/manifestHash",
+          "file": "extension.package.json"
+        }
+      ]
+    },
+    {
+      "file": "descriptor-version.zip",
+      "description": "A descriptor with archiveVersion 1.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "descriptor": {
+        "archiveVersion": 1
+      },
+      "expected": [
+        {
+          "code": "schema.version-unsupported",
+          "path": "/archiveVersion",
+          "file": "extension.package.json"
+        },
+        {
+          "code": "package.descriptor",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "descriptor-legacy-name.zip",
+      "description": "The version-1 descriptor name package.json.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        },
+        {
+          "name": "package.json",
+          "content": {
+            "text": "{}\n"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.path-reserved",
+          "path": "",
+          "file": "package.json"
+        },
+        {
+          "code": "package.file-missing",
+          "path": "",
+          "file": "extension.package.json"
+        }
+      ]
+    },
+    {
+      "file": "file-missing.zip",
+      "description": "No README.md.",
+      "entries": [
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.file-missing",
+          "path": "",
+          "file": "README.md"
+        }
+      ]
+    },
+    {
+      "file": "readme-nul.zip",
+      "description": "A README.md that contains NUL.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme-nul"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": [
+        {
+          "code": "package.readme",
+          "path": "",
+          "file": "README.md"
+        }
+      ]
+    },
+    {
+      "file": "manifest-invalid.zip",
+      "description": "A manifest with an unknown member; its diagnostics carry the entry name.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest-unknown-member"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "expected": [
+        {
+          "code": "json.unknown-member",
+          "path": "/entrypoint",
+          "file": "extension.json"
+        }
+      ]
+    },
+    {
+      "file": "eocd-disk.zip",
+      "description": "An end-of-central-directory record that names another disk.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "eocd": {
+        "diskNumber": 1
+      },
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "eocd-count.zip",
+      "description": "An end-of-central-directory record whose counts disagree.",
+      "entries": [
+        {
+          "name": "README.md",
+          "content": "readme"
+        },
+        {
+          "name": "extension.json",
+          "content": "manifest"
+        },
+        {
+          "name": "extension.package.json",
+          "content": "$descriptor"
+        },
+        {
+          "name": "payload/",
+          "folder": true
+        },
+        {
+          "name": "payload/companion.txt",
+          "content": "companion"
+        }
+      ],
+      "eocd": {
+        "entriesOnDisk": 3
+      },
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "file": "not-a-zip.zip",
+      "description": "Text that is not a ZIP archive.",
+      "entries": [],
+      "raw": "not a zip archive and never an error message",
+      "expected": [
+        {
+          "code": "package.archive",
+          "path": ""
+        }
+      ]
+    }
+  ],
+  "generated": {
+    "name": "every limit at once",
+    "description": "512 entries: extension.json, extension.package.json and README.md, 64 strings files strings/q<aa..cl>.json, and 445 payload files whose names are 240 characters (payload/, an 80-character segment, /, another 80-character segment, /, and a 70-character file name). extension.json (the countdown manifest), README.md and every strings file are padded to exactly 65,536 bytes; one payload file is exactly 16 MiB; the files expand to exactly 64 MiB; the archive is exactly 32 MiB, reached with stored pseudo-random payload data and an end-of-central-directory comment. It reads with no diagnostics."
+  }
+}

@@ -12,7 +12,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <ProjectReference Include="../../src/VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj" />
-    <EmbeddedResource Include="Fixtures/ids.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="FixturePins.txt" LogicalName="FixturePins.txt" />
   </ItemGroup>
 </Project>

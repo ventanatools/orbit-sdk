@@ -1,0 +1,250 @@
+{
+  "about": "Manifests built in code (ManifestReader.Validate), each the model of base with members set: a pointer set to null makes that member or element null in the model, {\"$enum\": n} sets an enumeration to the undefined value n, and a number sets an integer or a flags value. Diagnostics carry no line or column.",
+  "base": "manifests/valid/countdown.json",
+  "cases": [
+    {
+      "name": "manifest-null",
+      "set": {
+        "": null
+      },
+      "expected": [
+        {
+          "code": "manifest.null",
+          "path": ""
+        }
+      ]
+    },
+    {
+      "name": "hosts-null",
+      "set": {
+        "/hosts": null
+      },
+      "expected": [
+        {
+          "code": "null.member",
+          "path": "/hosts"
+        }
+      ]
+    },
+    {
+      "name": "hosts-element-null",
+      "set": {
+        "/hosts/0": null
+      },
+      "expected": [
+        {
+          "code": "null.element",
+          "path": "/hosts/0"
+        }
+      ]
+    },
+    {
+      "name": "contributions-null",
+      "set": {
+        "/contributions": null
+      },
+      "expected": [
+        {
+          "code": "null.member",
+          "path": "/contributions"
+        }
+      ]
+    },
+    {
+      "name": "contribution-element-null",
+      "set": {
+        "/contributions/1": null
+      },
+      "expected": [
+        {
+          "code": "null.element",
+          "path": "/contributions/1"
+        }
+      ]
+    },
+    {
+      "name": "settings-null",
+      "set": {
+        "/contributions/1/settings": null
+      },
+      "expected": [
+        {
+          "code": "null.member",
+          "path": "/contributions/1/settings"
+        }
+      ]
+    },
+    {
+      "name": "choices-null",
+      "set": {
+        "/contributions/0/settings/0/choices": null
+      },
+      "expected": [
+        {
+          "code": "setting.choices-required",
+          "path": "/contributions/0/settings/0/choices"
+        }
+      ]
+    },
+    {
+      "name": "choice-element-null",
+      "set": {
+        "/contributions/0/settings/0/choices/1": null
+      },
+      "expected": [
+        {
+          "code": "null.element",
+          "path": "/contributions/0/settings/0/choices/1"
+        }
+      ]
+    },
+    {
+      "name": "id-null",
+      "set": {
+        "/id": null
+      },
+      "expected": [
+        {
+          "code": "id.required",
+          "path": "/id"
+        }
+      ]
+    },
+    {
+      "name": "name-null",
+      "set": {
+        "/name": null
+      },
+      "expected": [
+        {
+          "code": "json.required-missing",
+          "path": "/name"
+        }
+      ]
+    },
+    {
+      "name": "publisher-name-null",
+      "set": {
+        "/publisher/name": null
+      },
+      "expected": [
+        {
+          "code": "json.required-missing",
+          "path": "/publisher/name"
+        }
+      ]
+    },
+    {
+      "name": "glyph-null",
+      "set": {
+        "/contributions/1/glyph": null
+      },
+      "expected": [
+        {
+          "code": "chrome.glyph-required",
+          "path": "/contributions/1/glyph"
+        }
+      ]
+    },
+    {
+      "name": "setting-id-null",
+      "set": {
+        "/contributions/0/settings/1/id": null
+      },
+      "expected": [
+        {
+          "code": "setting.id-required",
+          "path": "/contributions/0/settings/1/id"
+        }
+      ]
+    },
+    {
+      "name": "default-null",
+      "set": {
+        "/contributions/0/settings/0/default": null
+      },
+      "expected": [
+        {
+          "code": "setting.default-required",
+          "path": "/contributions/0/settings/0/default"
+        }
+      ]
+    },
+    {
+      "name": "choice-value-null",
+      "set": {
+        "/contributions/0/settings/0/choices/2/value": null
+      },
+      "expected": [
+        {
+          "code": "choice.value-required",
+          "path": "/contributions/0/settings/0/choices/2/value"
+        }
+      ]
+    },
+    {
+      "name": "kind-undefined",
+      "set": {
+        "/contributions/0/settings/0/kind": {
+          "$enum": 7
+        }
+      },
+      "expected": [
+        {
+          "code": "setting.kind-unsupported",
+          "path": "/contributions/0/settings/0/kind"
+        }
+      ]
+    },
+    {
+      "name": "network-undefined",
+      "set": {
+        "/disclosures/network": {
+          "$enum": 0
+        }
+      },
+      "expected": [
+        {
+          "code": "enum.undefined",
+          "path": "/disclosures/network"
+        }
+      ]
+    },
+    {
+      "name": "provides-none",
+      "set": {
+        "/contributions/1/provides": 0
+      },
+      "expected": [
+        {
+          "code": "list.too-short",
+          "path": "/contributions/1/provides"
+        }
+      ]
+    },
+    {
+      "name": "provides-undefined-flag",
+      "set": {
+        "/contributions/1/provides": 6
+      },
+      "expected": [
+        {
+          "code": "contribution.provides-unknown",
+          "path": "/contributions/1/provides/1"
+        }
+      ]
+    },
+    {
+      "name": "schema-version-2",
+      "set": {
+        "/schemaVersion": 2
+      },
+      "expected": [
+        {
+          "code": "schema.version-unsupported",
+          "path": "/schemaVersion"
+        }
+      ]
+    }
+  ]
+}

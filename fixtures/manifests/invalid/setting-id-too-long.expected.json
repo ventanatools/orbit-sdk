@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "string.too-long",
+      "path": "/contributions/0/settings/0/id",
+      "severity": "Error",
+      "line": 30,
+      "column": 17
+    }
+  ]
+}

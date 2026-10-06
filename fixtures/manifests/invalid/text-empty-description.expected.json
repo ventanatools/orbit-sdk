@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "text.empty",
+      "path": "/contributions/1/description",
+      "severity": "Error",
+      "line": 75,
+      "column": 22
+    }
+  ]
+}

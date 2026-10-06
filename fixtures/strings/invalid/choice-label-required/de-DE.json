@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "language": "de-DE",
+  "contributions": {
+    "example.countdown/timer": {
+      "settings": {
+        "mode": {
+          "choices": {
+            "reset": " "
+          }
+        }
+      }
+    }
+  }
+}

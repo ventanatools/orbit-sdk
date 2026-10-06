@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "setting.default-required",
+      "path": "/contributions/0/settings/0/default",
+      "severity": "Error",
+      "line": 29,
+      "column": 9
+    }
+  ]
+}

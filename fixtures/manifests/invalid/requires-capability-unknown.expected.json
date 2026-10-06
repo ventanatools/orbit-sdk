@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "requires.capability-unknown",
+      "path": "/requires/capabilities/0",
+      "severity": "Warning",
+      "line": 20,
+      "column": 7
+    }
+  ]
+}

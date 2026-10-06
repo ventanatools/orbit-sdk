@@ -1,153 +1,158 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 
+using System.Collections.Frozen;
+
 namespace VentanaTools.Orbit.Extensions;
 
-/// <summary>Who an id belongs to: Orbit's own widgets, or another program's.</summary>
-public enum ExtensionOrigin
+/// <summary>Whose an id is: a host's own (first party) or an extension author's (third party).</summary>
+public enum IdOrigin
 {
-    /// <summary>One of Orbit's own: an undotted root (<c>clock</c>, <c>now-playing</c>).</summary>
-    FirstParty,
+    /// <summary>A host's own id: a single segment root such as <c>clock</c> or <c>now-playing</c>.</summary>
+    FirstParty = 1,
 
-    /// <summary>Another program's: a dotted root (<c>contoso.status</c>).</summary>
-    ThirdParty,
+    /// <summary>An extension author's id: a dotted root such as <c>contoso.status</c>.</summary>
+    ThirdParty = 2,
 }
 
 /// <summary>
-/// The one grammar for the ids of widgets and their actions (platform design B2), in the
-/// shape Lollipop's manifest ids have, so an author learns one rule for both products:
+/// The extension id grammar (contract §2.4, §3.4 and §3.5):
 /// <code>
-/// seg    = [a-z0-9]+ ( "-" [a-z0-9]+ )*
-/// root1p = seg                     first party: clock, now-playing, weather
-/// root3p = seg ( "." seg )+        third party: contoso.status
-/// id     = root ( "/" seg )*       now-playing/play-pause, contoso.status/build
+/// segment        = [a-z0-9]+ ( "-" [a-z0-9]+ )*
+/// first party    = segment                       clock, now-playing
+/// third party    = segment ( "." segment )+      contoso.status
+/// id             = root ( "/" segment )*         contoso.status/build
 /// </code>
 /// </summary>
 /// <remarks>
 /// <para>
-/// A dot is allowed only in the root, so a third party's id can never equal or sit
-/// under one of Orbit's: <c>clock.x</c> is not <c>clock</c>, and no dotted root is the
-/// root of <c>now-playing/play-pause</c>. Which side an id is on is read from its shape
-/// (<see cref="OriginOf"/>), never from anything it claims.
+/// A dot is allowed only in the root, so an extension author's id can never equal or sit under
+/// a host's own ids. An id is at most 128 characters. Ids compare ordinally, and they are
+/// claims: nothing verifies who may use a publisher segment.
 /// </para>
 /// <para>
-/// A third party's root may not start with a reserved publisher: Orbit's, Lollipop's,
-/// Ventana's, or <c>ext</c>, the word a ring file uses for a widget item. Lollipop
-/// reserves its own list beside it. The public Protocol tests cover the portable
-/// grammar and Orbit's reserved-publisher policy; each product must also test
-/// its own list. Shared ID syntax does not establish host compatibility.
-/// </para>
-/// <para>
-/// The codes are Lollipop's words for the same faults, so one fixture can say what each
-/// case gives in both products. They are for tests and for a later manifest reader,
-/// never for a person: a ring file that names a bad id reads as an item Orbit can't
-/// read by the host.
+/// An extension author's id must not start with a reserved publisher
+/// (<see cref="ReservedPublishers"/>), and no id's first segment may be a Windows device name
+/// (<c>con</c>, <c>prn</c>, <c>aux</c>, <c>nul</c>, <c>com1</c> to <c>com9</c>, <c>lpt1</c> to
+/// <c>lpt9</c>), because ids begin file names. The device-name check is part of the grammar, so a
+/// caller that passes its own reserved-publisher list cannot turn it off.
 /// </para>
 /// </remarks>
 public static class ExtensionIds
 {
-    /// <summary>The longest id, in characters (Lollipop's limit).</summary>
+    /// <summary>The longest id, in characters.</summary>
     public const int MaxLength = 128;
 
-    /// <summary>Nothing, or nothing but white space.</summary>
-    public const string Required = "id.required";
-
-    /// <summary>A character, a segment or a slash the grammar does not allow.</summary>
-    public const string Grammar = "id.grammar";
-
-    /// <summary>Longer than <see cref="MaxLength"/>.</summary>
-    public const string TooLong = "id.too-long";
-
-    /// <summary>A third party's root must be dotted (<c>contoso.status</c>).</summary>
-    public const string RootNotDotted = "id.root-not-dotted";
-
-    /// <summary>Orbit's own roots are never dotted.</summary>
-    public const string RootDotted = "id.root-dotted";
-
-    /// <summary>A third party's root starts with a reserved publisher (<see cref="ReservedPublishers"/>).</summary>
-    public const string RootReserved = "id.root-reserved";
-
-    /// <summary>
-    /// The publishers no third party may use as the first part of its root: Orbit,
-    /// Lollipop and Ventana, whose names an extension could otherwise borrow, and
-    /// <c>ext</c>, the word a ring file stores a widget item under.
-    /// </summary>
-    public static IReadOnlyList<string> ReservedPublishers { get; } = Array.AsReadOnly<string>(["orbit", "lollipop", "ventana", "ext"]);
-
-    /// <summary>
-    /// Null when <paramref name="id"/> is a valid id for <paramref name="origin"/>: a valid
-    /// root, then any number of <c>/</c> and a segment. Otherwise the code that says why.
-    /// Never throws.
-    /// </summary>
-    /// <remarks>
-    /// The whole id is checked first (present, not too long), then its root, then the
-    /// segments after it, and the first fault found is the answer.
-    /// </remarks>
-    public static string? Classify(string? id, ExtensionOrigin origin) => Classify(id, origin, ReservedPublishers);
-
-    /// <summary>Uses a host-owned reserved publisher policy without changing the shared grammar.</summary>
-    public static string? Classify(string? id, ExtensionOrigin origin, IReadOnlyCollection<string> reservedPublishers)
+    private static readonly FrozenSet<string> DeviceNames = new[]
     {
-        ArgumentNullException.ThrowIfNull(reservedPublishers);
+        "con", "prn", "aux", "nul",
+        "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+        "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+    }.ToFrozenSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The publisher segments no extension author's id may start with, from the conformance
+    /// fixture <c>fixtures/reserved-publishers.json</c> (contract §3.5).
+    /// </summary>
+    public static IReadOnlyList<string> ReservedPublishers { get; } = EmbeddedData.ReservedPublishers();
+
+    /// <summary>
+    /// Classifies <paramref name="id"/> for <paramref name="origin"/>: a valid root, then any
+    /// number of <c>/</c> and a segment.
+    /// </summary>
+    /// <param name="id">The id to check.</param>
+    /// <param name="origin">Whose id it should be.</param>
+    /// <param name="reservedPublishers">The reserved publishers; null for <see cref="ReservedPublishers"/>.</param>
+    /// <returns>
+    /// Null when the id is valid; otherwise the first code that applies, in this order:
+    /// <c>id.required</c>, <c>id.grammar</c>, <c>id.root-not-dotted</c> or
+    /// <c>id.root-dotted</c>, <c>id.root-reserved</c>, <c>id.too-long</c>.
+    /// </returns>
+    public static string? Classify(string? id, IdOrigin origin, IReadOnlyCollection<string>? reservedPublishers = null)
+    {
         if (string.IsNullOrWhiteSpace(id))
         {
-            return Required;
-        }
-
-        if (id.Length > MaxLength)
-        {
-            return TooLong;
+            return DiagnosticCodes.IdRequired;
         }
 
         var slash = id.IndexOf('/', StringComparison.Ordinal);
         if (slash == 0)
         {
-            return Grammar;
+            return DiagnosticCodes.IdGrammar;
         }
 
-        if (slash < 0)
+        var root = slash < 0 ? id.AsSpan() : id.AsSpan(0, slash);
+        if (slash >= 0 && !AreSegments(id.AsSpan(slash + 1)))
         {
-            return ClassifyRoot(id, origin, reservedPublishers);
+            return DiagnosticCodes.IdGrammar;
         }
 
-        return ClassifyRoot(id[..slash], origin, reservedPublishers) ?? (AreSegments(id.AsSpan(slash + 1)) ? null : Grammar);
+        var single = IsSegment(root);
+        var dotted = !single && IsDotted(root);
+        if (!single && !dotted)
+        {
+            return DiagnosticCodes.IdGrammar;
+        }
+
+        if (origin == IdOrigin.FirstParty && dotted)
+        {
+            return DiagnosticCodes.IdRootDotted;
+        }
+
+        if (origin != IdOrigin.FirstParty && single)
+        {
+            return DiagnosticCodes.IdRootNotDotted;
+        }
+
+        var dot = root.IndexOf('.');
+        var first = (dot < 0 ? root : root[..dot]).ToString();
+        if (DeviceNames.Contains(first))
+        {
+            return DiagnosticCodes.IdRootReserved;
+        }
+
+        if (origin != IdOrigin.FirstParty
+            && (reservedPublishers ?? ReservedPublishers).Contains(first, StringComparer.Ordinal))
+        {
+            return DiagnosticCodes.IdRootReserved;
+        }
+
+        return id.Length > MaxLength ? DiagnosticCodes.IdTooLong : null;
     }
 
-    /// <summary>Whether <paramref name="id"/> is a valid id for <paramref name="origin"/> (<see cref="Classify(string?, ExtensionOrigin)"/>).</summary>
-    public static bool IsValid(string? id, ExtensionOrigin origin) => Classify(id, origin) is null;
-
-    /// <summary>Validates an id with the caller's reserved publisher policy.</summary>
-    public static bool IsValid(string? id, ExtensionOrigin origin, IReadOnlyCollection<string> reservedPublishers) =>
+    /// <summary>Whether <paramref name="id"/> is a valid id for <paramref name="origin"/> (see <see cref="Classify"/>).</summary>
+    /// <param name="id">The id to check.</param>
+    /// <param name="origin">Whose id it should be.</param>
+    /// <param name="reservedPublishers">The reserved publishers; null for <see cref="ReservedPublishers"/>.</param>
+    /// <returns>True when <see cref="Classify"/> returns null.</returns>
+    public static bool IsValid(string? id, IdOrigin origin, IReadOnlyCollection<string>? reservedPublishers = null) =>
         Classify(id, origin, reservedPublishers) is null;
 
     /// <summary>
-    /// Whose an id is, by its shape alone: a third party's when its root holds a dot,
-    /// Orbit's otherwise. Says nothing about whether the id is valid; ask
-    /// <see cref="Classify(string?, ExtensionOrigin)"/> with the answer.
+    /// Whose an id is, by its shape alone: an extension author's when its root holds a dot, a
+    /// host's own otherwise. Says nothing about whether the id is valid.
     /// </summary>
-    public static ExtensionOrigin OriginOf(string? id) =>
-        id is not null && RootOf(id).Contains('.', StringComparison.Ordinal)
-            ? ExtensionOrigin.ThirdParty
-            : ExtensionOrigin.FirstParty;
-
-    /// <summary>
-    /// Whether <paramref name="id"/> is a valid id of Orbit's own: undotted. Only such an
-    /// id may reach a power Orbit keeps for itself, or have free text in a ring file.
-    /// </summary>
-    public static bool IsFirstParty(string? id) => IsValid(id, ExtensionOrigin.FirstParty);
-
-    /// <summary>The root of an id: all of it up to its first <c>/</c>.</summary>
-    public static string RootOf(string id)
+    /// <param name="id">The id.</param>
+    /// <returns>The origin its shape implies.</returns>
+    public static IdOrigin OriginOf(string? id)
     {
-        ArgumentNullException.ThrowIfNull(id);
+        if (id is null)
+        {
+            return IdOrigin.FirstParty;
+        }
+
         var slash = id.IndexOf('/', StringComparison.Ordinal);
-        return slash < 0 ? id : id[..slash];
+        var root = slash < 0 ? id.AsSpan() : id.AsSpan(0, slash);
+        return root.Contains('.') ? IdOrigin.ThirdParty : IdOrigin.FirstParty;
     }
 
     /// <summary>
     /// Whether <paramref name="id"/> is <paramref name="root"/> itself or sits under it
     /// (<paramref name="root"/> and a <c>/</c>). Ordinal; the grammar is not checked.
     /// </summary>
+    /// <param name="id">The id.</param>
+    /// <param name="root">The namespace root, usually an extension id.</param>
+    /// <returns>True when the id is the root or under it.</returns>
     public static bool IsInNamespace(string? id, string? root)
     {
         if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(root))
@@ -160,9 +165,11 @@ public static class ExtensionIds
     }
 
     /// <summary>
-    /// A segment: one or more lower-case ASCII letters and digits, with single hyphens
-    /// between them and none at either end.
+    /// Whether <paramref name="value"/> is a segment: one or more lowercase ASCII letters and
+    /// digits, with single hyphens between them and none at either end.
     /// </summary>
+    /// <param name="value">The text.</param>
+    /// <returns>True for a segment.</returns>
     public static bool IsSegment(ReadOnlySpan<char> value)
     {
         if (value.IsEmpty)
@@ -195,30 +202,6 @@ public static class ExtensionIds
         return !afterHyphen; // and a trailing one
     }
 
-    private static string? ClassifyRoot(string root, ExtensionOrigin origin, IReadOnlyCollection<string> reservedPublishers)
-    {
-        var single = IsSegment(root);
-        var dotted = !single && IsDotted(root);
-        if (origin == ExtensionOrigin.FirstParty)
-        {
-            return single ? null : dotted ? RootDotted : Grammar;
-        }
-
-        if (single)
-        {
-            return RootNotDotted;
-        }
-
-        if (!dotted)
-        {
-            return Grammar;
-        }
-
-        var publisher = root[..root.IndexOf('.', StringComparison.Ordinal)];
-        return reservedPublishers.Contains(publisher, StringComparer.Ordinal) ? RootReserved : null;
-    }
-
-    /// <summary>One or more segments joined by <c>/</c>.</summary>
     private static bool AreSegments(ReadOnlySpan<char> value)
     {
         if (value.IsEmpty)
@@ -237,7 +220,6 @@ public static class ExtensionIds
         return true;
     }
 
-    /// <summary>Two or more segments joined by dots.</summary>
     private static bool IsDotted(ReadOnlySpan<char> value)
     {
         var parts = 0;

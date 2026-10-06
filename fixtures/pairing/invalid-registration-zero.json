@@ -1,0 +1,9 @@
+{
+  "pairingVersion": 3,
+  "mode": "Persistent",
+  "hostId": "example-host",
+  "pipeName": "Ventana.Extensions.v3.example-host.store.a8c06b3027d3fc4a.00000000000000000000000000000000",
+  "registrationId": "00000000000000000000000000000000",
+  "extensionId": "example.countdown",
+  "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+}

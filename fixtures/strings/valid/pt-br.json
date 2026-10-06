@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 3,
+  "language": "pt-BR",
+  "contributions": {
+    "example.countdown/status": {
+      "name": "Status da contagem"
+    }
+  }
+}

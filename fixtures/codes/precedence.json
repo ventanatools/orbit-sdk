@@ -1,0 +1,359 @@
+{
+  "about": "The one-diagnostic-per-path precedence of contract section 4.2, generated from the C# catalog: when several codes apply to one file and path, a reader reports the first in this order (tiers in order, codes in order within a tier). Each case edits fixtures/manifests/valid/countdown.json (set: pointer to new value; remove: pointers to delete) and names the one code reported at path.",
+  "tiers": [
+    {
+      "name": "structure",
+      "codes": [
+        "json.too-large",
+        "json.encoding",
+        "json.syntax",
+        "json.depth",
+        "json.internal-error",
+        "diagnostics.truncated",
+        "pairing.missing",
+        "pairing.too-large",
+        "pairing.encoding",
+        "package.too-large",
+        "package.entries",
+        "package.archive",
+        "package.zip64",
+        "package.encrypted",
+        "package.path",
+        "package.path-reserved",
+        "package.path-conflict",
+        "package.link",
+        "package.crc",
+        "package.file-too-large",
+        "package.expanded-too-large",
+        "package.file-missing",
+        "package.descriptor",
+        "package.readme",
+        "pack.config",
+        "json.duplicate-member",
+        "json.member-renamed",
+        "json.unknown-member"
+      ]
+    },
+    {
+      "name": "presence",
+      "codes": [
+        "id.required",
+        "setting.id-required",
+        "choice.value-required",
+        "chrome.glyph-required",
+        "setting.choices-required",
+        "setting.default-required",
+        "json.required-missing",
+        "json.null-not-allowed",
+        "manifest.null",
+        "null.member",
+        "null.element"
+      ]
+    },
+    {
+      "name": "type",
+      "codes": [
+        "json.type-mismatch"
+      ]
+    },
+    {
+      "name": "grammar",
+      "codes": [
+        "schema.version-unsupported",
+        "pairing.version-unsupported",
+        "pairing.mode-unsupported",
+        "setting.kind-unsupported",
+        "contribution.provides-unknown",
+        "id.grammar",
+        "id.root-not-dotted",
+        "id.root-dotted",
+        "id.root-reserved",
+        "setting.id-grammar",
+        "choice.value-grammar",
+        "chrome.glyph-invalid",
+        "manifest.version-invalid",
+        "manifest.host-invalid",
+        "language.invalid",
+        "url.invalid",
+        "strings.language-invalid",
+        "pairing.registration-invalid",
+        "pairing.secret-invalid",
+        "enum.undefined"
+      ]
+    },
+    {
+      "name": "length",
+      "codes": [
+        "string.too-long",
+        "id.too-long",
+        "list.too-long",
+        "list.too-short",
+        "strings.too-many-files"
+      ]
+    },
+    {
+      "name": "text",
+      "codes": [
+        "chrome.label-required",
+        "setting.label-required",
+        "choice.label-required",
+        "text.empty",
+        "text.whitespace",
+        "text.invalid-character"
+      ]
+    },
+    {
+      "name": "cross-member",
+      "codes": [
+        "setting.default-unknown",
+        "id.outside-namespace",
+        "id.duplicate",
+        "id.taken",
+        "setting.id-duplicate",
+        "choice.value-duplicate",
+        "contribution.provides-duplicate",
+        "manifest.host-duplicate",
+        "manifest.host-not-listed",
+        "requires.capability-duplicate",
+        "requires.capability-unsupported",
+        "strings.language-mismatch",
+        "strings.language-duplicate",
+        "strings.target-unknown",
+        "pairing.host-not-listed",
+        "pairing.pipe-name-invalid",
+        "pairing.extension-mismatch",
+        "package.inventory-missing",
+        "package.inventory-extra",
+        "package.hash-mismatch",
+        "package.manifest-hash",
+        "package.extension",
+        "package.version-not-newer",
+        "pack.source-missing",
+        "pack.build-failed",
+        "pack.link",
+        "pack.secret",
+        "pack.output-exists"
+      ]
+    },
+    {
+      "name": "warning",
+      "codes": [
+        "text.long",
+        "schema.uri-mismatch",
+        "manifest.host-unknown",
+        "requires.capability-unknown"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "name": "an unknown setting kind is setting.kind-unsupported, not enum.undefined",
+      "set": {
+        "/contributions/0/settings/0/kind": "Toggle"
+      },
+      "remove": [],
+      "path": "/contributions/0/settings/0/kind",
+      "expected": "setting.kind-unsupported"
+    },
+    {
+      "name": "an unknown network token is enum.undefined",
+      "set": {
+        "/disclosures/network": "Satellite"
+      },
+      "remove": [],
+      "path": "/disclosures/network",
+      "expected": "enum.undefined"
+    },
+    {
+      "name": "a non-string enumeration value is json.type-mismatch",
+      "set": {
+        "/disclosures/network": 2
+      },
+      "remove": [],
+      "path": "/disclosures/network",
+      "expected": "json.type-mismatch"
+    },
+    {
+      "name": "an unknown provides value is contribution.provides-unknown",
+      "set": {
+        "/contributions/1/provides/0": "images"
+      },
+      "remove": [],
+      "path": "/contributions/1/provides/0",
+      "expected": "contribution.provides-unknown"
+    },
+    {
+      "name": "an empty name is chrome.label-required, not text.empty",
+      "set": {
+        "/name": ""
+      },
+      "remove": [],
+      "path": "/name",
+      "expected": "chrome.label-required"
+    },
+    {
+      "name": "a white-space name is chrome.label-required",
+      "set": {
+        "/contributions/1/name": "   "
+      },
+      "remove": [],
+      "path": "/contributions/1/name",
+      "expected": "chrome.label-required"
+    },
+    {
+      "name": "an empty setting name is setting.label-required",
+      "set": {
+        "/contributions/0/settings/0/name": ""
+      },
+      "remove": [],
+      "path": "/contributions/0/settings/0/name",
+      "expected": "setting.label-required"
+    },
+    {
+      "name": "a format-character choice name is choice.label-required",
+      "set": {
+        "/contributions/0/settings/0/choices/0/name": "​"
+      },
+      "remove": [],
+      "path": "/contributions/0/settings/0/choices/0/name",
+      "expected": "choice.label-required"
+    },
+    {
+      "name": "an empty description is text.empty",
+      "set": {
+        "/description": ""
+      },
+      "remove": [],
+      "path": "/description",
+      "expected": "text.empty"
+    },
+    {
+      "name": "an over-long white-space description is string.too-long",
+      "set": {
+        "/description": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 "
+      },
+      "remove": [],
+      "path": "/description",
+      "expected": "string.too-long"
+    },
+    {
+      "name": "a missing id is id.required, not json.required-missing",
+      "set": {},
+      "remove": [
+        "/id"
+      ],
+      "path": "/id",
+      "expected": "id.required"
+    },
+    {
+      "name": "a blank id is id.required",
+      "set": {
+        "/id": "  "
+      },
+      "remove": [],
+      "path": "/id",
+      "expected": "id.required"
+    },
+    {
+      "name": "a missing contribution id is id.required",
+      "set": {},
+      "remove": [
+        "/contributions/1/id"
+      ],
+      "path": "/contributions/1/id",
+      "expected": "id.required"
+    },
+    {
+      "name": "a missing setting id is setting.id-required",
+      "set": {},
+      "remove": [
+        "/contributions/0/settings/0/id"
+      ],
+      "path": "/contributions/0/settings/0/id",
+      "expected": "setting.id-required"
+    },
+    {
+      "name": "a missing choice value is choice.value-required",
+      "set": {},
+      "remove": [
+        "/contributions/0/settings/0/choices/0/value"
+      ],
+      "path": "/contributions/0/settings/0/choices/0/value",
+      "expected": "choice.value-required"
+    },
+    {
+      "name": "a missing glyph is chrome.glyph-required",
+      "set": {},
+      "remove": [
+        "/contributions/1/glyph"
+      ],
+      "path": "/contributions/1/glyph",
+      "expected": "chrome.glyph-required"
+    },
+    {
+      "name": "a missing name is json.required-missing",
+      "set": {},
+      "remove": [
+        "/name"
+      ],
+      "path": "/name",
+      "expected": "json.required-missing"
+    },
+    {
+      "name": "a null name is json.null-not-allowed",
+      "set": {
+        "/name": null
+      },
+      "remove": [],
+      "path": "/name",
+      "expected": "json.null-not-allowed"
+    },
+    {
+      "name": "a number for a name is json.type-mismatch",
+      "set": {
+        "/name": 7
+      },
+      "remove": [],
+      "path": "/name",
+      "expected": "json.type-mismatch"
+    },
+    {
+      "name": "an over-long id that breaks the grammar is id.grammar",
+      "set": {
+        "/id": "Example.abcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefgh"
+      },
+      "remove": [],
+      "path": "/id",
+      "expected": "id.grammar"
+    },
+    {
+      "name": "a duplicate contribution id outside the namespace is id.outside-namespace",
+      "set": {
+        "/contributions/0/id": "example.other/timer",
+        "/contributions/1/id": "example.other/timer"
+      },
+      "remove": [],
+      "path": "/contributions/1/id",
+      "expected": "id.outside-namespace"
+    },
+    {
+      "name": "a duplicate choice value that breaks the grammar is choice.value-grammar",
+      "set": {
+        "/contributions/0/settings/0/choices/1/value": "Start",
+        "/contributions/0/settings/0/choices/0/value": "Start"
+      },
+      "remove": [],
+      "path": "/contributions/0/settings/0/choices/1/value",
+      "expected": "choice.value-grammar"
+    },
+    {
+      "name": "a non-integer schemaVersion is json.type-mismatch",
+      "set": {
+        "/schemaVersion": 3.0
+      },
+      "remove": [],
+      "path": "/schemaVersion",
+      "expected": "json.type-mismatch"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.extension-mismatch",
+      "path": "/extensionId",
+      "severity": "Error",
+      "line": 7,
+      "column": 18
+    }
+  ]
+}

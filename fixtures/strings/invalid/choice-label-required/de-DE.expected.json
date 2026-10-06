@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "choice.label-required",
+      "path": "/contributions/example.countdown~1timer/settings/mode/choices/reset",
+      "severity": "Error",
+      "line": 9,
+      "column": 22
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.type-mismatch",
+      "path": "",
+      "severity": "Error",
+      "line": 1,
+      "column": 1
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 3,
+  "id": "example.countdown",
+  "name": "Countdown sample",
+  "version": "0.3.0",
+  "hosts": [
+    "example-host"
+  ],
+  "publisher": {
+    "name": "Example Co",
+    "url": "https://example.com"
+  },
+  "supportUrl": "https://example.com/support",
+  "disclosures": {
+    "network": "None"
+  },
+  "contributions": [
+    {
+      "id": "example.countdown/timer",
+      "name": "Countdown",
+      "description": "Start or resume, pause, or reset the shared countdown. Its face shows the time left.",
+      "glyph": "\ue916",
+      "provides": [
+        "invoke",
+        "face"
+      ],
+      "settings": [
+        {
+          "id": "mode",
+          "kind": "Choice",
+          "name": "When picked",
+          "default": "start",
+          "choices": [
+            {
+              "value": "start",
+              "name": "Start or resume"
+            },
+            {
+              "value": "pause",
+              "name": "Pause"
+            },
+            {
+              "value": "reset",
+              "name": "Reset"
+            }
+          ]
+        },
+        {
+          "id": "duration",
+          "kind": "Choice",
+          "name": "Duration",
+          "description": "Used when the countdown starts fresh or resets.",
+          "default": "five-minutes",
+          "choices": [
+            {
+              "value": "one-minute",
+              "name": "1 minute"
+            },
+            {
+              "value": "five-minutes",
+              "name": "5 minutes"
+            },
+            {
+              "value": "twenty-five-minutes",
+              "name": "25 minutes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "example.countdown/status",
+      "name": "Countdown status",
+      "description": "Shows the shared countdown. Picking it changes nothing.",
+      "glyph": "\ue916",
+      "provides": [
+        "face"
+      ]
+    }
+  ]
+}

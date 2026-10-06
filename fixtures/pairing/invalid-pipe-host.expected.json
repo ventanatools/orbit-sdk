@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.pipe-name-invalid",
+      "path": "/pipeName",
+      "severity": "Error",
+      "line": 5,
+      "column": 15
+    }
+  ]
+}

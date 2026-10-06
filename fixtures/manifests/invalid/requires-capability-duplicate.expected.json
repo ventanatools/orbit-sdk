@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "requires.capability-duplicate",
+      "path": "/requires/capabilities/1",
+      "severity": "Error",
+      "line": 21,
+      "column": 7
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "setting.id-duplicate",
+      "path": "/contributions/0/settings/1/id",
+      "severity": "Error",
+      "line": 50,
+      "column": 17
+    }
+  ]
+}

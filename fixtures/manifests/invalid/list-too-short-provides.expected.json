@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "list.too-short",
+      "path": "/contributions/1/provides",
+      "severity": "Error",
+      "line": 77,
+      "column": 19
+    }
+  ]
+}

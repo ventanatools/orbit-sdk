@@ -1,0 +1,9 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.encoding",
+      "path": "",
+      "severity": "Error"
+    }
+  ]
+}

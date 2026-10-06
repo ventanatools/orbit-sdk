@@ -1,0 +1,45 @@
+{
+  "$schema": "https://dev.ventana.tools/schemas/extensions/example-host/manifest.v3.json",
+  "schemaVersion": 3,
+  "id": "example.full-sample",
+  "name": "Beispiel \u2013 voll",
+  "description": "Every optional member: glyph, publisher, support and privacy links, default language, disclosures and requirements.",
+  "version": "123456789.0.10",
+  "hosts": ["example-host"],
+  "glyph": "\uE7B3",
+  "publisher": { "name": "Example Co\u200Dop", "url": "https://example.com/about" },
+  "supportUrl": "https://example.com/support?topic=full#start",
+  "defaultLanguage": "de-DE",
+  "disclosures": { "network": "Internet", "privacyUrl": "https://example.com/privacy" },
+  "requires": { "capabilities": ["x.test-echo"] },
+  "contributions": [
+    {
+      "id": "example.full-sample/a/b",
+      "name": "Nested",
+      "description": "A contribution id with two segments after the extension id.",
+      "glyph": "\uF8FF",
+      "provides": ["face", "invoke"],
+      "settings": []
+    },
+    {
+      "id": "example.full-sample/rate",
+      "name": "Rate",
+      "description": "A contribution with one setting.",
+      "glyph": "\uE000",
+      "provides": ["invoke"],
+      "settings": [
+        {
+          "id": "refreshRate",
+          "kind": "Choice",
+          "name": "Refresh rate",
+          "description": "How often the face refreshes.",
+          "default": "slow",
+          "choices": [
+            { "value": "slow", "name": "Slow" },
+            { "value": "fast", "name": "Fast" }
+          ]
+        }
+      ]
+    }
+  ]
+}

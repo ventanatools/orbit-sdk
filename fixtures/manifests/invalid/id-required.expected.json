@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "id.required",
+      "path": "/id",
+      "severity": "Error",
+      "line": 3,
+      "column": 9
+    }
+  ]
+}

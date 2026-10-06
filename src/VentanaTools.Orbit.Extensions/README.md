@@ -1,60 +1,51 @@
 # VentanaTools.Orbit.Extensions
 
-The one .NET package for Orbit extension authors: extension declarations, ID
-syntax, declared choice settings, the pairing reader, strict JSON helpers, v2
-framing and authentication primitives, and the Windows companion client. The
-package targets plain net10.0 AnyCPU and depends only on the .NET runtime. It
-also validates bounded inert `.orbitextension` ZIP packages and explicit
-protocol/capability requirements without extraction.
+The one .NET package for Orbit extension authors. It implements extension
+contract generation 3: manifest schema 3, the diagnostics shape, package archive
+version 2, pairing file version 3 and wire protocol 3. It targets plain
+`net10.0`, AnyCPU, is AOT- and trimming-compatible, and depends only on the .NET
+base class library.
 
-## Declarations and wire primitives
+## What is in the package
 
-Orbit's host and this package's companion client consume the same
-implementation. This package does not contain Orbit's UI, ring model, consent
-store, DPAPI integration, named-pipe listener, executable loader, or Photoshop
-integration.
+- **Declarations** (`VentanaTools.Orbit.Extensions`): `ExtensionManifest`,
+  `Contribution`, `Setting` and the other manifest types; `ManifestReader`
+  (read a file or bytes, or validate a manifest built in code), `ManifestWriter`
+  (canonical JSON and the manifest hash), `StringsReader` for localized strings
+  files, `ExtensionIds`, `TextRules` and the host registry (`HostRegistry`).
+- **Diagnostics**: every reader reports findings as `Diagnostic` values with a
+  stable dotted code, a JSON Pointer path, fixed English text that never echoes
+  file content, a severity and, for JSON files, the line and UTF-8 byte column.
+  The codes are listed in `DiagnosticCodes`.
+- **Reason codes**: `ReasonCode` is an open registry of the codes that explain
+  runtime events, with each known code's disposition, fix and help anchor.
+- **Pairing**: `PairingReader` reads the connection info a host saves, and
+  `Pairing` computes and verifies handshake proofs without ever exposing the
+  secret. `PairingReader.DefaultPath` is the per-user location companions search.
+- **Packaging** (`VentanaTools.Orbit.Extensions.Packaging`): `PackageReader`
+  verifies package archives without extracting or running anything,
+  `PackageWriter` writes deterministic archives with their
+  `extension.package.json` descriptor, and `ZoneOfOrigin` carries the
+  Mark-of-the-Web from a package to the files a host extracts.
+- **Wire** (`VentanaTools.Orbit.Extensions.Wire`): framing, pipe names, the
+  downgrade-proof handshake transcript and proofs, the capability registry, typed
+  messages with a strict `MessageReader` and a canonical `MessageWriter`, host
+  limits and token buckets. Hosts, tools and implementations in other languages
+  use this namespace; companion authors rarely need it.
 
-There is one supported extension contract: schema-2 manifests and protocol-2
-sessions. Contributions declare invoke, face, or both; action-only contributions
-need no face or settings but use the same sessions. Older declarations, pairing
-files and handshakes are rejected without automatic migration. Package descriptor
-and local storage versions are independent formats. ID syntax can accept a
-host-owned reserved-publisher policy; its default remains Orbit's policy. This
-does not establish compatibility with another host.
+The protocol 3 companion client builds on these types in the same package.
 
-ExtensionJson checks one object's fields at a time; readers must check every
-nested object. ExtensionWire supplies framing primitives, not an authenticated
-connection by itself. A connection must enforce the whole handshake deadline,
-serialize writes, bound its queues, enforce write deadlines, and validate each
-message's declared schema. Idle reads may wait, but started frames have a fixed
-five-second deadline.
+## Contract and conformance
 
-ExternalExtensionManifestReader.Snapshot validates and copies programmatic
-manifests before a host or companion retains them. The original declarations
-may be backed by mutable collections and must not remain the runtime authority.
-
-## Companion client
-
-The client implements the Windows companion side of Orbit's v2 extension
-protocol. A separately started companion supplies configured actions, passive
-live displays, or actions with live faces through `IContributionHandler`.
-
-Use `CompanionClient.RunAsync` with a validated manifest, a disposable
-`ExtensionPairing`, a handler, and a cancellation token. Honor cancellation and
-check `CompanionSession.IsActive` immediately before external mutations. Faces
-must have finite lifetimes; requests are never replayed on reconnect. No foreign
-code runs inside Orbit, and this client does not launch companion programs.
-
-The repository's `samples/dotnet-extension` demonstrates an independent NuGet
-consumer. See [the author guide](https://dev.ventana.tools/orbit/get-started/) for the full
-local author workflow and remaining release boundaries.
+The normative specification is the extension contract in the SDK repository
+(`docs/design/contract-v3.md`). The shared conformance fixtures in `fixtures/`
+(ids, text rules, codes, manifests, strings, pairing files, packages and wire
+vectors) are run by this package's tests, the Node SDK and the host.
 
 ## License and availability
 
 This source preview is licensed under Apache-2.0, including LICENSE, NOTICE and
-THIRD-PARTY-NOTICES.md in its NuGet package. Build packages with
-`pwsh -File tools/build.ps1` at the repository root. A nuget.org release remains
-pending. The proprietary Orbit app is distributed separately; actual
-Store-signed compatibility remains unverified. This library never installs or
-starts extension programs. See the
-[distribution guide](https://dev.ventana.tools/orbit/guides/distribution/).
+THIRD-PARTY-NOTICES.md in its NuGet package. Build it from the repository root
+with `dotnet build VentanaTools.Orbit.Extensions.slnx`. No nuget.org package with
+this ID is official yet. See the
+[documentation](https://dev.ventana.tools/) for the author guide.

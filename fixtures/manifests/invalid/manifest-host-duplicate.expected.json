@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "manifest.host-duplicate",
+      "path": "/hosts/1",
+      "severity": "Error",
+      "line": 9,
+      "column": 5
+    }
+  ]
+}

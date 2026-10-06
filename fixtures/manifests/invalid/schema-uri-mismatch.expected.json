@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "schema.uri-mismatch",
+      "path": "/$schema",
+      "severity": "Warning",
+      "line": 2,
+      "column": 14
+    }
+  ]
+}

@@ -7,9 +7,17 @@
     <AssemblyName>VentanaTools.Orbit.Extensions</AssemblyName>
     <RootNamespace>VentanaTools.Orbit.Extensions</RootNamespace>
     <PackageId>VentanaTools.Orbit.Extensions</PackageId>
-    <Description>Orbit extension declarations, authenticated wire primitives and the out-of-process .NET companion client.</Description>
+    <Description>Orbit extension declarations, diagnostics, pairing, packaging and the protocol 3 wire for companion programs.</Description>
     <IsPackable>true</IsPackable>
-    <!-- Temporary until the v3 rewrite documents and tracks every public member. -->
-    <NoWarn>$(NoWarn);CS1591;RS0016;RS0017</NoWarn>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- The one product definition and the reserved publishers, embedded from fixtures/ (contract §2.1). -->
+    <EmbeddedResource Include="..\..\fixtures\hosts.json" LogicalName="hosts.json" Link="Data\hosts.json" />
+    <EmbeddedResource Include="..\..\fixtures\reserved-publishers.json" LogicalName="reserved-publishers.json" Link="Data\reserved-publishers.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Testing" />
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
 </Project>

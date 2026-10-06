@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 3,
+  "language": "de-DE",
+  "contributions": {
+    "example.countdown/timer": {
+      "settings": {
+        "volume": {
+          "name": "Lautst\u00e4rke"
+        }
+      }
+    }
+  }
+}

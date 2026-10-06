@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "language.invalid",
+      "path": "/defaultLanguage",
+      "severity": "Error",
+      "line": 82,
+      "column": 22
+    }
+  ]
+}

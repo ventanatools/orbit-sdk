@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "id.root-not-dotted",
+      "path": "/id",
+      "severity": "Error",
+      "line": 3,
+      "column": 9
+    }
+  ]
+}

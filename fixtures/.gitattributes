@@ -1,0 +1,8 @@
+# Byte-exact fixtures: never normalize line endings or treat as text.
+*.zip binary
+manifests/invalid/syntax-invalid-utf8.json binary
+manifests/invalid/encoding-utf16.json binary
+pairing/valid-crlf.json -text
+pairing/invalid-utf16.json binary
+pairing/invalid-utf8.json binary
+pairing/valid-bom.json -text

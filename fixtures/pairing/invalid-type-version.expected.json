@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.type-mismatch",
+      "path": "/pairingVersion",
+      "severity": "Error",
+      "line": 2,
+      "column": 21
+    }
+  ]
+}

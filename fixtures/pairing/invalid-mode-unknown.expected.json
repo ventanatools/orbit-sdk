@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.mode-unsupported",
+      "path": "/mode",
+      "severity": "Error",
+      "line": 3,
+      "column": 11
+    }
+  ]
+}

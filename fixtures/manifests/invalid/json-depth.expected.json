@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.depth",
+      "path": "/x/0/0/0/0/0/0/0",
+      "severity": "Error",
+      "line": 7,
+      "column": 15
+    }
+  ]
+}

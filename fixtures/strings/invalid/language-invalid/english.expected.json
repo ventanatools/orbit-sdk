@@ -1,0 +1,9 @@
+{
+  "diagnostics": [
+    {
+      "code": "strings.language-invalid",
+      "path": "",
+      "severity": "Error"
+    }
+  ]
+}

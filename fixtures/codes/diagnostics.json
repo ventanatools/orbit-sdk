@@ -1,0 +1,656 @@
+{
+  "about": "The diagnostic code table of contract section 4.4, generated from the C# catalog. message is the fixed English text readers report; fix is the author fix, where {tool} stands for the tool's command name; sharedConvention is true when the Ventana code-naming convention (contract section 2.7) shares the code's string and meaning across products.",
+  "codes": [
+    {
+      "code": "json.too-large",
+      "severity": "Error",
+      "message": "The file is larger than its size limit.",
+      "fix": "Shorten it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.syntax",
+      "severity": "Error",
+      "message": "The file is not valid JSON: a bad token, a comment, a trailing comma, trailing content or invalid UTF-8.",
+      "fix": "Fix the JSON at the reported line and column.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.encoding",
+      "severity": "Error",
+      "message": "The file starts with a UTF-16 or UTF-32 byte order mark.",
+      "fix": "Save it as UTF-8.",
+      "sharedConvention": false
+    },
+    {
+      "code": "json.depth",
+      "severity": "Error",
+      "message": "Objects and arrays nest deeper than 8 levels.",
+      "fix": "Flatten the document.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.unknown-member",
+      "severity": "Error",
+      "message": "This member is not part of the schema: a typo, or a member of a newer schema.",
+      "fix": "Remove or correct it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.duplicate-member",
+      "severity": "Error",
+      "message": "The same member appears twice in one object.",
+      "fix": "Keep one.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.null-not-allowed",
+      "severity": "Error",
+      "message": "null is not a valid value here.",
+      "fix": "Give a value or leave the member out.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.required-missing",
+      "severity": "Error",
+      "message": "A required member is missing.",
+      "fix": "Add it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.type-mismatch",
+      "severity": "Error",
+      "message": "The value has the wrong JSON type, or is a number that is not an integer.",
+      "fix": "Use the documented type.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.member-renamed",
+      "severity": "Error",
+      "message": "This member was renamed in schema 3 (capabilities is now provides; manifestVersion is now schemaVersion).",
+      "fix": "Use the new name.",
+      "sharedConvention": false
+    },
+    {
+      "code": "enum.undefined",
+      "severity": "Error",
+      "message": "The value is not one of the documented values.",
+      "fix": "Use a documented value.",
+      "sharedConvention": true
+    },
+    {
+      "code": "manifest.null",
+      "severity": "Error",
+      "message": "The manifest is null.",
+      "fix": "Pass a manifest.",
+      "sharedConvention": true
+    },
+    {
+      "code": "null.member",
+      "severity": "Error",
+      "message": "A list or object member is null.",
+      "fix": "Give a value or an empty list.",
+      "sharedConvention": true
+    },
+    {
+      "code": "null.element",
+      "severity": "Error",
+      "message": "A list entry is null.",
+      "fix": "Remove the entry.",
+      "sharedConvention": true
+    },
+    {
+      "code": "json.internal-error",
+      "severity": "Error",
+      "message": "The reader failed in a way the contract does not describe; the file is refused.",
+      "fix": "Report it; the file is still refused.",
+      "sharedConvention": true
+    },
+    {
+      "code": "schema.version-unsupported",
+      "severity": "Error",
+      "message": "This format version is not supported by this reader.",
+      "fix": "Use the version in the contract, or update the host.",
+      "sharedConvention": true
+    },
+    {
+      "code": "schema.uri-mismatch",
+      "severity": "Warning",
+      "message": "$schema is an http or https URL that is not the published schema of any listed host.",
+      "fix": "Use a published schema URL, or a relative path to a local copy.",
+      "sharedConvention": false
+    },
+    {
+      "code": "list.too-long",
+      "severity": "Error",
+      "message": "The list has more entries than allowed.",
+      "fix": "Remove entries.",
+      "sharedConvention": true
+    },
+    {
+      "code": "list.too-short",
+      "severity": "Error",
+      "message": "The list has fewer entries than required.",
+      "fix": "Add entries.",
+      "sharedConvention": false
+    },
+    {
+      "code": "string.too-long",
+      "severity": "Error",
+      "message": "The text is longer than allowed.",
+      "fix": "Shorten it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "text.empty",
+      "severity": "Error",
+      "message": "The text is empty, or contains only white space or format characters.",
+      "fix": "Write the text.",
+      "sharedConvention": false
+    },
+    {
+      "code": "text.whitespace",
+      "severity": "Error",
+      "message": "The text starts or ends with white space.",
+      "fix": "Trim it.",
+      "sharedConvention": false
+    },
+    {
+      "code": "text.invalid-character",
+      "severity": "Error",
+      "message": "The text contains a disallowed character: a control, bidirectional or invisible format character, a noncharacter or an unpaired surrogate.",
+      "fix": "Remove control, bidirectional-override and invisible characters.",
+      "sharedConvention": false
+    },
+    {
+      "code": "text.long",
+      "severity": "Warning",
+      "message": "This name is longer than 32 characters and will be truncated.",
+      "fix": "Shorten it.",
+      "sharedConvention": false
+    },
+    {
+      "code": "diagnostics.truncated",
+      "severity": "Error",
+      "message": "Reporting stopped after 199 diagnostics.",
+      "fix": "Fix the reported problems and validate again.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.required",
+      "severity": "Error",
+      "message": "The id is missing or blank.",
+      "fix": "Add it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.grammar",
+      "severity": "Error",
+      "message": "The id contains characters, segments or slashes the id grammar does not allow.",
+      "fix": "Use lowercase letters, digits and single hyphens.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.too-long",
+      "severity": "Error",
+      "message": "The id is longer than 128 characters.",
+      "fix": "Shorten it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.root-not-dotted",
+      "severity": "Error",
+      "message": "A third-party extension id must contain a dot (publisher.name).",
+      "fix": "Add your publisher segment.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.root-dotted",
+      "severity": "Error",
+      "message": "A first-party id must not contain a dot.",
+      "fix": "Hosts only.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.root-reserved",
+      "severity": "Error",
+      "message": "The id starts with a reserved publisher, or its first segment is a Windows device name.",
+      "fix": "Use your own publisher segment.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.outside-namespace",
+      "severity": "Error",
+      "message": "A contribution id must be the extension id, a slash and segments; only a lone contribution may use the extension id itself.",
+      "fix": "Prefix it with the extension id.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.duplicate",
+      "severity": "Error",
+      "message": "Two contributions share this id.",
+      "fix": "Make ids unique.",
+      "sharedConvention": true
+    },
+    {
+      "code": "id.taken",
+      "severity": "Error",
+      "message": "Another installed extension already uses this id.",
+      "fix": "Remove the other extension, or use Reload or Replace in developer mode.",
+      "sharedConvention": true
+    },
+    {
+      "code": "chrome.label-required",
+      "severity": "Error",
+      "message": "The name is empty, or contains only white space or format characters.",
+      "fix": "Write a name.",
+      "sharedConvention": true
+    },
+    {
+      "code": "chrome.glyph-required",
+      "severity": "Error",
+      "message": "The glyph is missing or empty.",
+      "fix": "Give one private-use glyph.",
+      "sharedConvention": true
+    },
+    {
+      "code": "chrome.glyph-invalid",
+      "severity": "Error",
+      "message": "The glyph is not exactly one character in U+E000 to U+F8FF.",
+      "fix": "Pick a Segoe Fluent Icons glyph and write it as \\uXXXX.",
+      "sharedConvention": false
+    },
+    {
+      "code": "manifest.version-invalid",
+      "severity": "Error",
+      "message": "The version is not MAJOR.MINOR.PATCH with numbers.",
+      "fix": "Use a version like 1.2.3.",
+      "sharedConvention": false
+    },
+    {
+      "code": "manifest.host-invalid",
+      "severity": "Error",
+      "message": "The host id does not match the host-id grammar.",
+      "fix": "Use an id from the host-id registry.",
+      "sharedConvention": false
+    },
+    {
+      "code": "manifest.host-duplicate",
+      "severity": "Error",
+      "message": "This host id is listed twice.",
+      "fix": "Keep one.",
+      "sharedConvention": false
+    },
+    {
+      "code": "manifest.host-not-listed",
+      "severity": "Error",
+      "message": "This host's id is not listed in hosts.",
+      "fix": "Add the host id.",
+      "sharedConvention": false
+    },
+    {
+      "code": "manifest.host-unknown",
+      "severity": "Warning",
+      "message": "This host id is not an active host in the registry.",
+      "fix": "Check the spelling.",
+      "sharedConvention": false
+    },
+    {
+      "code": "contribution.provides-unknown",
+      "severity": "Error",
+      "message": "provides contains a value other than invoke or face.",
+      "fix": "Use invoke, face or both.",
+      "sharedConvention": false
+    },
+    {
+      "code": "contribution.provides-duplicate",
+      "severity": "Error",
+      "message": "provides lists this value twice.",
+      "fix": "Keep one.",
+      "sharedConvention": false
+    },
+    {
+      "code": "setting.id-required",
+      "severity": "Error",
+      "message": "The setting id is missing or blank.",
+      "fix": "Add it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "setting.id-grammar",
+      "severity": "Error",
+      "message": "The setting id is not a lowercase letter followed by letters or digits.",
+      "fix": "Use an id like mode or refreshRate.",
+      "sharedConvention": true
+    },
+    {
+      "code": "setting.id-duplicate",
+      "severity": "Error",
+      "message": "Two settings of this contribution share this id.",
+      "fix": "Make ids unique.",
+      "sharedConvention": true
+    },
+    {
+      "code": "setting.label-required",
+      "severity": "Error",
+      "message": "The setting's name is empty, or contains only white space or format characters.",
+      "fix": "Write a name.",
+      "sharedConvention": true
+    },
+    {
+      "code": "setting.kind-unsupported",
+      "severity": "Error",
+      "message": "kind is not Choice, the only setting kind of schema 3.",
+      "fix": "Use Choice.",
+      "sharedConvention": false
+    },
+    {
+      "code": "setting.choices-required",
+      "severity": "Error",
+      "message": "A Choice setting has no choices.",
+      "fix": "Add 2 to 32 choices.",
+      "sharedConvention": true
+    },
+    {
+      "code": "setting.default-required",
+      "severity": "Error",
+      "message": "A Choice setting has no default.",
+      "fix": "Add one of its values.",
+      "sharedConvention": false
+    },
+    {
+      "code": "setting.default-unknown",
+      "severity": "Error",
+      "message": "default is not one of the setting's choice values.",
+      "fix": "Use a declared value.",
+      "sharedConvention": false
+    },
+    {
+      "code": "choice.value-required",
+      "severity": "Error",
+      "message": "The choice value is missing or empty.",
+      "fix": "Add it.",
+      "sharedConvention": true
+    },
+    {
+      "code": "choice.value-grammar",
+      "severity": "Error",
+      "message": "The choice value is not a lowercase segment.",
+      "fix": "Use a value like five-minutes.",
+      "sharedConvention": false
+    },
+    {
+      "code": "choice.value-duplicate",
+      "severity": "Error",
+      "message": "Two choices share this value.",
+      "fix": "Make values unique.",
+      "sharedConvention": true
+    },
+    {
+      "code": "choice.label-required",
+      "severity": "Error",
+      "message": "The choice's name is empty, or contains only white space or format characters.",
+      "fix": "Write a name.",
+      "sharedConvention": true
+    },
+    {
+      "code": "requires.capability-unknown",
+      "severity": "Warning",
+      "message": "This required capability id is not in the registry this tool knows.",
+      "fix": "Check the id, or update the tool.",
+      "sharedConvention": false
+    },
+    {
+      "code": "requires.capability-unsupported",
+      "severity": "Error",
+      "message": "This host does not implement a required capability.",
+      "fix": "Update the host, or remove the requirement.",
+      "sharedConvention": false
+    },
+    {
+      "code": "requires.capability-duplicate",
+      "severity": "Error",
+      "message": "This capability id is listed twice.",
+      "fix": "Keep one.",
+      "sharedConvention": false
+    },
+    {
+      "code": "url.invalid",
+      "severity": "Error",
+      "message": "The URL is not an absolute https URL of printable ASCII, without user information, of at most 512 characters.",
+      "fix": "Use a full https:// address.",
+      "sharedConvention": false
+    },
+    {
+      "code": "language.invalid",
+      "severity": "Error",
+      "message": "The language tag does not match the tag grammar.",
+      "fix": "Use a tag like en-US.",
+      "sharedConvention": false
+    },
+    {
+      "code": "strings.language-invalid",
+      "severity": "Error",
+      "message": "The strings file name is not a language tag.",
+      "fix": "Rename it, for example de-DE.json.",
+      "sharedConvention": false
+    },
+    {
+      "code": "strings.language-mismatch",
+      "severity": "Error",
+      "message": "language differs from the file name's tag.",
+      "fix": "Make them equal.",
+      "sharedConvention": false
+    },
+    {
+      "code": "strings.language-duplicate",
+      "severity": "Error",
+      "message": "Two strings files have the same language tag.",
+      "fix": "Keep one.",
+      "sharedConvention": false
+    },
+    {
+      "code": "strings.target-unknown",
+      "severity": "Error",
+      "message": "This key names a contribution, setting or choice the manifest does not have.",
+      "fix": "Correct the key.",
+      "sharedConvention": false
+    },
+    {
+      "code": "strings.too-many-files",
+      "severity": "Error",
+      "message": "There are more than 64 strings files.",
+      "fix": "Remove some.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.too-large",
+      "severity": "Error",
+      "message": "The archive is larger than 32 MiB.",
+      "fix": "Reduce the payload.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.expanded-too-large",
+      "severity": "Error",
+      "message": "The expanded contents are larger than 64 MiB.",
+      "fix": "Reduce the payload.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.file-too-large",
+      "severity": "Error",
+      "message": "This file is larger than its limit.",
+      "fix": "Reduce it.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.entries",
+      "severity": "Error",
+      "message": "The archive has more than 512 entries.",
+      "fix": "Bundle or trim the payload.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.archive",
+      "severity": "Error",
+      "message": "The ZIP structure is malformed or inconsistent: the central directory, a local header that disagrees with it, overlapping or non-contiguous entries, or bytes before the first entry.",
+      "fix": "Rebuild it with {tool} pack.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.zip64",
+      "severity": "Error",
+      "message": "The archive uses ZIP64.",
+      "fix": "Rebuild it with {tool} pack.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.encrypted",
+      "severity": "Error",
+      "message": "This entry is encrypted.",
+      "fix": "Rebuild without encryption.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.crc",
+      "severity": "Error",
+      "message": "This entry's CRC-32 or size does not match its data.",
+      "fix": "Rebuild the archive.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.path",
+      "severity": "Error",
+      "message": "This entry name breaks the path grammar.",
+      "fix": "Rename the file.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.path-reserved",
+      "severity": "Error",
+      "message": "This entry is not one of the names allowed at the archive root or in strings/.",
+      "fix": "Move it under payload/.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.path-conflict",
+      "severity": "Error",
+      "message": "Two entries differ only in case, or a file and a folder share a name.",
+      "fix": "Rename one.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.link",
+      "severity": "Error",
+      "message": "This entry is marked as a symbolic link, a device, or with attributes that are not allowed.",
+      "fix": "Include the real file.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.file-missing",
+      "severity": "Error",
+      "message": "A required file is missing: extension.json, extension.package.json or README.md.",
+      "fix": "Add it.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.descriptor",
+      "severity": "Error",
+      "message": "extension.package.json is invalid; its own diagnostics follow.",
+      "fix": "Rebuild with {tool} pack.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.inventory-missing",
+      "severity": "Error",
+      "message": "The descriptor lists a file the archive does not contain.",
+      "fix": "Rebuild the archive.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.inventory-extra",
+      "severity": "Error",
+      "message": "The archive contains a file the descriptor does not list.",
+      "fix": "Rebuild the archive.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.hash-mismatch",
+      "severity": "Error",
+      "message": "A file's SHA-256 or size differs from the descriptor.",
+      "fix": "Rebuild the archive.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.manifest-hash",
+      "severity": "Error",
+      "message": "The descriptor's manifestHash differs from the manifest's hash.",
+      "fix": "Rebuild the archive.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.readme",
+      "severity": "Error",
+      "message": "README.md is empty, not UTF-8, contains NUL, or is too large.",
+      "fix": "Fix the readme.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.extension",
+      "severity": "Error",
+      "message": "The package file name does not end with this host's package file extension.",
+      "fix": "Use the package file extension of the host-id registry.",
+      "sharedConvention": false
+    },
+    {
+      "code": "package.version-not-newer",
+      "severity": "Error",
+      "message": "The update's version is not higher than the installed one.",
+      "fix": "Increase version.",
+      "sharedConvention": false
+    },
+    {
+      "code": "pack.config",
+      "severity": "Error",
+      "message": "extension.pack.json is invalid; its own diagnostics follow.",
+      "fix": "Fix the pack configuration.",
+      "sharedConvention": false
+    },
+    {
+      "code": "pack.source-missing",
+      "severity": "Error",
+      "message": "A from path does not exist.",
+      "fix": "Correct the path, or add a build step.",
+      "sharedConvention": false
+    },
+    {
+      "code": "pack.build-failed",
+      "severity": "Error",
+      "message": "The build step's dotnet publish failed.",
+      "fix": "Fix the build errors it printed.",
+      "sharedConvention": false
+    },
+    {
+      "code": "pack.link",
+      "severity": "Error",
+      "message": "A staged file or folder is a symbolic link or junction.",
+      "fix": "Stage the real file.",
+      "sharedConvention": false
+    },
+    {
+      "code": "pack.secret",
+      "severity": "Error",
+      "message": "A staged file looks like a pairing file; pairing files are never packed.",
+      "fix": "Remove it from the payload.",
+      "sharedConvention": false
+    },
+    {
+      "code": "pack.output-exists",
+      "severity": "Error",
+      "message": "The output file exists.",
+      "fix": "Remove it, or pass --force.",
+      "sharedConvention": false
+    }
+  ]
+}

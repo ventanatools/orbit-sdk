@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "text.long",
+      "path": "/name",
+      "severity": "Warning",
+      "line": 4,
+      "column": 11
+    }
+  ]
+}

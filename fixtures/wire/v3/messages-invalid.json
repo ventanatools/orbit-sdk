@@ -1,0 +1,883 @@
+{
+  "about": "Frames a receiver refuses, with the reason code it closes with. frameBase64 holds bytes that are not text; frameRepeat builds prefix, then fill repeated, then suffix, to exactly length bytes.",
+  "cases": [
+    {
+      "name": "an empty frame",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frameBase64": "",
+      "expect": "frame.too-large"
+    },
+    {
+      "name": "a frame over 65,536 bytes",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frameRepeat": {
+        "prefix": "{\"type\":\"ping\",\"id\":1,\"pad\":\"",
+        "fill": "a",
+        "suffix": "\"}",
+        "length": 65537
+      },
+      "expect": "frame.too-large"
+    },
+    {
+      "name": "a handshake frame over 8,192 bytes",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frameRepeat": {
+        "prefix": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\",\"pad\":\"",
+        "fill": "a",
+        "suffix": "\"}",
+        "length": 8193
+      },
+      "expect": "frame.too-large"
+    },
+    {
+      "name": "invalid UTF-8",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frameBase64": "eyJ0eXBlIjoicGluZyIsImlkIjoxLCJ4Ijoi/yJ9",
+      "expect": "frame.utf8-invalid"
+    },
+    {
+      "name": "an overlong UTF-8 encoding",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frameBase64": "eyJ0eXBlIjoicGluZyIsImlkIjoxLCJ4IjoiwK8ifQ==",
+      "expect": "frame.utf8-invalid"
+    },
+    {
+      "name": "not JSON",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "hello",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "an array root",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "[]",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "a string root",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "\"ping\"",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "trailing content",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1} {}",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "a trailing comma",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,}",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "a comment",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",/* c */\"id\":1}",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "nesting deeper than 8",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"x\":[[[[[[[[1]]]]]]]]}",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "an unpaired surrogate escape",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"x\":\"\\ud800\"}",
+      "expect": "frame.json-invalid"
+    },
+    {
+      "name": "a duplicate member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"id\":2}",
+      "expect": "frame.json-duplicate"
+    },
+    {
+      "name": "a duplicate that differs only in escaping",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"\\u0069d\":2}",
+      "expect": "frame.json-duplicate"
+    },
+    {
+      "name": "a duplicate in a nested object",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"goodForSeconds\":1,\"goodForSeconds\":2}}",
+      "expect": "frame.json-duplicate"
+    },
+    {
+      "name": "a duplicate in an ignored member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"extra\":{\"a\":1,\"a\":2}}",
+      "expect": "frame.json-duplicate"
+    },
+    {
+      "name": "a case variant of a known member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionid\":\"0f0e0d0c0b0a09080706050403020100\"}",
+      "expect": "protocol.member-invalid"
+    },
+    {
+      "name": "a case variant beside the member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"SESSIONID\":\"x\"}",
+      "expect": "protocol.member-invalid"
+    },
+    {
+      "name": "a case variant of type",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"tYPE\":\"x\"}",
+      "expect": "protocol.member-invalid"
+    },
+    {
+      "name": "a member name outside the grammar",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"session_id\":\"x\"}",
+      "expect": "protocol.member-invalid"
+    },
+    {
+      "name": "an unknown dollar member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"$schema\":\"x\"}",
+      "expect": "protocol.member-invalid"
+    },
+    {
+      "name": "a member name longer than 32 characters",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\":1}",
+      "expect": "protocol.member-invalid"
+    },
+    {
+      "name": "a case variant in a nested object",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"goodforseconds\":1,\"goodForSeconds\":1}}",
+      "expect": "protocol.member-invalid"
+    },
+    {
+      "name": "an unknown picture variant",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"image\",\"uri\":\"x\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "protocol.variant-unknown"
+    },
+    {
+      "name": "an unknown line variant",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"time\",\"at\":1},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "protocol.variant-unknown"
+    },
+    {
+      "name": "a picture without a type",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a case variant of a type value is unknown",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"Glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "protocol.variant-unknown"
+    },
+    {
+      "name": "an unknown state",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Stopped\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "face.state-invalid"
+    },
+    {
+      "name": "a state in the wrong case",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "face.state-invalid"
+    },
+    {
+      "name": "an invalid glyph",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"A\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "face.glyph-invalid"
+    },
+    {
+      "name": "a lifetime of zero",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":0}}",
+      "expect": "face.lifetime-invalid"
+    },
+    {
+      "name": "a lifetime over a day",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":86401}}",
+      "expect": "face.lifetime-invalid"
+    },
+    {
+      "name": "a fractional lifetime",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"goodForSeconds\":1.5}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an integer written with an exponent",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"goodForSeconds\":1e1}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a string lifetime",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"goodForSeconds\":\"5\"}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a face without a lifetime",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"state\":\"On\"}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an unknown failure",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"fail\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"failure\":\"Timeout\"}",
+      "expect": "face.failure-invalid"
+    },
+    {
+      "name": "a capability-gated failure without its capability",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"fail\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"failure\":\"LlmUnavailable\"}",
+      "expect": "face.failure-invalid"
+    },
+    {
+      "name": "the protocol-2 failure NoData",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"fail\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"failure\":\"NoData\"}",
+      "expect": "face.failure-invalid"
+    },
+    {
+      "name": "an unknown outcome",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"result\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"outcome\":\"Ok\"}",
+      "expect": "invoke.outcome-invalid"
+    },
+    {
+      "name": "a failure with an outcome other than Failed",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"result\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"outcome\":\"Done\",\"failure\":\"Network\"}",
+      "expect": "invoke.failure-unexpected"
+    },
+    {
+      "name": "a result with an unknown failure",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"result\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"outcome\":\"Failed\",\"failure\":\"Oops\"}",
+      "expect": "face.failure-invalid"
+    },
+    {
+      "name": "a null member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionId\":null}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a null in an ignored member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"extra\":null}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a null in hello",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\",\"extra\":null}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "an uppercase session id",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionId\":\"0F0E0D0C0B0A09080706050403020100\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an all-zero session id",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionId\":\"00000000000000000000000000000000\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a session id with a hyphenated form",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionId\":\"0f0e0d0c-0b0a-0908-0706-050403020100\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a missing required member",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"invoke\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a contribution id that breaks the grammar",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"Example/timer\",\"settings\":{}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "settings with 17 members",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/timer\",\"settings\":{\"s0\":\"v\",\"s1\":\"v\",\"s2\":\"v\",\"s3\":\"v\",\"s4\":\"v\",\"s5\":\"v\",\"s6\":\"v\",\"s7\":\"v\",\"s8\":\"v\",\"s9\":\"v\",\"s10\":\"v\",\"s11\":\"v\",\"s12\":\"v\",\"s13\":\"v\",\"s14\":\"v\",\"s15\":\"v\",\"s16\":\"v\"}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a settings key outside the setting-id grammar",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/timer\",\"settings\":{\"Mode\":\"start\"}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a settings value outside the choice-value grammar",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/timer\",\"settings\":{\"mode\":\"Start\"}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a settings value that is not a string",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/timer\",\"settings\":{\"mode\":1}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "settings that are not an object",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/timer\",\"settings\":[]}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a sessionRefused code outside its set",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"sessionRefused\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"code\":\"session.replay\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an error message with a control character",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.turned-off\",\"message\":\"bad\\u0001\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an error message with a bidirectional control",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.turned-off\",\"message\":\"bad\\u202E\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an error message with a non-ASCII character",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.turned-off\",\"message\":\"caf\\u00E9\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an empty error message",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.turned-off\",\"message\":\"\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an error message of 257 characters",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.turned-off\",\"message\":\"mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an error code outside the grammar",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"Bad Code\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "an error code with one segment",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"closed\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "retryAfterMs over 300,000",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.paused\",\"retryAfterMs\":300001}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a negative retryAfterMs",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.paused\",\"retryAfterMs\":-1}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "supported out of range",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"protocol.version-unsupported\",\"supported\":{\"minVersion\":0,\"maxVersion\":3}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "supported with minVersion over maxVersion",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"protocol.version-unsupported\",\"supported\":{\"minVersion\":4,\"maxVersion\":3}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "supported with another code",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"auth.timeout\",\"supported\":{\"minVersion\":3,\"maxVersion\":3}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a known code without the Pre flag before verification",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"auth.proof-invalid\"}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "access revoked before verification",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"host.access-revoked\"}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "a companion sending startSession",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/timer\",\"settings\":{}}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "a host sending setFace",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "a ping before ready",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ping\",\"id\":1}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "a hello after authentication",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "ready before the challenge verified",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "a second challenge",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "an unknown type before authentication",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"future\",\"x\":1}",
+      "expect": "protocol.unexpected"
+    },
+    {
+      "name": "a type that is not a string",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":3}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "no type",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"id\":1}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a type outside the member grammar after authentication",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"set_face\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "hello with minVersion over maxVersion",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":4,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "hello without manifestHash",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"}}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "hello with a repeated capability",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[\"face.image\",\"face.image\"],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "hello with 33 capabilities",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[\"x.c0\",\"x.c1\",\"x.c2\",\"x.c3\",\"x.c4\",\"x.c5\",\"x.c6\",\"x.c7\",\"x.c8\",\"x.c9\",\"x.c10\",\"x.c11\",\"x.c12\",\"x.c13\",\"x.c14\",\"x.c15\",\"x.c16\",\"x.c17\",\"x.c18\",\"x.c19\",\"x.c20\",\"x.c21\",\"x.c22\",\"x.c23\",\"x.c24\",\"x.c25\",\"x.c26\",\"x.c27\",\"x.c28\",\"x.c29\",\"x.c30\",\"x.c31\",\"x.c32\"],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "hello with a client name containing a space",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "hello with a nonce that is not 32 bytes",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "hello with version 0",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":0,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "expect": "protocol.hello-invalid"
+    },
+    {
+      "name": "a challenge whose proof is not Base64",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"not base64\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a challenge with an invalid host id",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"Example\",\"version\":\"1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with an invalid UI language",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"english\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready without limits",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\"}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with a limit written as 1.0",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000.0}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with maxFrameBytes below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":8191,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with maxSessions below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":0,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with maxPendingInvokes below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":0,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with invokeTimeoutMs below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":3999,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with faceChangesPerSecond below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":0,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with faceBurst below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":0,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with messageRate below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":0,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with messageBurst below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":63,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with hardMessageRate below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":127,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with hardMessageBurst below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":255,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with pingIntervalMs below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":4999,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with pongTimeoutMs below its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":999}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with maxFrameBytes above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65537,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with maxSessions above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":65,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with maxPendingInvokes above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":33,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with invokeTimeoutMs above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":60001,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with faceChangesPerSecond above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":3,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with faceBurst above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":5,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with messageRate above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":129,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with messageBurst above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":257,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with hardMessageRate above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":513,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with hardMessageBurst above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1025,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with pingIntervalMs above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":300001,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with pongTimeoutMs above its range",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":60001}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with messageBurst below one token per KiB of maxFrameBytes",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":16384,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":8,\"messageBurst\":15,\"hardMessageRate\":8,\"hardMessageBurst\":15,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with hardMessageRate below messageRate",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":100,\"messageBurst\":256,\"hardMessageRate\":99,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with hardMessageBurst below messageBurst",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":200,\"hardMessageRate\":512,\"hardMessageBurst\":199,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with pingIntervalMs not greater than pongTimeoutMs",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":10000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "ready with an integer beyond 32 bits",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":4294967360,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a ping id of zero",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":0}",
+      "expect": "protocol.message-invalid"
+    },
+    {
+      "name": "a ping id beyond 2147483647",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":2147483648}",
+      "expect": "protocol.message-invalid"
+    }
+  ]
+}

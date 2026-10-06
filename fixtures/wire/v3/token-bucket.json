@@ -1,0 +1,327 @@
+{
+  "about": "Token-bucket vectors (contract section B.3 and 7.10). A bucket starts full; take(n) refills by rate times the elapsed seconds (at most burst), then takes n when it holds n, and otherwise refuses with retryAfterMs = ceil((n - tokens) / rate * 1000). A frame costs one token per started 1,024 bytes of its body. atMs is a monotonic time in milliseconds.",
+  "cases": [
+    {
+      "name": "face budget: burst then refill",
+      "rate": 2,
+      "burst": 4,
+      "steps": [
+        {
+          "atMs": 0,
+          "bytes": 100,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 100,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 100,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 100,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 100,
+          "cost": 1,
+          "take": false,
+          "retryAfterMs": 500
+        },
+        {
+          "atMs": 250,
+          "bytes": 100,
+          "cost": 1,
+          "take": false,
+          "retryAfterMs": 250
+        },
+        {
+          "atMs": 500,
+          "bytes": 100,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 2500,
+          "bytes": 100,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 2500,
+          "bytes": 100,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        }
+      ]
+    },
+    {
+      "name": "soft bucket with multi-token frames",
+      "rate": 128,
+      "burst": 256,
+      "steps": [
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 1,
+          "cost": 1,
+          "take": false,
+          "retryAfterMs": 8
+        },
+        {
+          "atMs": 0,
+          "bytes": 1025,
+          "cost": 2,
+          "take": false,
+          "retryAfterMs": 16
+        },
+        {
+          "atMs": 250,
+          "bytes": 32768,
+          "cost": 32,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 500,
+          "bytes": 32769,
+          "cost": 33,
+          "take": false,
+          "retryAfterMs": 8
+        },
+        {
+          "atMs": 750,
+          "bytes": 1024,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        }
+      ]
+    },
+    {
+      "name": "hard bucket: 16 full frames then a refusal",
+      "rate": 512,
+      "burst": 1024,
+      "steps": [
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 1,
+          "cost": 1,
+          "take": false,
+          "retryAfterMs": 2
+        },
+        {
+          "atMs": 2,
+          "bytes": 1,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 4,
+          "bytes": 2048,
+          "cost": 2,
+          "take": false,
+          "retryAfterMs": 2
+        }
+      ]
+    },
+    {
+      "name": "a full 64 KiB frame against the smallest allowed burst",
+      "rate": 1,
+      "burst": 64,
+      "steps": [
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 0,
+          "bytes": 65536,
+          "cost": 64,
+          "take": false,
+          "retryAfterMs": 64000
+        },
+        {
+          "atMs": 32000,
+          "bytes": 32768,
+          "cost": 32,
+          "take": true,
+          "retryAfterMs": 0
+        },
+        {
+          "atMs": 64000,
+          "bytes": 65536,
+          "cost": 64,
+          "take": false,
+          "retryAfterMs": 32000
+        },
+        {
+          "atMs": 64000,
+          "bytes": 1,
+          "cost": 1,
+          "take": true,
+          "retryAfterMs": 0
+        }
+      ]
+    }
+  ]
+}

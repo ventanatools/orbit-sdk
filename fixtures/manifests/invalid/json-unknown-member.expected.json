@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.unknown-member",
+      "path": "/entrypoint",
+      "severity": "Error",
+      "line": 82,
+      "column": 17
+    }
+  ]
+}

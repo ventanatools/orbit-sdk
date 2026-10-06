@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "string.too-long",
+      "path": "/$schema",
+      "severity": "Error",
+      "line": 2,
+      "column": 14
+    }
+  ]
+}

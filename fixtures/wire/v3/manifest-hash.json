@@ -1,0 +1,543 @@
+{
+  "about": "Manifest hashes (contract section B.2): SHA-256 in lowercase hexadecimal of the RFC 8785 canonical form of the contract projection, which keeps schemaVersion, id and, for each contribution sorted by id, its id, sorted provides and its settings sorted by id with id, kind and sorted choice values (no settings member when there are none). Sorting is by UTF-16 code unit. canonical is the exact serialized projection.",
+  "cases": [
+    {
+      "name": "the worked example of contract section 3.9",
+      "manifest": {
+        "schemaVersion": 3,
+        "id": "example.countdown",
+        "name": "Countdown sample",
+        "description": "One local countdown shared by Start, Pause and Reset actions and a passive status widget.",
+        "version": "0.3.0",
+        "hosts": [
+          "example-host"
+        ],
+        "publisher": {
+          "name": "Example Co",
+          "url": "https://example.com"
+        },
+        "supportUrl": "https://example.com/support",
+        "disclosures": {
+          "network": "None"
+        },
+        "contributions": [
+          {
+            "id": "example.countdown/timer",
+            "name": "Countdown",
+            "description": "Start or resume, pause, or reset the shared countdown. Its face shows the time left.",
+            "glyph": "\ue916",
+            "provides": [
+              "invoke",
+              "face"
+            ],
+            "settings": [
+              {
+                "id": "mode",
+                "kind": "Choice",
+                "name": "When picked",
+                "default": "start",
+                "choices": [
+                  {
+                    "value": "start",
+                    "name": "Start or resume"
+                  },
+                  {
+                    "value": "pause",
+                    "name": "Pause"
+                  },
+                  {
+                    "value": "reset",
+                    "name": "Reset"
+                  }
+                ]
+              },
+              {
+                "id": "duration",
+                "kind": "Choice",
+                "name": "Duration",
+                "description": "Used when the countdown starts fresh or resets.",
+                "default": "five-minutes",
+                "choices": [
+                  {
+                    "value": "one-minute",
+                    "name": "1 minute"
+                  },
+                  {
+                    "value": "five-minutes",
+                    "name": "5 minutes"
+                  },
+                  {
+                    "value": "twenty-five-minutes",
+                    "name": "25 minutes"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "example.countdown/status",
+            "name": "Countdown status",
+            "description": "Shows the shared countdown. Picking it changes nothing.",
+            "glyph": "\ue916",
+            "provides": [
+              "face"
+            ]
+          }
+        ]
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.countdown/status\",\"provides\":[\"face\"]},{\"id\":\"example.countdown/timer\",\"provides\":[\"face\",\"invoke\"],\"settings\":[{\"choices\":[\"five-minutes\",\"one-minute\",\"twenty-five-minutes\"],\"id\":\"duration\",\"kind\":\"Choice\"},{\"choices\":[\"pause\",\"reset\",\"start\"],\"id\":\"mode\",\"kind\":\"Choice\"}]}],\"id\":\"example.countdown\",\"schemaVersion\":3}",
+      "hash": "1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f"
+    },
+    {
+      "name": "member, contribution, setting, choice and provides order do not change the hash",
+      "manifest": {
+        "contributions": [
+          {
+            "id": "example.countdown/status",
+            "name": "Countdown status",
+            "description": "Shows the shared countdown. Picking it changes nothing.",
+            "glyph": "\ue916",
+            "provides": [
+              "face"
+            ]
+          },
+          {
+            "id": "example.countdown/timer",
+            "name": "Countdown",
+            "description": "Start or resume, pause, or reset the shared countdown. Its face shows the time left.",
+            "glyph": "\ue916",
+            "provides": [
+              "face",
+              "invoke"
+            ],
+            "settings": [
+              {
+                "id": "duration",
+                "kind": "Choice",
+                "name": "Duration",
+                "description": "Used when the countdown starts fresh or resets.",
+                "default": "five-minutes",
+                "choices": [
+                  {
+                    "value": "twenty-five-minutes",
+                    "name": "25 minutes"
+                  },
+                  {
+                    "value": "five-minutes",
+                    "name": "5 minutes"
+                  },
+                  {
+                    "value": "one-minute",
+                    "name": "1 minute"
+                  }
+                ]
+              },
+              {
+                "id": "mode",
+                "kind": "Choice",
+                "name": "When picked",
+                "default": "start",
+                "choices": [
+                  {
+                    "value": "reset",
+                    "name": "Reset"
+                  },
+                  {
+                    "value": "pause",
+                    "name": "Pause"
+                  },
+                  {
+                    "value": "start",
+                    "name": "Start or resume"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "disclosures": {
+          "network": "None"
+        },
+        "supportUrl": "https://example.com/support",
+        "publisher": {
+          "name": "Example Co",
+          "url": "https://example.com"
+        },
+        "hosts": [
+          "example-host"
+        ],
+        "version": "0.3.0",
+        "description": "One local countdown shared by Start, Pause and Reset actions and a passive status widget.",
+        "name": "Countdown sample",
+        "id": "example.countdown",
+        "schemaVersion": 3
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.countdown/status\",\"provides\":[\"face\"]},{\"id\":\"example.countdown/timer\",\"provides\":[\"face\",\"invoke\"],\"settings\":[{\"choices\":[\"five-minutes\",\"one-minute\",\"twenty-five-minutes\"],\"id\":\"duration\",\"kind\":\"Choice\"},{\"choices\":[\"pause\",\"reset\",\"start\"],\"id\":\"mode\",\"kind\":\"Choice\"}]}],\"id\":\"example.countdown\",\"schemaVersion\":3}",
+      "hash": "1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f"
+    },
+    {
+      "name": "names, descriptions, glyphs, hosts, $schema, version and publisher do not change the hash",
+      "manifest": {
+        "schemaVersion": 3,
+        "id": "example.countdown",
+        "name": "Renamed",
+        "description": "A new description.",
+        "version": "9.9.9",
+        "hosts": [
+          "other-host",
+          "example-host"
+        ],
+        "publisher": {
+          "name": "Someone Else"
+        },
+        "supportUrl": "https://example.com/support",
+        "disclosures": {
+          "network": "None"
+        },
+        "contributions": [
+          {
+            "id": "example.countdown/timer",
+            "name": "X",
+            "description": "Y",
+            "glyph": "\ue000",
+            "provides": [
+              "invoke",
+              "face"
+            ],
+            "settings": [
+              {
+                "id": "mode",
+                "kind": "Choice",
+                "name": "Z",
+                "default": "start",
+                "choices": [
+                  {
+                    "value": "start",
+                    "name": "W"
+                  },
+                  {
+                    "value": "pause",
+                    "name": "W"
+                  },
+                  {
+                    "value": "reset",
+                    "name": "W"
+                  }
+                ]
+              },
+              {
+                "id": "duration",
+                "kind": "Choice",
+                "name": "Z",
+                "description": "Used when the countdown starts fresh or resets.",
+                "default": "five-minutes",
+                "choices": [
+                  {
+                    "value": "one-minute",
+                    "name": "W"
+                  },
+                  {
+                    "value": "five-minutes",
+                    "name": "W"
+                  },
+                  {
+                    "value": "twenty-five-minutes",
+                    "name": "W"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "example.countdown/status",
+            "name": "X",
+            "description": "Y",
+            "glyph": "\ue000",
+            "provides": [
+              "face"
+            ]
+          }
+        ],
+        "$schema": "https://dev.ventana.tools/schemas/extensions/other-host/manifest.v3.json"
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.countdown/status\",\"provides\":[\"face\"]},{\"id\":\"example.countdown/timer\",\"provides\":[\"face\",\"invoke\"],\"settings\":[{\"choices\":[\"five-minutes\",\"one-minute\",\"twenty-five-minutes\"],\"id\":\"duration\",\"kind\":\"Choice\"},{\"choices\":[\"pause\",\"reset\",\"start\"],\"id\":\"mode\",\"kind\":\"Choice\"}]}],\"id\":\"example.countdown\",\"schemaVersion\":3}",
+      "hash": "1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f"
+    },
+    {
+      "name": "an added choice value changes the hash",
+      "manifest": {
+        "schemaVersion": 3,
+        "id": "example.countdown",
+        "name": "Countdown sample",
+        "description": "One local countdown shared by Start, Pause and Reset actions and a passive status widget.",
+        "version": "0.3.0",
+        "hosts": [
+          "example-host"
+        ],
+        "publisher": {
+          "name": "Example Co",
+          "url": "https://example.com"
+        },
+        "supportUrl": "https://example.com/support",
+        "disclosures": {
+          "network": "None"
+        },
+        "contributions": [
+          {
+            "id": "example.countdown/timer",
+            "name": "Countdown",
+            "description": "Start or resume, pause, or reset the shared countdown. Its face shows the time left.",
+            "glyph": "\ue916",
+            "provides": [
+              "invoke",
+              "face"
+            ],
+            "settings": [
+              {
+                "id": "mode",
+                "kind": "Choice",
+                "name": "When picked",
+                "default": "start",
+                "choices": [
+                  {
+                    "value": "start",
+                    "name": "Start or resume"
+                  },
+                  {
+                    "value": "pause",
+                    "name": "Pause"
+                  },
+                  {
+                    "value": "reset",
+                    "name": "Reset"
+                  }
+                ]
+              },
+              {
+                "id": "duration",
+                "kind": "Choice",
+                "name": "Duration",
+                "description": "Used when the countdown starts fresh or resets.",
+                "default": "five-minutes",
+                "choices": [
+                  {
+                    "value": "one-minute",
+                    "name": "1 minute"
+                  },
+                  {
+                    "value": "five-minutes",
+                    "name": "5 minutes"
+                  },
+                  {
+                    "value": "twenty-five-minutes",
+                    "name": "25 minutes"
+                  },
+                  {
+                    "value": "one-hour",
+                    "name": "1 hour"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "example.countdown/status",
+            "name": "Countdown status",
+            "description": "Shows the shared countdown. Picking it changes nothing.",
+            "glyph": "\ue916",
+            "provides": [
+              "face"
+            ]
+          }
+        ]
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.countdown/status\",\"provides\":[\"face\"]},{\"id\":\"example.countdown/timer\",\"provides\":[\"face\",\"invoke\"],\"settings\":[{\"choices\":[\"five-minutes\",\"one-hour\",\"one-minute\",\"twenty-five-minutes\"],\"id\":\"duration\",\"kind\":\"Choice\"},{\"choices\":[\"pause\",\"reset\",\"start\"],\"id\":\"mode\",\"kind\":\"Choice\"}]}],\"id\":\"example.countdown\",\"schemaVersion\":3}",
+      "hash": "199c516660f362e3c3a6fff3b79c963787d163de10526f008eade0a7f14c33cd"
+    },
+    {
+      "name": "an added provides value changes the hash",
+      "manifest": {
+        "schemaVersion": 3,
+        "id": "example.countdown",
+        "name": "Countdown sample",
+        "description": "One local countdown shared by Start, Pause and Reset actions and a passive status widget.",
+        "version": "0.3.0",
+        "hosts": [
+          "example-host"
+        ],
+        "publisher": {
+          "name": "Example Co",
+          "url": "https://example.com"
+        },
+        "supportUrl": "https://example.com/support",
+        "disclosures": {
+          "network": "None"
+        },
+        "contributions": [
+          {
+            "id": "example.countdown/timer",
+            "name": "Countdown",
+            "description": "Start or resume, pause, or reset the shared countdown. Its face shows the time left.",
+            "glyph": "\ue916",
+            "provides": [
+              "invoke",
+              "face"
+            ],
+            "settings": [
+              {
+                "id": "mode",
+                "kind": "Choice",
+                "name": "When picked",
+                "default": "start",
+                "choices": [
+                  {
+                    "value": "start",
+                    "name": "Start or resume"
+                  },
+                  {
+                    "value": "pause",
+                    "name": "Pause"
+                  },
+                  {
+                    "value": "reset",
+                    "name": "Reset"
+                  }
+                ]
+              },
+              {
+                "id": "duration",
+                "kind": "Choice",
+                "name": "Duration",
+                "description": "Used when the countdown starts fresh or resets.",
+                "default": "five-minutes",
+                "choices": [
+                  {
+                    "value": "one-minute",
+                    "name": "1 minute"
+                  },
+                  {
+                    "value": "five-minutes",
+                    "name": "5 minutes"
+                  },
+                  {
+                    "value": "twenty-five-minutes",
+                    "name": "25 minutes"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "example.countdown/status",
+            "name": "Countdown status",
+            "description": "Shows the shared countdown. Picking it changes nothing.",
+            "glyph": "\ue916",
+            "provides": [
+              "invoke",
+              "face"
+            ]
+          }
+        ]
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.countdown/status\",\"provides\":[\"face\",\"invoke\"]},{\"id\":\"example.countdown/timer\",\"provides\":[\"face\",\"invoke\"],\"settings\":[{\"choices\":[\"five-minutes\",\"one-minute\",\"twenty-five-minutes\"],\"id\":\"duration\",\"kind\":\"Choice\"},{\"choices\":[\"pause\",\"reset\",\"start\"],\"id\":\"mode\",\"kind\":\"Choice\"}]}],\"id\":\"example.countdown\",\"schemaVersion\":3}",
+      "hash": "ad0699957f127697800e733003bed94e16229aab0ff1350448ef5c150f4a9215"
+    },
+    {
+      "name": "a contribution without settings has no settings member in the projection",
+      "manifest": {
+        "schemaVersion": 3,
+        "id": "example.minimal",
+        "name": "Minimal",
+        "description": "The fewest members a valid manifest has.",
+        "version": "0.0.0",
+        "hosts": [
+          "example-host"
+        ],
+        "contributions": [
+          {
+            "id": "example.minimal/clock",
+            "name": "Clock",
+            "description": "A passive widget.",
+            "glyph": "\ue121",
+            "provides": [
+              "face"
+            ]
+          }
+        ]
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.minimal/clock\",\"provides\":[\"face\"]}],\"id\":\"example.minimal\",\"schemaVersion\":3}",
+      "hash": "268214b1ade6fcccbdac989d7fb1a65c319a7ca2cca49c17434756deb4f34a0a"
+    },
+    {
+      "name": "an empty settings list hashes as no settings",
+      "manifest": {
+        "schemaVersion": 3,
+        "id": "example.minimal",
+        "name": "Minimal",
+        "description": "The fewest members a valid manifest has.",
+        "version": "0.0.0",
+        "hosts": [
+          "example-host"
+        ],
+        "contributions": [
+          {
+            "id": "example.minimal/clock",
+            "name": "Clock",
+            "description": "A passive widget.",
+            "glyph": "\ue121",
+            "provides": [
+              "face"
+            ],
+            "settings": []
+          }
+        ]
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.minimal/clock\",\"provides\":[\"face\"]}],\"id\":\"example.minimal\",\"schemaVersion\":3}",
+      "hash": "268214b1ade6fcccbdac989d7fb1a65c319a7ca2cca49c17434756deb4f34a0a"
+    },
+    {
+      "name": "a lone leaf",
+      "manifest": {
+        "schemaVersion": 3,
+        "id": "example.greeter",
+        "name": "Greeter",
+        "description": "One action whose contribution id is the extension id itself.",
+        "version": "1.0.0",
+        "hosts": [
+          "example-host"
+        ],
+        "contributions": [
+          {
+            "id": "example.greeter",
+            "name": "Greet",
+            "description": "Prints a greeting.",
+            "glyph": "\ue8bd",
+            "provides": [
+              "invoke"
+            ],
+            "settings": [
+              {
+                "id": "greeting",
+                "kind": "Choice",
+                "name": "Greeting",
+                "default": "hello",
+                "choices": [
+                  {
+                    "value": "hello",
+                    "name": "Hello"
+                  },
+                  {
+                    "value": "hi",
+                    "name": "Hi"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "canonical": "{\"contributions\":[{\"id\":\"example.greeter\",\"provides\":[\"invoke\"],\"settings\":[{\"choices\":[\"hello\",\"hi\"],\"id\":\"greeting\",\"kind\":\"Choice\"}]}],\"id\":\"example.greeter\",\"schemaVersion\":3}",
+      "hash": "0ab465676d358d72dda532d172b079e4ba11ca165a90374cb629ec3d37b6b817"
+    }
+  ]
+}

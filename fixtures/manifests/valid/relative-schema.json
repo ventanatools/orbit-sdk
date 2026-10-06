@@ -1,0 +1,18 @@
+{
+  "$schema": ".schemas/manifest.v3.json",
+  "schemaVersion": 3,
+  "id": "example.relative-schema",
+  "name": "Relative schema",
+  "description": "A $schema that is a relative path to a bundled copy, as templates write.",
+  "version": "1.0.0",
+  "hosts": ["example-host"],
+  "contributions": [
+    {
+      "id": "example.relative-schema/run",
+      "name": "Run",
+      "description": "An action.",
+      "glyph": "\uE768",
+      "provides": ["invoke"]
+    }
+  ]
+}

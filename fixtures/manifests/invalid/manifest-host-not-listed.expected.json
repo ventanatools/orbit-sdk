@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "manifest.host-not-listed",
+      "path": "/hosts",
+      "severity": "Error",
+      "line": 7,
+      "column": 12
+    }
+  ]
+}

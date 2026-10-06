@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.null-not-allowed",
+      "path": "/mode",
+      "severity": "Error",
+      "line": 8,
+      "column": 11
+    }
+  ]
+}

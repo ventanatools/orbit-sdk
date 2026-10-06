@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.member-renamed",
+      "path": "/manifestVersion",
+      "severity": "Error",
+      "line": 2,
+      "column": 22
+    }
+  ]
+}

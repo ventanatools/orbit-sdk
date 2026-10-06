@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "chrome.label-required",
+      "path": "/contributions/example.countdown~1status/name",
+      "severity": "Error",
+      "line": 6,
+      "column": 15
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "strings.target-unknown",
+      "path": "/contributions/example.countdown~1timer/settings/mode/choices/stop",
+      "severity": "Error",
+      "line": 9,
+      "column": 21
+    }
+  ]
+}

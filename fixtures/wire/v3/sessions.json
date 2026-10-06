@@ -1,0 +1,62 @@
+{
+  "about": "startSession settings checked against a companion's manifest (contract section 7.6.1): the set is complete, every key is a declared setting, and every value is one of its choices. code is what the companion refuses the session with, or null when it accepts it.",
+  "manifest": "manifests/valid/countdown.json",
+  "cases": [
+    {
+      "name": "a complete set",
+      "contributionId": "example.countdown/timer",
+      "settings": {
+        "mode": "start",
+        "duration": "five-minutes"
+      },
+      "code": null
+    },
+    {
+      "name": "no settings for a contribution without settings",
+      "contributionId": "example.countdown/status",
+      "settings": {},
+      "code": null
+    },
+    {
+      "name": "an undeclared key",
+      "contributionId": "example.countdown/timer",
+      "settings": {
+        "mode": "start",
+        "duration": "five-minutes",
+        "volume": "loud"
+      },
+      "code": "session.settings-invalid"
+    },
+    {
+      "name": "a missing key",
+      "contributionId": "example.countdown/timer",
+      "settings": {
+        "mode": "start"
+      },
+      "code": "session.settings-invalid"
+    },
+    {
+      "name": "an undeclared value",
+      "contributionId": "example.countdown/timer",
+      "settings": {
+        "mode": "stop",
+        "duration": "five-minutes"
+      },
+      "code": "session.settings-invalid"
+    },
+    {
+      "name": "a key for a contribution without settings",
+      "contributionId": "example.countdown/status",
+      "settings": {
+        "mode": "start"
+      },
+      "code": "session.settings-invalid"
+    },
+    {
+      "name": "a contribution the manifest does not have",
+      "contributionId": "example.countdown/missing",
+      "settings": {},
+      "code": "session.unknown-contribution"
+    }
+  ]
+}
