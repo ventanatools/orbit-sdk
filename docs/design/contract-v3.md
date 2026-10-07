@@ -2093,9 +2093,9 @@ same version. An add-on's other direct dependencies are limited to
 A concrete implementation, such as `Microsoft.Extensions.Hosting`, is the
 application's to add: the Generic Host add-on `VentanaTools.Orbit.Extensions.Hosting`
 (§9.5) depends on `Microsoft.Extensions.Hosting.Abstractions` and
-`Microsoft.Extensions.Options`. The version
-range is exact (`[x.y.z]`) because the test kit and the add-on use the author
-package's internal seams (the in-memory transport and `CompanionApp`'s output).
+`Microsoft.Extensions.Options`. The version range is exact (`[x.y.z]`) because
+the test kit and the add-on use the author package's internal seams (the
+in-memory transport and `CompanionApp`'s output).
 
 The packages target `net10.0` only, with no `netstandard2.0` build. A companion
 is a program that brings or names its own runtime, not a library loaded into an
@@ -3268,8 +3268,8 @@ overload stays binary compatible.
 - **The command line.** By default the companion and the host read the same
   command line, and the host's configuration takes it as `--key value` pairs, so
   a value-less `--verbose` followed by another option takes that option as its
-  value (`--verbose --environment Development` leaves the host's environment
-  unset). Authors put `--verbose` last or write `--verbose true`:
+  value (`--verbose --environment Development` leaves the host's environment at
+  Production). Authors put `--verbose` last or write `--verbose true`:
   `CompanionApp`'s parser (§9.2) reads the flag and leaves `true` among the
   arguments the add-on ignores.
 - **Stopping.** When the host stops, the run is cancelled as `RunAsync` is: the
@@ -3289,12 +3289,13 @@ overload stays binary compatible.
   prints through `ILogger`, under the category
   `VentanaTools.Orbit.Extensions.Hosting.CompanionService`, with a fixed event id
   and level: 1 `Connecting` (Debug), 2 `Connected` (Information, with the host's
-  id, version and protocol), 3 `Waiting` (Information or Warning, below, with the
-  reason code, the retry delay, the fix and the help link), 4 `Retrying` (Information), 5
-  `PairingUnusable` (Warning), 6 `PairingDiagnostic` (Warning), 7 `Stopped`
-  (Warning), 8 `StoppedQuietly` (Information), 10 and 11 `ManifestInvalid` (Error,
-  with each error's code, line, column and fixed message), 12 `ManifestUnreadable`
-  (Error), 13 `WatchingManifest` and 14 `WatchingPairing` (Information), 15
+  id, version and protocol), 3 `Waiting` (Information or Warning, below, with
+  the reason code, the retry delay, the fix and the help link), 4 `Retrying`
+  (Information), 5 `PairingUnusable` (Warning), 6 `PairingDiagnostic`
+  (Warning), 7 `Stopped` (Warning), 8 `StoppedQuietly` (Information), 10 and 11
+  `ManifestInvalid` (Error, with each error's code, line, column and fixed
+  message), 12 `ManifestUnreadable` (Error, with the exception's type only), 13
+  `WatchingManifest` and 14 `WatchingPairing` (Information), 15
   `Unmapped` (Warning), 16 `HostMessage` (Debug, only with `--verbose`), 17
   `HandlerFaulted` (Error, with the author's exception), 18 `CallbackFaulted`
   (Warning, once), 19 `Usage` (Error), 20 `Unexpected` (Error, with the
@@ -3303,19 +3304,19 @@ overload stays binary compatible.
   paths (which name the person's profile), pipe names, setting values or face
   text; a manifest diagnostic is logged without its file and pointer.
 - **Levels and repeats.** A `Waiting` entry is Information when its reason
-  resolves itself: the catalog's fix for the code is "None" (§8.3:
-  `host.shutting-down`, `host.turned-off`, `host.reloaded`), or the client treats
-  the host as absent (`host.not-running`, `host.turned-off`, §9.2), so the
-  companion connects by itself once the host is back. Every other reason needs a
-  person and is a Warning: missing or out-of-date connection info, revoked
-  access, another program, differing manifests, a paused or misbehaving peer,
-  and a code the SDK does not know. The default host
-  (`Host.CreateApplicationBuilder`) writes Warnings and above to the Windows event
-  log, so a companion whose host is closed adds nothing there. A status that
-  repeats the one logged before it (the same state and reason code, the retry
-  delay and attempt aside) is not logged again, and neither are the `Connecting`
-  attempt and the host's text that come with it, until the status changes; the
-  `StatusChanged` callback still receives every status.
+  resolves itself: the catalog's fix for the code is "None" (§8.3; of the codes
+  a status carries, `host.shutting-down`, `host.turned-off` and `host.reloaded`),
+  or the client treats the host as absent (`host.not-running`, `host.turned-off`,
+  §9.2), so the companion connects by itself once the host is back. Every other
+  reason needs a person and is a Warning: missing or out-of-date connection info,
+  revoked access, another program, differing manifests, a paused or misbehaving
+  peer, and a code the SDK does not know. The default host
+  (`Host.CreateApplicationBuilder`) writes Warnings and above to the Windows
+  event log, so a companion whose host is closed adds nothing there. A status
+  that repeats the one logged before it (the same state and reason code, the
+  retry delay and attempt aside) is not logged again, and neither are the
+  `Connecting` attempt and the host's text that come with it, until the status
+  changes; the `StatusChanged` callback still receives every status.
 
 ---
 

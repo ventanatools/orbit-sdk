@@ -31,9 +31,10 @@ Keep the libraries plain .NET 10. The author package depends only on the base
 class library. The test kit and add-on packages also depend on their author
 package at the exact same version. An add-on's other direct dependencies are
 limited to `Microsoft.Extensions.*.Abstractions` packages and
-`Microsoft.Extensions.Options`. Document every public member. Public tests use xUnit's own
-assertions. Add focused tests for every behavior you change, especially
-authentication, cancellation, session lifetime, framing and untrusted input.
+`Microsoft.Extensions.Options`. Document every public member. Public tests use
+xUnit's own assertions. Add focused tests for every behavior you change,
+especially authentication, cancellation, session lifetime, framing and untrusted
+input.
 
 ## Contract changes start here
 

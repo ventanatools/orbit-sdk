@@ -148,11 +148,11 @@ are checked when the host starts: a `Client` option out of its range, or a
 
 When the host stops (Ctrl+C, a service stop, `StopApplication`), the companion's
 connection closes, its sessions end, their handlers' tokens are cancelled, and
-the hosted service completes. It never waits for a handler, only, at most 5
-seconds, for status and fault callbacks still running, so a handler that ignores
-its token cannot hold up the host's shutdown. Such a handler runs on until it
-returns or the process exits, and is logged as `IgnoredCancellation` once
-`HandlerStopTimeout` (5 seconds) has passed.
+the hosted service completes. The stop never waits for a handler, only for
+status and fault callbacks still running, and for those at most 5 seconds, so a
+handler that ignores its token cannot hold up the host's shutdown. Such a
+handler runs on until it returns or the process exits, and is logged as
+`IgnoredCancellation` once `HandlerStopTimeout` (5 seconds) has passed.
 
 The companion stops by itself only for the reasons `CompanionApp.RunAsync` would
 return: a usage error (exit code 2), an unexpected failure (1), and, with
@@ -175,7 +175,7 @@ Entries go to the category `VentanaTools.Orbit.Extensions.Hosting.CompanionServi
 | 7 `Stopped` | Warning | The client stopped with a reason code it cannot retry. |
 | 8 `StoppedQuietly` | Information | The client stopped because the host is stopping. |
 | 10, 11 `ManifestInvalid` | Error | One error of an invalid manifest: its code, line, column and fixed message. |
-| 12 `ManifestUnreadable` | Error | The manifest could not be read. |
+| 12 `ManifestUnreadable` | Error | The manifest could not be read; the entry names the exception's type only. |
 | 13, 14 `WatchingManifest`, `WatchingPairing` | Information | The companion waits for a file to change. |
 | 15 `Unmapped` | Warning | A `ContributionRouter` maps no handler for a contribution. |
 | 16 `HostMessage` | Debug | The host's fixed error text, only with `--verbose`. |
