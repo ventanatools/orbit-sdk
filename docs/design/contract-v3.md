@@ -332,7 +332,8 @@ The SDK repository enforces the product-name rule (§2.1) with
   `lib/hosts.json` (the checked-in copy of `fixtures/hosts.json`), in the
   package name `@ventanatools/orbit-extensions` and its subpaths (in
   `package.json`, `package-lock.json`, `index.d.ts` module declarations and
-  `require` calls), and in `README.md`.
+  `require` calls), in `README.md`, and in `NOTICE`, the byte copy of the
+  repository's `NOTICE` that the npm tarball carries.
 
 Tests, fixtures, samples and templates are outside this test: fixtures and
 vectors use `example-host` (Appendix A), and the repository's leak lint checks

@@ -290,7 +290,8 @@ public sealed class ProductNameConfinementTests
         foreach (var path in TrackedFiles("node").Where(path => path.StartsWith(folder, StringComparison.Ordinal)))
         {
             var relative = path[folder.Length..];
-            if (relative is "lib/hosts.json" or "README.md")
+            // NOTICE is the repository's NOTICE, which names the products (TheNodePackageCarriesTheRepositorysLicenceAndNotice).
+            if (relative is "lib/hosts.json" or "README.md" or "NOTICE")
             {
                 continue;
             }
