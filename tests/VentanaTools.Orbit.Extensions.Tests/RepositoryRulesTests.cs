@@ -205,6 +205,34 @@ public sealed class PublicShapeTests
     }
 
     [Fact]
+    public void ThePackageReadmesHelloWorldCompilesAndItsManifestIsValid()
+    {
+        // The readme is the package's nuget.org page; its quick start must work as written.
+        var readme = File.ReadAllText(Path.Combine(Fixtures.Root, "src", typeof(ExtensionManifest).Assembly.GetName().Name!, "README.md"))
+            .Replace("\r\n", "\n", StringComparison.Ordinal);
+        string Block(string language)
+        {
+            var start = readme.IndexOf("```" + language + "\n", StringComparison.Ordinal);
+            Assert.True(start >= 0, "The readme has no " + language + " block.");
+            start += language.Length + 4;
+            return readme[start..readme.IndexOf("\n```", start, StringComparison.Ordinal)];
+        }
+
+        var manifest = ManifestReader.Read(Encoding.UTF8.GetBytes(Block("json")));
+        Assert.True(manifest.Value is not null, string.Join("; ", manifest.Diagnostics));
+        Assert.DoesNotContain(manifest.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Warning);
+
+        var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
+            .Select(path => MetadataReference.CreateFromFile(path))
+            .Append(MetadataReference.CreateFromFile(typeof(ExtensionManifest).Assembly.Location));
+        var implicitUsings = CSharpSyntaxTree.ParseText("global using System;\nglobal using System.Threading;\nglobal using System.Threading.Tasks;");
+        var compilation = CSharpCompilation.Create("Readme", [CSharpSyntaxTree.ParseText(Block("csharp")), implicitUsings], references,
+            new CSharpCompilationOptions(OutputKind.ConsoleApplication, nullableContextOptions: NullableContextOptions.Enable));
+        Assert.Empty(compilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity >= Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+            .Select(diagnostic => diagnostic.ToString()));
+    }
+
+    [Fact]
     public void TheNodePackageCarriesTheRepositorysLicenceAndNotice()
     {
         // Apache-2.0 section 4: the licence and the NOTICE travel with every redistribution, the npm tarball included.
