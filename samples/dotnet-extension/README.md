@@ -23,19 +23,31 @@ You need Windows, the .NET 10 SDK, the SDK's NuGet packages (`VentanaTools.Orbit
 `VentanaTools.Orbit.Extensions.Testing`), and a build of the host app with extension support.
 
 1. Build and test. The folder imports none of the repository's build settings and references the
-   SDK only as packages; `Directory.Build.props` chooses the package version
-   (`-p:VentanaExtensionsVersion=<version>` overrides it).
+   SDK only as packages. `Directory.Build.props` asks for the repository's version unless the
+   `VentanaExtensionsVersion` property or environment variable names another. `tools/build.ps1`
+   (see the repository README) instead packs packages with a local `-dev.<stamp>` version into
+   `artifacts/packages`, the folder the repository's `NuGet.config` maps the SDK packages to. So,
+   from the repository root, first tell this PowerShell session which version you built:
 
    ```powershell
+   cd samples/dotnet-extension
+   $env:VentanaExtensionsVersion = (Get-Content ..\..\artifacts\build\state.json | ConvertFrom-Json).version
    dotnet test tests/DotnetExtensionSample.Tests.csproj
    ```
+
+   The variable reaches every build this session starts: `dotnet test`, `dotnet run` in step 3,
+   and the build that the tool's `pack` starts, which takes no `-p:` option. If you built with the
+   plain `dotnet pack` commands, which write no `state.json`, skip that line: your packages
+   already have the repository's version. For a single `dotnet` command,
+   `-p:VentanaExtensionsVersion=<version>` does the same.
 
 2. In the host app, open the extension settings, turn on developer mode, import this folder's
    `extension.json`, and turn the extension on after reviewing it. Then save the connection info:
    the host app writes the pairing file to
    `%USERPROFILE%\.ventana\pairings\<host-id>\example.dotnet-state.pairing.json`, where the
    companion finds it. The pairing file is a credential: never commit, package or share it.
-3. Start the companion with `dotnet run --project DotnetExtensionSample.csproj`. It prints one
+3. In the same session, start the companion with
+   `dotnet run --project DotnetExtensionSample.csproj`. It prints one
    status line per change; Ctrl+C stops it. `--pairing <path>` uses a pairing file elsewhere.
 4. In the host app, add **Set sample state** twice (one turns the sample on, one off) and
    **Sample status**. Pick each action: every face changes at once.
@@ -60,7 +72,9 @@ You need Windows, the .NET 10 SDK, the SDK's NuGet packages (`VentanaTools.Orbit
   when what the face shows changes, and let `Renew` keep a still face alive.
 - Validate and package with the SDK's command-line tool (the `VentanaTools.Orbit.Extensions.Tool`
   package; see the repository README): `validate` checks this folder, and `pack` follows
-  `extension.pack.json`, publishing the companion as one executable to `payload/companion/`.
+  `extension.pack.json`, publishing the companion as one executable to `payload/companion/`. Run
+  `pack` in a session where `VentanaExtensionsVersion` names your build (step 1), so its publish
+  step restores those packages.
 - `dotnet publish -r win-x64 -p:PublishAot=true` builds a native executable instead (it needs the
   C++ build tools).
 
@@ -71,7 +85,8 @@ You need Windows, the .NET 10 SDK, the SDK's NuGet packages (`VentanaTools.Orbit
 - **The host refused the connection.** The status line names the reason. After the manifest
   changes, import it again, turn the extension on, and save fresh connection info.
 - **Restore cannot find the SDK packages.** Point NuGet at a folder or feed with the
-  `VentanaTools.Orbit.Extensions` packages and pass the version you have with
-  `-p:VentanaExtensionsVersion=<version>`.
+  `VentanaTools.Orbit.Extensions` packages (inside the repository, its `NuGet.config` already
+  points at `artifacts/packages`) and name the version you have: set `VentanaExtensionsVersion`
+  as in step 1, or pass `-p:VentanaExtensionsVersion=<version>`.
 
 The sample is [MIT-0](LICENSE); the SDK is Apache-2.0.
