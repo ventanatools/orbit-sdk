@@ -2880,8 +2880,8 @@ namespace VentanaTools.Orbit.Extensions.Testing;
 public static class TestSessions
 {
     public static RecordingSession FromManifest(ExtensionManifest manifest, string contributionId,
-        IReadOnlyDictionary<string, string>? settings = null, TimeProvider? time = null);
-        // fills defaults, derives Provides from the manifest, validates the settings
+        IReadOnlyDictionary<string, string>? settings = null, TimeProvider? time = null, string uiLanguage = "en-US");
+        // fills defaults, derives Provides from the manifest, validates the settings and the language tag
     public static RecordingSession Create(string contributionId, Provides provides,
         IReadOnlyDictionary<string, string>? settings = null, string uiLanguage = "en-US", TimeProvider? time = null);
 }
@@ -2992,6 +2992,10 @@ public static class ExtensionConformance
         IContributionHandler handler, CancellationToken cancellationToken = default);
     public static Task AssertAuthoringContractAsync(ExtensionManifest manifest, IContributionHandler handler,
         CancellationToken cancellationToken = default);
+    public static Task<IReadOnlyList<string>> CollectContractFileFailuresAsync(string manifestPath,
+        IContributionHandler handler, ManifestReadOptions? options = null, CancellationToken cancellationToken = default);
+    public static Task AssertAuthoringContractFileAsync(string manifestPath, IContributionHandler handler,
+        ManifestReadOptions? options = null, CancellationToken cancellationToken = default);
 }
 public sealed class ConformanceException : InvalidOperationException { public IReadOnlyList<string> Failures { get; } }
                                                                   // also the three standard exception constructors
@@ -3010,6 +3014,14 @@ session's clock, with a `TimeoutException`.
 `StartSessionAsync` returns once the companion has accepted or refused the
 session (and, when it refused, once the `sessionRefused` frame is in the
 transcript); `RefusedCode` says which.
+
+Manifest failures read `code path: message` for a manifest object and
+`file(line,column): code path: message` for a file (`file: code path: message`
+when the error has no position), where `file` is the path as given, as the Node
+kit's `assertManifestValid` writes them. The `File` contract entry points read
+and validate the file first: when it is invalid they report its errors that way
+and run no other check, so the generated test project (§11.4) never fails for a
+secondary reason.
 
 `ExtensionConformance.CollectContractFailuresAsync` runs the
 `ContributionContractSuite` checks with their defaults. By default the suite

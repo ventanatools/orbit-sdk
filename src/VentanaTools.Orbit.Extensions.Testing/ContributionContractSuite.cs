@@ -385,7 +385,11 @@ public static class ExtensionConformance
     public static void AssertManifestValid(ExtensionManifest manifest, ManifestReadOptions? options = null) =>
         ThrowIfAny(CollectManifestFailures(manifest, options));
 
-    /// <summary>Every error a host would refuse the manifest file for, formatted <c>code path: message</c>.</summary>
+    /// <summary>
+    /// Every error a host would refuse the manifest file for, formatted
+    /// <c>file(line,column): code path: message</c> (<c>file: code path: message</c> for an error
+    /// with no position), where <c>file</c> is <paramref name="manifestPath"/> as given.
+    /// </summary>
     /// <param name="manifestPath">The path of <c>extension.json</c>.</param>
     /// <param name="options">How to validate; null for the third-party rules.</param>
     /// <returns>The failures; empty when the file is valid.</returns>
@@ -393,7 +397,7 @@ public static class ExtensionConformance
     public static IReadOnlyList<string> CollectManifestFileFailures(string manifestPath, ManifestReadOptions? options = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(manifestPath);
-        return Errors(ManifestReader.Read(ReadBounded(manifestPath, ManifestReader.MaxBytes), options));
+        return Errors(ManifestReader.Read(ReadBounded(manifestPath, ManifestReader.MaxBytes), options), manifestPath);
     }
 
     /// <summary>Throws when a host would refuse the manifest file.</summary>
@@ -426,8 +430,60 @@ public static class ExtensionConformance
         CancellationToken cancellationToken = default) =>
         ThrowIfAny(await CollectContractFailuresAsync(manifest, handler, cancellationToken).ConfigureAwait(false));
 
-    private static string[] Errors(ReadResult<ExtensionManifest> read) =>
-        read.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Select(diagnostic => diagnostic.ToString()).ToArray();
+    /// <summary>
+    /// The failures of the <see cref="ContributionContractSuite"/> checks with their defaults for the
+    /// manifest file at <paramref name="manifestPath"/>: when the file is invalid, its errors as
+    /// <see cref="CollectManifestFileFailures"/> formats them, and no other check.
+    /// </summary>
+    /// <param name="manifestPath">The path of <c>extension.json</c>.</param>
+    /// <param name="handler">The handler under test.</param>
+    /// <param name="options">How to validate; null for the third-party rules.</param>
+    /// <param name="cancellationToken">Cancels the run.</param>
+    /// <returns>The failures; empty when the file is valid and the handler keeps the contract.</returns>
+    /// <exception cref="IOException">The file cannot be read.</exception>
+    public static Task<IReadOnlyList<string>> CollectContractFileFailuresAsync(string manifestPath, IContributionHandler handler,
+        ManifestReadOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(manifestPath);
+        ArgumentNullException.ThrowIfNull(handler);
+        var read = ManifestReader.Read(ReadBounded(manifestPath, ManifestReader.MaxBytes), options);
+        return read.Value is { } manifest
+            ? new DefaultSuite(manifest, handler, options).CollectFailuresAsync(cancellationToken)
+            : Task.FromResult<IReadOnlyList<string>>(Errors(read, manifestPath));
+    }
+
+    /// <summary>
+    /// Throws when the manifest file is invalid or the handler breaks the authoring contract (the
+    /// suite's default checks). The generated test project uses it, so an invalid file fails with
+    /// its own errors and positions.
+    /// </summary>
+    /// <param name="manifestPath">The path of <c>extension.json</c>.</param>
+    /// <param name="handler">The handler under test.</param>
+    /// <param name="options">How to validate; null for the third-party rules.</param>
+    /// <param name="cancellationToken">Cancels the run.</param>
+    /// <returns>A task that completes when every check passed.</returns>
+    /// <exception cref="ConformanceException">The file is invalid or a check failed; it lists every failure.</exception>
+    /// <exception cref="IOException">The file cannot be read.</exception>
+    public static async Task AssertAuthoringContractFileAsync(string manifestPath, IContributionHandler handler,
+        ManifestReadOptions? options = null, CancellationToken cancellationToken = default) =>
+        ThrowIfAny(await CollectContractFileFailuresAsync(manifestPath, handler, options, cancellationToken).ConfigureAwait(false));
+
+    private static string[] Errors(ReadResult<ExtensionManifest> read, string? file = null) =>
+        read.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Select(diagnostic => Format(diagnostic, file)).ToArray();
+
+    /// <summary><c>file(line,column): code path: message</c>, as the Node test kit and compilers write it.</summary>
+    private static string Format(Diagnostic diagnostic, string? file)
+    {
+        if (file is null)
+        {
+            return diagnostic.ToString();
+        }
+
+        var where = diagnostic.Line is { } line
+            ? file + "(" + line.ToString(CultureInfo.InvariantCulture) + "," + (diagnostic.Column ?? 1).ToString(CultureInfo.InvariantCulture) + "): "
+            : file + ": ";
+        return where + diagnostic;
+    }
 
     private static void ThrowIfAny(IReadOnlyList<string> failures)
     {
@@ -455,14 +511,18 @@ public static class ExtensionConformance
     {
         private readonly ExtensionManifest _manifest;
         private readonly IContributionHandler _handler;
+        private readonly ManifestReadOptions? _validation;
 
-        public DefaultSuite(ExtensionManifest manifest, IContributionHandler handler)
+        public DefaultSuite(ExtensionManifest manifest, IContributionHandler handler, ManifestReadOptions? validation = null)
         {
             _manifest = manifest;
             _handler = handler;
+            _validation = validation;
         }
 
         protected override ExtensionManifest Manifest => _manifest;
+
+        protected override ManifestReadOptions ManifestValidation => _validation ?? base.ManifestValidation;
 
         protected override IContributionHandler CreateHandler() => _handler;
     }

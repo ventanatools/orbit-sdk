@@ -51,9 +51,12 @@ await host.StopSessionAsync(session);
 
 ## Check the contract
 
-`ExtensionConformance.AssertAuthoringContractAsync(manifest, handler)` runs the
-contract checks with their defaults. Derive from `ContributionContractSuite` to
-change them. By default the checks start and stop sessions only, for every
+`ExtensionConformance.AssertAuthoringContractFileAsync("extension.json", handler)`
+reads and checks the manifest file, then runs the contract checks with their
+defaults; an invalid file fails with its own errors, each with its line and
+column (`extension.json(16,23): code path: message`).
+`AssertAuthoringContractAsync(manifest, handler)` does the same for a manifest
+object. Derive from `ContributionContractSuite` to change them. By default the checks start and stop sessions only, for every
 contribution and setting combination, so your first `dotnet test` never runs your
 real actions: they check that each session is accepted, that a widget publishes a
 first face, that nothing is published after a session stops, that handlers end

@@ -28,13 +28,20 @@ public static class TestSessions
     /// <param name="contributionId">The contribution id.</param>
     /// <param name="settings">Setting values; null or missing keys take the defaults.</param>
     /// <param name="time">The session's clock (<see cref="Session.Time"/>); null for <see cref="TimeProvider.System"/>.</param>
+    /// <param name="uiLanguage">The host UI language (<see cref="Session.UiLanguage"/>), a BCP 47 tag.</param>
     /// <returns>The recording session; dispose it.</returns>
-    /// <exception cref="ArgumentException">The contribution is not in the manifest, or the settings do not match it.</exception>
+    /// <exception cref="ArgumentException">The contribution is not in the manifest, the settings do not match it, or the language is not a tag.</exception>
     public static RecordingSession FromManifest(ExtensionManifest manifest, string contributionId,
-        IReadOnlyDictionary<string, string>? settings = null, TimeProvider? time = null)
+        IReadOnlyDictionary<string, string>? settings = null, TimeProvider? time = null, string uiLanguage = "en-US")
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(contributionId);
+        ArgumentNullException.ThrowIfNull(uiLanguage);
+        if (!TextRules.IsLanguageTag(uiLanguage))
+        {
+            throw new ArgumentException("The language is not a BCP 47 tag.", nameof(uiLanguage));
+        }
+
         var contribution = (manifest.Contributions ?? []).FirstOrDefault(item => string.Equals(item?.Id, contributionId, StringComparison.Ordinal))
             ?? throw new ArgumentException("The contribution is not in the manifest.", nameof(contributionId));
         var complete = TestSettings.Complete(contribution, settings);
@@ -43,7 +50,7 @@ public static class TestSessions
             throw new ArgumentException("The settings do not match the manifest (" + code.Value + ").", nameof(settings));
         }
 
-        return new RecordingSession(contributionId, contribution.Provides, complete, "en-US", time ?? TimeProvider.System);
+        return new RecordingSession(contributionId, contribution.Provides, complete, uiLanguage, time ?? TimeProvider.System);
     }
 
     /// <summary>A session with an explicit <see cref="Session.Provides"/> and settings, without a manifest.</summary>

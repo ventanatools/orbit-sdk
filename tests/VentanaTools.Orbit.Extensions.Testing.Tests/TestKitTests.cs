@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Runtime.Versioning;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using VentanaTools.Orbit.Extensions.Wire;
@@ -25,6 +26,9 @@ public sealed class RecordingSessionTests
         Assert.Throws<ArgumentException>(() => TestSessions.FromManifest(manifest, Manifests.Widget, new Dictionary<string, string> { ["size"] = "huge" }));
         Assert.Throws<ArgumentException>(() => TestSessions.FromManifest(manifest, Manifests.Widget, new Dictionary<string, string> { ["color"] = "red" }));
         Assert.Throws<ArgumentException>(() => TestSessions.FromManifest(manifest, "example.kit/missing"));
+        using var french = TestSessions.FromManifest(manifest, Manifests.Widget, uiLanguage: "fr-FR");
+        Assert.Equal("fr-FR", french.Session.UiCulture.Name);
+        Assert.Throws<ArgumentException>(() => TestSessions.FromManifest(manifest, Manifests.Widget, uiLanguage: "not a tag"));
         using var created = TestSessions.Create("example.any/thing", Provides.Invoke, uiLanguage: "de-DE");
         Assert.Equal(Provides.Invoke, created.Session.Provides);
         Assert.Empty(created.Session.Settings);
@@ -508,7 +512,8 @@ public sealed class ContractSuiteTests
             Assert.Empty(ExtensionConformance.CollectManifestFileFailures(path));
             ExtensionConformance.AssertManifestFileValid(path);
             File.WriteAllText(path, "{ \"schemaVersion\": 3, }");
-            Assert.Contains(ExtensionConformance.CollectManifestFileFailures(path), failure => failure.StartsWith("json.syntax", StringComparison.Ordinal));
+            Assert.Contains(ExtensionConformance.CollectManifestFileFailures(path), failure => failure.StartsWith(path + "(1,", StringComparison.Ordinal)
+                && failure.Contains("): json.syntax ", StringComparison.Ordinal));
             Assert.Throws<ConformanceException>(() => ExtensionConformance.AssertManifestFileValid(path));
         }
         finally
@@ -517,6 +522,32 @@ public sealed class ContractSuiteTests
         }
 
         Assert.Throws<FileNotFoundException>(() => ExtensionConformance.CollectManifestFileFailures(path));
+    }
+
+    [Fact]
+    public async Task TheFileEntryPointReportsAnInvalidManifestWithItsPositionsAndNothingElse()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "ventana-kit-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            File.WriteAllBytes(path, ManifestWriter.Write(Manifests.Kit()));
+            Assert.Empty(await ExtensionConformance.CollectContractFileFailuresAsync(path, new GoodWidget()));
+            await ExtensionConformance.AssertAuthoringContractFileAsync(path, new GoodWidget());
+
+            // A contribution id outside the namespace: the manifest's own error, at its position, and no secondary failure.
+            File.WriteAllText(path, Encoding.UTF8.GetString(ManifestWriter.Write(Manifests.Kit())).Replace("example.kit/action", "other.root/action", StringComparison.Ordinal));
+            var failures = await ExtensionConformance.CollectContractFileFailuresAsync(path, new GoodWidget());
+            var failure = Assert.Single(failures);
+            Assert.Matches("^" + Regex.Escape(path) + @"\(\d+,\d+\): id\.outside-namespace /contributions/1/id: ", failure);
+            var thrown = await Assert.ThrowsAsync<ConformanceException>(() => ExtensionConformance.AssertAuthoringContractFileAsync(path, new GoodWidget()));
+            Assert.Equal(failures, thrown.Failures);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+
+        await Assert.ThrowsAsync<FileNotFoundException>(() => ExtensionConformance.CollectContractFileFailuresAsync(path, new GoodWidget()));
     }
 
     [Fact]
