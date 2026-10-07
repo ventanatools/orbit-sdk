@@ -30,8 +30,12 @@ does. People should install only extensions they trust, and hosts say so in
 install review and consent.
 
 - **The pipe.** A host creates each registration's named pipe for the current
-  user only, as the first and only instance of its name. Before it writes a
-  byte, the .NET SDK checks that the current user owns the pipe, that the server
+  user only, with a Medium mandatory label that refuses lower-integrity
+  processes every kind of open, rejecting remote clients, as the first and only
+  instance of its name, so a sandboxed process of the same user can neither use
+  that one instance nor hold it to keep the companion out. `orbit-ext simulate`
+  creates its pipe the same way. Before it writes a byte, the .NET SDK checks
+  that the current user owns the pipe, that the server
   process runs as the current user at an integrity level no lower than its own,
   and that the pipe's mandatory label does not show a lower-integrity creator.
   The label check still refuses a lower-integrity process that has denied

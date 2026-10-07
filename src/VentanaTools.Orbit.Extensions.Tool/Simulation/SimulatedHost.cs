@@ -4,7 +4,6 @@
 using System.Globalization;
 using System.IO.Pipes;
 using System.Runtime.Versioning;
-using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
 using VentanaTools.Orbit.Extensions.Wire;
@@ -116,8 +115,9 @@ internal static class Tokens
 
 /// <summary>
 /// A pipe-level fake host for <c>simulate</c> (contract §11.1, §11.2): it creates its pipe exactly
-/// as a host must (§7.1: access for the current user only, the first and only instance of its
-/// name, one connection at a time, kept across reconnects), performs the host's half of the
+/// as a host must (§7.1: access for the current user only, a Medium no-read-up label, rejecting
+/// remote clients, the first and only instance of its name, one connection at a time, kept across
+/// reconnects), performs the host's half of the
 /// handshake with the temporary registration, validates every frame with the author package's
 /// <see cref="MessageReader"/>, answers and sends pings, enforces the hard rate budget, and
 /// records sessions, faces and results for the prompt, the script runner and the transcript.
@@ -460,28 +460,38 @@ internal sealed class SimulatedHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// The host's pipe options (contract §7.1): asynchronous, the first instance of its name, one
-    /// instance, and an access-control list with exactly one entry, for the current user's SID.
+    /// The host's pipe (contract §7.1): asynchronous, byte mode, the first and only instance of its
+    /// name, rejecting remote clients, and the security descriptor <see cref="PipeDescriptor"/>, set in
+    /// the call that creates it.
     /// </summary>
+    /// <exception cref="UnauthorizedAccessException">The name is in use or access was denied.</exception>
+    /// <exception cref="IOException">The pipe could not be created for another reason.</exception>
     public static NamedPipeServerStream CreatePipe(string pipeName)
     {
         using var identity = WindowsIdentity.GetCurrent();
         var user = identity.User ?? throw new UnauthorizedAccessException("The current user has no SID.");
-        var options = PipeOptions.Asynchronous | PipeOptions.FirstPipeInstance;
-        if (identity.Owner == user)
+        var handle = LabelledObjects.CreateServerPipe(pipeName, PipeDescriptor(user));
+        try
         {
-            // The token's owner is the user, so CurrentUserOnly builds exactly the one-entry list.
-            return new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, options | PipeOptions.CurrentUserOnly,
-                4_096, 4_096);
+            return new NamedPipeServerStream(PipeDirection.InOut, isAsync: true, isConnected: false, handle);
         }
-
-        // An elevated token's default owner is Administrators, which CurrentUserOnly would grant; list the user instead.
-        var security = new PipeSecurity();
-        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-        security.AddAccessRule(new PipeAccessRule(user, PipeAccessRights.FullControl, AccessControlType.Allow));
-        security.SetOwner(user);
-        return NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, options, 4_096, 4_096, security);
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
     }
+
+    /// <summary>
+    /// The pipe's security descriptor: the current user as owner and as the only entry of a protected
+    /// access-control list (the token's user, which an elevated token's default owner, Administrators,
+    /// is not), and the Medium mandatory label with no-read-up, no-write-up and no-execute-up that the
+    /// pairing file carries. Under the default label, which refuses a lower-integrity process only
+    /// writes, a sandboxed process of the same user could open the one instance read-only and hold it
+    /// through each handshake timeout, keeping the companion out.
+    /// </summary>
+    internal static string PipeDescriptor(SecurityIdentifier user) =>
+        "O:" + user.Value + "D:P(A;;FA;;;" + user.Value + ")S:(ML;;NRNWNX;;;ME)";
 
     private async Task AcceptLoopAsync()
     {

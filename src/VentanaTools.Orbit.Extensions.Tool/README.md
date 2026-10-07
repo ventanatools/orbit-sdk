@@ -167,8 +167,10 @@ Steps: `start` (with `settings` and `as`), `invoke` (with `expect`, `failure`,
 `as` and `wait`), `cancel`, `stop`, `expectFace` (with `within`, `line1`,
 `line2` and `state`), `disconnect` and `wait`. A failed expectation exits 1.
 The simulated host creates its pipe as Orbit does: for the current user only,
-as the first and only instance of its name. Its temporary pairing file is
-readable only by you and is deleted when the simulation ends.
+with a Medium mandatory label that keeps lower-integrity (sandboxed) processes
+out, rejecting remote clients, as the first and only instance of its name. Its
+temporary pairing file is readable only by you and is deleted when the
+simulation ends.
 
 ## Licence
 
