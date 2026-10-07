@@ -221,11 +221,14 @@ public sealed class TemplateTests(TemplateFeed feed, ITestOutputHelper output) :
             .Select(source => (string?)source.Attribute("key"));
         Assert.Equal(["extension-packages"], mapped);
 
-        // While the per-user folder does not exist, restore fails instead of looking elsewhere.
+        // While the per-user folder does not exist, restore fails instead of looking elsewhere. An empty package
+        // folder keeps the packages earlier tests restored from answering instead of the sources.
         var localAppData = Path.Combine(feed.Work, "no-source-local-app-data");
+        var packages = Path.Combine(feed.Work, "no-source-packages");
         Directory.CreateDirectory(localAppData);
-        var restore = feed.Run("dotnet", ["restore", "-nologo"], folder, expectedExitCode: 1,
-            environment: new Dictionary<string, string> { ["LOCALAPPDATA"] = localAppData });
+        Directory.CreateDirectory(packages);
+        var restore = feed.Run("dotnet", ["restore", Path.Combine("src", "NoSource", "NoSource.csproj"), "-nologo"], folder, expectedExitCode: 1,
+            environment: new Dictionary<string, string> { ["LOCALAPPDATA"] = localAppData, ["NUGET_PACKAGES"] = packages });
         Assert.Contains(Path.Combine(localAppData, "VentanaTools", "packages", feed.Version), restore, StringComparison.OrdinalIgnoreCase);
     }
 
