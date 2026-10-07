@@ -232,10 +232,32 @@ internal sealed class HostPeer
     public static Func<Stream, CancellationToken, ValueTask<bool>> Accepting(Channel<Stream> connections) =>
         (stream, _) => ValueTask.FromResult(connections.Writer.TryWrite(stream));
 
-    public static async Task<HostPeer> AcceptAsync(Channel<Stream> connections, byte[] secret) =>
-        new(await connections.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10)), secret);
+    public static async Task<HostPeer> AcceptAsync(Channel<Stream> connections, byte[] secret, CancellationToken cancellationToken = default) =>
+        new(await connections.Reader.ReadAsync(cancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(10), cancellationToken), secret);
 
     public async Task HandshakeAsync()
+    {
+        var host = await ChallengeAsync();
+        await SendAsync(new ReadyMessage
+        {
+            Version = ProtocolVersions.Max,
+            Capabilities = [],
+            Host = host,
+            UiLanguage = "en-US",
+            Limits = HostLimits.Protocol3Defaults,
+        });
+    }
+
+    /// <summary>Authenticates the companion, then refuses it with <paramref name="code"/> in place of <c>ready</c>, as a host does.</summary>
+    public async Task RefuseAsync(ReasonCode code)
+    {
+        await ChallengeAsync();
+        await SendAsync(new ErrorMessage { Code = code, Message = "Refused." });
+        await WaitForCloseAsync();
+    }
+
+    /// <summary>Reads the hello, sends a challenge with the host's proof and verifies the companion's; returns the host's identity.</summary>
+    private async Task<HostIdentity> ChallengeAsync()
     {
         var hello = Assert.IsType<HelloMessage>(await ReadAsync(ConnectionPhase.Handshake));
         var host = new HostIdentity { Id = Manifests.Host, Version = "1.0.0" };
@@ -264,14 +286,7 @@ internal sealed class HostPeer
         });
         var authenticate = Assert.IsType<AuthenticateMessage>(await ReadAsync(ConnectionPhase.Handshake));
         Assert.True(Handshake.VerifyProof(_secret, authenticate.Proof, transcript, ProofRole.Client));
-        await SendAsync(new ReadyMessage
-        {
-            Version = transcript.Version,
-            Capabilities = [],
-            Host = host,
-            UiLanguage = "en-US",
-            Limits = HostLimits.Protocol3Defaults,
-        });
+        return host;
     }
 
     public Task SendAsync(WireMessage message) => Framing.WriteFrameAsync(_stream, MessageWriter.Write(message), CancellationToken.None).AsTask();
@@ -322,6 +337,28 @@ internal sealed class HostPeer
 /// <summary>A Generic Host with the add-on and a capturing logger, as an application would build it.</summary>
 internal static class TestHosts
 {
+    /// <summary>Client options with retries a few milliseconds apart, so a test sees many of them.</summary>
+    public static CompanionClientOptions FastRetries { get; } = new()
+    {
+        InitialRetryDelay = TimeSpan.FromMilliseconds(10),
+        MaxRetryDelay = TimeSpan.FromMilliseconds(20),
+        HostAbsentMaxRetryDelay = TimeSpan.FromMilliseconds(10),
+    };
+
+    /// <summary>A host that runs <see cref="ClockWidget"/> on the files of <paramref name="files"/>, with the options <paramref name="configure"/> sets.</summary>
+    public static IHost Companion(CapturingLoggerProvider logs, CompanionFiles files, Action<CompanionServiceOptions> configure) =>
+        Build(logs, services =>
+        {
+            services.AddSingleton(new Clock());
+            services.AddCompanion<ClockWidget>(options =>
+            {
+                options.Arguments = [];
+                options.ManifestPath = files.ManifestPath;
+                options.PairingPath = files.PairingPath;
+                configure(options);
+            });
+        });
+
     public static IHost Build(CapturingLoggerProvider logs, Action<IServiceCollection> services)
     {
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { Args = [], DisableDefaults = true });

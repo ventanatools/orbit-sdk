@@ -38,6 +38,13 @@ internal sealed class RetryPolicy
         _random = random ?? Random.Shared.NextDouble;
     }
 
+    /// <summary>
+    /// Whether <paramref name="code"/> says the host is absent: it is not running, or the extension is
+    /// turned off. The client then probes every few seconds at most
+    /// (<see cref="CompanionClientOptions.HostAbsentMaxRetryDelay"/>) and connects once the host is back.
+    /// </summary>
+    internal static bool IsHostAbsent(ReasonCode code) => code == ReasonCode.HostNotRunning || code == ReasonCode.HostTurnedOff;
+
     /// <summary>A connection stayed up for <see cref="CompanionClientOptions.StableConnection"/>: the backoff starts again.</summary>
     public void Reset()
     {
@@ -71,7 +78,7 @@ internal sealed class RetryPolicy
             return Wait(_options.MaxRetryDelay);
         }
 
-        if (code == ReasonCode.HostNotRunning || code == ReasonCode.HostTurnedOff)
+        if (IsHostAbsent(code))
         {
             return Wait(Min(Normal(), _options.HostAbsentMaxRetryDelay));
         }

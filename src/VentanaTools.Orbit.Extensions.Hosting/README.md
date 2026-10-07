@@ -120,7 +120,7 @@ Entries go to the category `VentanaTools.Orbit.Extensions.Hosting.CompanionServi
 |---|---|---|
 | 1 `Connecting` | Debug | A connection attempt starts. |
 | 2 `Connected` | Information | The companion is connected, with the host's id, version and protocol. |
-| 3 `Waiting` | Warning | The client waits to retry after a reason code, with the code's fix and help link. |
+| 3 `Waiting` | Information or Warning | The client waits to retry after a reason code, with the code's fix and help link: Information when the reason resolves itself, Warning when it needs someone (below). |
 | 4 `Retrying` | Information | The connection closed without a reason; the client retries. |
 | 5 `PairingUnusable` | Warning | No valid connection info yet (`pairing.missing` and the other `pairing.*` codes), with the fix. |
 | 6 `PairingDiagnostic` | Warning | The pairing file has an error that is not a reason code. |
@@ -136,6 +136,22 @@ Entries go to the category `VentanaTools.Orbit.Extensions.Hosting.CompanionServi
 | 19 `Usage` | Error | `--manifest` or `--pairing` has no value. |
 | 20 `Unexpected` | Error | The companion failed in a way the contract doesn't describe. |
 | 21 `Exited` | Error | The companion stopped by itself, with its exit code. |
+
+A wait is a Warning only when its reason needs someone: missing or out-of-date
+connection info, revoked access, another program, differing manifests, a host
+that paused the companion or a peer that broke the protocol, and any reason code
+the SDK does not know. A reason that resolves itself is Information: the host is
+not running or is closing, the extension is turned off, or the host reloaded the
+manifest. These are the codes whose catalog fix is "None", and those for which
+the client treats the host as absent; the companion connects by itself once the
+host is back. So while Orbit is closed, nothing reaches the Windows event log,
+which `Host.CreateApplicationBuilder` gives Warnings and above.
+
+The client retries every few seconds while it waits. A retry that ends as the
+one before it did (the same state and reason code) is not logged again, and
+neither are the connection attempt and the host's message that come with it,
+until the status changes: when the companion connects, or the reason changes.
+The `StatusChanged` callback still receives every status.
 
 Entries follow the SDK's logging rule: states, reason codes, fixes and help
 links, and never connection info, file paths (which name the person's profile),

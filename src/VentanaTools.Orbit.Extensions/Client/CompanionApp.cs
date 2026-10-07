@@ -651,6 +651,18 @@ internal sealed class AppRunner
     internal static string? HelpLinkFor(ReasonCode code, string? hostId) =>
         hostId is not null && TextRules.IsHostId(hostId) && code.Info.HelpUri(hostId) is { } help ? help.AbsoluteUri : null;
 
+    /// <summary>
+    /// Whether a status with <paramref name="code"/> needs nothing from anyone, because the client
+    /// connects by itself once the host is back: a code whose catalog fix is "None" (the host is
+    /// closing, the extension was turned off, the host reloaded the manifest), or one for which the
+    /// client treats the host as absent and keeps probing (<see cref="RetryPolicy.IsHostAbsent"/>).
+    /// Every other code needs a person: the connection info is missing or out of date, access was
+    /// revoked, another program connected, the manifests differ, or a peer broke the protocol; so does
+    /// a code this library's catalog does not know.
+    /// </summary>
+    internal static bool ResolvesItself(ReasonCode code) =>
+        code.IsKnown && (RetryPolicy.IsHostAbsent(code) || (code.Info.Fix?.StartsWith("None", StringComparison.Ordinal) ?? false));
+
     private static void AppendFix(StringBuilder line, ReasonCode code, string? hostId, string? hostName)
     {
         if (FixFor(code, hostName) is { } fix)

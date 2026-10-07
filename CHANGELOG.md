@@ -138,7 +138,9 @@ protocol-2 source preview, `Orbit.Extensions.Protocol` and `Orbit.Extensions.Sdk
 - `VentanaTools.Orbit.Extensions.Hosting`, the Generic Host add-on:
   `services.AddCompanion<THandler>()` (or a handler factory) runs a companion as
   a hosted service with `CompanionApp`'s discovery, status and exit codes, logs
-  each status through `ILogger` with a fixed event id, and stops with the host.
+  each status through `ILogger` with a fixed event id (a wait is a Warning only
+  when its reason needs a person, and a repeated status is logged once), and
+  stops with the host.
   The tool carries it into the feed `orbit-ext new` prepares.
 - `VentanaTools.Orbit.Extensions.Tool`, the `orbit-ext` command: `new`,
   `validate`, `pack`, `verify`, `test`, `simulate`, `run`, `link` and `schema`,

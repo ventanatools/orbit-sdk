@@ -220,6 +220,25 @@ public sealed class CompanionAppTests : IDisposable
         Assert.Equal("ventana: waiting (future.reason)", AppRunner.StatusLine(ConnectionState.Waiting, unknown, host.Id, host.DisplayName));
     }
 
+    [Fact]
+    public void TheReasonsThatResolveThemselvesComeFromTheCatalogsFixAndTheHostAbsentCodes()
+    {
+        // The Generic Host add-on logs these at Information and every other reason at Warning (contract §9.5): they come
+        // from the catalog's "None" fixes and the codes the client treats as an absent host, never from a list of its own.
+        string[] expected =
+        [
+            "face.session-unknown", "host.listener-faulted", "host.not-running", "host.reloaded", "host.shutting-down", "host.turned-off",
+            "invoke.request-unknown", "protocol.pong-unknown", "protocol.type-unknown",
+        ];
+        Assert.Equal(expected, ReasonCodeCatalog.All.Where(entry => AppRunner.ResolvesItself(ReasonCode.TryParse(entry.Code, out var code) ? code : default))
+            .Select(entry => entry.Code).Order(StringComparer.Ordinal));
+        Assert.All(ReasonCodeCatalog.All.Where(entry => entry.Code.StartsWith("pairing.", StringComparison.Ordinal)
+                || entry.Code is "auth.proof-invalid" or "auth.identity-changed" or "host.access-revoked" or "manifest.mismatch" or "host.paused"),
+            entry => Assert.False(AppRunner.ResolvesItself(ReasonCode.TryParse(entry.Code, out var code) ? code : default), entry.Code));
+        Assert.True(ReasonCode.TryParse("future.reason", out var unknown));
+        Assert.False(AppRunner.ResolvesItself(unknown));
+    }
+
     internal static ExtensionManifest WithExtraContribution(ExtensionManifest manifest) => new()
     {
         Id = manifest.Id,

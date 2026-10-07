@@ -254,15 +254,5 @@ public sealed class LifecycleTests
     }
 
     private static IHost Build(CapturingLoggerProvider logs, CompanionFiles files, Action<CompanionServiceOptions> configure) =>
-        TestHosts.Build(logs, services =>
-        {
-            services.AddSingleton(new Clock());
-            services.AddCompanion<ClockWidget>(options =>
-            {
-                options.Arguments = [];
-                options.ManifestPath = files.ManifestPath;
-                options.PairingPath = files.PairingPath;
-                configure(options);
-            });
-        });
+        TestHosts.Companion(logs, files, configure);
 }

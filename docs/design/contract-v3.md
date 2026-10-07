@@ -3249,8 +3249,8 @@ optional parameters, so adding an overload stays binary compatible.
   prints through `ILogger`, under the category
   `VentanaTools.Orbit.Extensions.Hosting.CompanionService`, with a fixed event id
   and level: 1 `Connecting` (Debug), 2 `Connected` (Information, with the host's
-  id, version and protocol), 3 `Waiting` (Warning, with the reason code, the retry
-  delay, the fix and the help link), 4 `Retrying` (Information), 5
+  id, version and protocol), 3 `Waiting` (Information or Warning, below, with the
+  reason code, the retry delay, the fix and the help link), 4 `Retrying` (Information), 5
   `PairingUnusable` (Warning), 6 `PairingDiagnostic` (Warning), 7 `Stopped`
   (Warning), 8 `StoppedQuietly` (Information), 10 and 11 `ManifestInvalid` (Error,
   with each error's code, line, column and fixed message), 12 `ManifestUnreadable`
@@ -3262,6 +3262,20 @@ optional parameters, so adding an overload stays binary compatible.
   those of the status lines (§9.2). Entries never contain pairing contents, file
   paths (which name the person's profile), pipe names, setting values or face
   text; a manifest diagnostic is logged without its file and pointer.
+- **Levels and repeats.** A `Waiting` entry is Information when its reason
+  resolves itself: the catalog's fix for the code is "None" (§8.3:
+  `host.shutting-down`, `host.turned-off`, `host.reloaded`), or the client treats
+  the host as absent (`host.not-running`, `host.turned-off`, §9.2), so the
+  companion connects by itself once the host is back. Every other reason needs a
+  person and is a Warning: missing or out-of-date connection info, revoked
+  access, another program, differing manifests, a paused or misbehaving peer,
+  and a code the SDK does not know. The default host
+  (`Host.CreateApplicationBuilder`) writes Warnings and above to the Windows event
+  log, so a companion whose host is closed adds nothing there. A status that
+  repeats the one logged before it (the same state and reason code, the retry
+  delay and attempt aside) is not logged again, and neither are the `Connecting`
+  attempt and the host's text that come with it, until the status changes; the
+  `StatusChanged` callback still receives every status.
 
 ---
 

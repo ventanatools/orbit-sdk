@@ -11,9 +11,19 @@ namespace VentanaTools.Orbit.Extensions.Hosting;
 /// person's profile, are never logged: neither the files <see cref="CompanionApp"/> watches nor the
 /// file of a diagnostic.
 /// </summary>
+/// <remarks>
+/// A wait is a Warning only when its reason needs a person (<see cref="AppRunner.ResolvesItself"/>):
+/// the default host sends Warnings to the Windows event log, and a companion whose host is closed
+/// retries every few seconds. A retry that ends as the previous one did (the same state and reason)
+/// is not logged again, nor is the connection attempt between such retries, until the status changes.
+/// </remarks>
 internal sealed class LoggerAppOutput : ICompanionAppOutput
 {
     private readonly ILogger _logger;
+    private readonly Lock _gate = new();
+    private bool _waiting;
+    private ReasonCode? _waitingFor;
+    private bool _repeating;
 
     public LoggerAppOutput(ILogger logger) => _logger = logger;
 
@@ -68,6 +78,11 @@ internal sealed class LoggerAppOutput : ICompanionAppOutput
 
     public void Status(StatusChangedEventArgs status, HostInfo? host)
     {
+        if (Repeats(status))
+        {
+            return;
+        }
+
         var seconds = status.RetryIn?.TotalSeconds ?? 0;
         switch (status.State)
         {
@@ -78,8 +93,11 @@ internal sealed class LoggerAppOutput : ICompanionAppOutput
                 CompanionLog.Connected(_logger, status.Host?.Id ?? string.Empty, status.Host?.Version ?? string.Empty,
                     status.ProtocolVersion ?? 0, null);
                 break;
-            case ConnectionState.Waiting when status.Reason is { } code:
+            case ConnectionState.Waiting when status.Reason is { } code && AppRunner.ResolvesItself(code):
                 CompanionLog.Waiting(_logger, code.Value, seconds, Fix(code, host), Help(code, host), null);
+                break;
+            case ConnectionState.Waiting when status.Reason is { } code:
+                CompanionLog.WaitingOnSomeone(_logger, code.Value, seconds, Fix(code, host), Help(code, host), null);
                 break;
             case ConnectionState.Waiting:
                 CompanionLog.Retrying(_logger, seconds, null);
@@ -93,7 +111,19 @@ internal sealed class LoggerAppOutput : ICompanionAppOutput
         }
     }
 
-    public void HostMessage(string text) => CompanionLog.HostMessage(_logger, text, null);
+    public void HostMessage(string text)
+    {
+        // The host's text belongs to the status just reported; a repeat of it is not logged either.
+        lock (_gate)
+        {
+            if (_repeating)
+            {
+                return;
+            }
+        }
+
+        CompanionLog.HostMessage(_logger, text, null);
+    }
 
     public void Fault(HandlerFaultedEventArgs fault, HostInfo? host)
     {
@@ -103,6 +133,36 @@ internal sealed class LoggerAppOutput : ICompanionAppOutput
     }
 
     public void CallbackFaulted(Exception error) => CompanionLog.CallbackFaulted(_logger, error);
+
+    /// <summary>
+    /// Whether <paramref name="status"/> repeats what is already logged: a wait with the same reason
+    /// as the wait before it (with or without a reason), or the connection attempt that follows such a
+    /// repeat. Any other status ends the repetition.
+    /// </summary>
+    private bool Repeats(StatusChangedEventArgs status)
+    {
+        lock (_gate)
+        {
+            switch (status.State)
+            {
+                case ConnectionState.Waiting when _waiting && _waitingFor == status.Reason:
+                    _repeating = true;
+                    return true;
+                case ConnectionState.Waiting:
+                    _waiting = true;
+                    _waitingFor = status.Reason;
+                    _repeating = false;
+                    return false;
+                case ConnectionState.Connecting:
+                    return _repeating;
+                default:
+                    _waiting = false;
+                    _waitingFor = null;
+                    _repeating = false;
+                    return false;
+            }
+        }
+    }
 
     private static string Fix(ReasonCode code, HostInfo? host) => AppRunner.FixFor(code, host?.DisplayName) ?? string.Empty;
 
@@ -118,7 +178,12 @@ internal static class CompanionLog
     public static readonly Action<ILogger, string, string, int, Exception?> Connected = LoggerMessage.Define<string, string, int>(
         LogLevel.Information, new EventId(2, nameof(Connected)), "Connected to {HostId} {HostVersion} with protocol {ProtocolVersion}.");
 
+    /// <summary>A wait whose reason needs nothing from anyone, such as a host that is not running.</summary>
     public static readonly Action<ILogger, string, double, string, string, Exception?> Waiting = LoggerMessage.Define<string, double, string, string>(
+        LogLevel.Information, new EventId(3, nameof(Waiting)), "Waiting ({ReasonCode}), retrying in {RetrySeconds:0.0} s. {Fix} {HelpLink}");
+
+    /// <summary>A wait whose reason needs a person, such as out-of-date connection info or differing manifests.</summary>
+    public static readonly Action<ILogger, string, double, string, string, Exception?> WaitingOnSomeone = LoggerMessage.Define<string, double, string, string>(
         LogLevel.Warning, new EventId(3, nameof(Waiting)), "Waiting ({ReasonCode}), retrying in {RetrySeconds:0.0} s. {Fix} {HelpLink}");
 
     public static readonly Action<ILogger, double, Exception?> Retrying = LoggerMessage.Define<double>(
