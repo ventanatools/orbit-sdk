@@ -30,13 +30,19 @@ does. People should install only extensions they trust, and hosts say so in
 install review and consent.
 
 - **The pipe.** A host creates each registration's named pipe for the current
-  user only, as the first and only instance of its name. The .NET SDK refuses to
-  write to a pipe the current user does not own, or whose server process runs as
-  another user or at a lower integrity level than its own, and requests
-  identification-level impersonation, so a server can learn who the client is
-  but cannot act as it. Together this protects against other users, web content
-  and lower-integrity or sandboxed processes. Nothing protects against a program
-  that already runs as the same user at the same integrity level
+  user only, as the first and only instance of its name. Before it writes a
+  byte, the .NET SDK checks that the current user owns the pipe, that the server
+  process runs as the current user at an integrity level no lower than its own,
+  and that the pipe's mandatory label does not show a lower-integrity creator.
+  The label check still refuses a lower-integrity process that has denied
+  everyone access to itself so that the process check cannot open it: Windows
+  labels the pipes such a process creates, and it can neither raise nor remove
+  that label. The SDK also requests identification-level impersonation, so a
+  server can learn who the client is but cannot act as it. Together this
+  protects .NET companions against other users, web content and lower-integrity
+  or sandboxed processes, even when a pairing file lacks the label described
+  below. Nothing protects against a program that already runs as the same user
+  at the same integrity level
   ([contract §7.1](docs/design/contract-v3.md#71-transport)).
 - **The handshake.** The secret never crosses the pipe. Both sides prove
   knowledge of it with HMAC-SHA256 over a transcript that binds both offers, the
@@ -59,11 +65,17 @@ install review and consent.
   Whether to ship an optional native check is decided before the Node SDK is
   published ([contract §10](docs/design/contract-v3.md#10-node-sdk)).
 - **Pairing files are credentials.** A host writes one only when the person asks,
-  by default to `%USERPROFILE%\.ventana\pairings\<host-id>\`, readable only by
-  that person and labelled so that lower-integrity processes, such as sandboxed
-  browser renderers, cannot read it
-  ([contract §6.2](docs/design/contract-v3.md#62-encoding)). The SDKs never log or print the secret, and `orbit-ext pack`
-  refuses to pack a pairing file. Never commit or share one.
+  by default to `%USERPROFILE%\.ventana\pairings\<host-id>\`. The contract
+  requires the host to make it readable only by that person and to give it, and
+  every folder it creates for it, a Medium mandatory label with no-read-up, so
+  that lower-integrity processes, such as sandboxed browser renderers, cannot
+  read it ([contract §6.2](docs/design/contract-v3.md#62-encoding));
+  `orbit-ext simulate` does this for its temporary pairing file. An access-control list
+  alone does not keep out a Low-integrity process of the same user: it can read
+  a pairing file that lacks the label. The .NET SDK still refuses such a process
+  as a server, but the Node SDK cannot (see above). The SDKs never log or print
+  the secret, and `orbit-ext pack` refuses to pack a pairing file. Never commit
+  or share one.
 - **Packages are inert.** Installing a package never runs anything. Readers
   verify the whole archive (sizes, entry names, ZIP structure, CRCs, the SHA-256
   inventory and the manifest) before a host writes a file, and hosts carry the

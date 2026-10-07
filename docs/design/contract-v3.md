@@ -108,7 +108,7 @@ A requirement addressed to "receivers" applies to hosts and companions alike.
 | **Diagnostic** | A finding about a static file: manifest, strings file, package or pack configuration (§4). |
 | **Reason code** | A stable code that explains a runtime event: a refused connection, a dropped frame, a refused session (§8). |
 | **Developer mode** | A host setting that unlocks author tooling. It never relaxes consent, authentication, limits or text cleaning. |
-| **Verified server** | A pipe server a companion has checked, either because it proved knowledge of the secret in `challenge` (§7.3.2) or because the operating system confirmed that it runs as the current user at an integrity level no lower than the companion's (§7.1). Only a verified server can stop an SDK (§9.2). |
+| **Verified server** | A pipe server a companion has checked, either because it proved knowledge of the secret in `challenge` (§7.3.2) or because the operating system confirmed that it runs as the current user at an integrity level no lower than the companion's and that its pipe was not created at a lower level (§7.1). Only a verified server can stop an SDK (§9.2). |
 
 ---
 
@@ -1165,7 +1165,8 @@ integrity with no-read-up, no-write-up and no-execute-up (SDDL
 created. Windows treats a file without a label as Medium with no-write-up only,
 so a Low-integrity process of the same user can read it whatever its
 access-control list says, learn the secret, and pose as the host to a client
-that cannot check the server process (§7.1).
+that checks neither the server process nor the pipe's label (§7.1), such as the
+Node SDK.
 
 ### 6.3 Members
 
@@ -1273,21 +1274,39 @@ package and synced folder:
 - One registration has one pipe, and the pipe accepts one connection at a time.
 - **Clients verify the server before writing.** Before writing the first byte, a
   client MUST verify that the pipe is owned by the current user (in .NET,
-  `PipeOptions.CurrentUserOnly`). It SHOULD also check the server process: get
-  its id (`GetNamedPipeServerProcessId`), open it with
-  `PROCESS_QUERY_LIMITED_INFORMATION`, open its token with `TOKEN_QUERY`, and
-  confirm that the token's user is the current user and its integrity level is
-  no lower than the client's. A server that passes both checks is a **verified
-  server** before any message is exchanged (§1.4). A client MUST NOT write to a
-  server that fails the owner check, nor to one whose token it read and found to
-  belong to another user or to run at a lower integrity level than the client;
-  it closes the pipe and reports `auth.server-unverified`. Such a server's
-  challenge proof proves nothing, because a lower-integrity process of the same
-  user may have read the pairing file (§6.2). A client that runs at a higher
-  integrity level than its host, for example a companion started as
-  administrator while the host is not, is refused the same way. A server whose
-  process or token cannot be opened or read is unverified until its challenge
-  proof verifies.
+  `PipeOptions.CurrentUserOnly`). It SHOULD also check the server process and
+  the pipe's label, and a client that checks the process MUST also check the
+  label:
+  - *Process:* get its id (`GetNamedPipeServerProcessId`), open it with
+    `PROCESS_QUERY_LIMITED_INFORMATION`, open its token with `TOKEN_QUERY`, and
+    confirm that the token's user is the current user and its integrity level
+    is no lower than the client's.
+  - *Label:* read the pipe's mandatory label through the client's own handle
+    (`GetSecurityInfo` with `LABEL_SECURITY_INFORMATION`). The lowest label
+    that applies to the pipe itself counts, and a pipe without one counts as
+    Medium. Windows labels an object with its creator's integrity level when
+    that level is below Medium, and the creator can neither raise nor remove
+    that label. The label therefore still shows a lower-integrity creator when
+    that process has denied everyone access to itself, which any process can
+    do without a privilege, so that the process check cannot run.
+
+  The client then decides:
+  - A server that passes the owner and process checks, and whose label is no
+    lower than Medium or the client's integrity level, whichever is lower (a
+    pipe created above Medium carries no label), is a **verified server**
+    before any message is exchanged (§1.4).
+  - A server whose process or token cannot be opened or read, and whose label
+    is no lower than the client's integrity level, is unverified until its
+    challenge proof verifies.
+  - A client MUST NOT write to any other server: one that fails the owner
+    check, one whose token it read and found to belong to another user or to
+    run at a lower integrity level than the client, or one whose label is lower
+    than these rules allow or cannot be read. It closes the pipe and reports
+    `auth.server-unverified`. Such a server's challenge proof proves nothing,
+    because a lower-integrity process of the same user may have read the
+    pairing file (§6.2). A client that runs at a higher integrity level than
+    its host, for example a companion started as administrator while the host
+    is not, is refused the same way.
 - Clients SHOULD request identification-level impersonation
   (`SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION`), so a server can learn
   who the client is but cannot act as the client.
@@ -1296,11 +1315,13 @@ package and synced folder:
   treat every server as unverified until its challenge proof verifies (§9.2).
   The Node SDK is such a client (§10).
 - The .NET SDK does all of the above. With it, the pipe protects against other
-  users, web content and lower-integrity or sandboxed processes. A client that
-  cannot check the server process, such as the Node SDK, is protected against a
-  lower-integrity process only while the pairing file carries the label of §6.2.
-  Nothing protects against a program running as the same user at the same
-  integrity level.
+  users, web content and lower-integrity or sandboxed processes, even where a
+  host has not yet given its pairing files the label of §6.2: such a process
+  may then read the secret, but any pipe it creates carries its lower label.
+  A client that checks neither the server process nor the pipe's label, such
+  as the Node SDK, is protected against a lower-integrity process only while
+  the pairing file carries the label of §6.2. Nothing protects against a
+  program running as the same user at the same integrity level.
 
 ### 7.2 Framing
 
@@ -1925,7 +1946,7 @@ audiences, Pre and violation flags, the author fix below, and its help anchor
 | `auth.registration-mismatch` | close | L R E S | ✓ | ✓ | The hello names a different registration than this pipe's. | Save connection info again and use the new file. |
 | `auth.proof-invalid` | close | L R E S | — | ✓ | The companion's proof is wrong: its pairing is out of date or for another registration, or a per-launch credential was used up. | Save connection info again; restart the companion. |
 | `auth.server-proof-invalid` | local | S | — | — | The host's proof failed verification: the pairing is out of date, or the pipe is not the host. | Save connection info again. |
-| `auth.server-unverified` | local | S | — | — | The pipe is not owned by the current user, or the process serving it runs as another user or at a lower integrity level than the companion, so the SDK wrote nothing to it (§7.1). Another program may hold the pipe name while the host is not running. | Start the host and run the companion without administrator rights; if this persists, restart the PC. |
+| `auth.server-unverified` | local | S | — | — | The pipe is not owned by the current user, the process serving it runs as another user or at a lower integrity level than the companion, or the pipe was created at a lower integrity level, so the SDK wrote nothing to it (§7.1). Another program may hold the pipe name while the host is not running. | Start the host and run the companion without administrator rights; if this persists, restart the PC. |
 | `auth.host-mismatch` | local | S | — | — | `challenge.host.id` differs from the pairing's `hostId`. | Use connection info from this host. |
 | `auth.abandoned` | local | L R | — | ✓ | The companion closed after the challenge without authenticating; most often an out-of-date pairing. | Save connection info again. |
 | `auth.timeout` | close | L R E S | ✓ | — | The handshake did not finish within 5 seconds. | Check the companion's handshake code. |
@@ -2666,13 +2687,16 @@ Behaviour the SDK guarantees:
   `PipeOptions.CurrentUserOnly | PipeOptions.Asynchronous` and
   `TokenImpersonationLevel.Identification`, so it never writes to a pipe the
   current user does not own (`auth.server-unverified`). Before writing `hello`
-  it checks the server process's user and integrity level (§7.1). When that
-  check passes, the server is verified from the start. When it reads the
-  server's token and finds another user or a lower integrity level, it closes
-  the pipe without writing anything (`auth.server-unverified`, then `Waiting`
-  with normal backoff). When it cannot open or read the server process or its
-  token, the server becomes verified only when its challenge proof verifies.
-  `StatusChangedEventArgs.ServerVerified` reports which.
+  it checks the server process's user and integrity level and the pipe's
+  mandatory label (§7.1). When both checks pass, the server is verified from
+  the start. When it reads the server's token and finds another user or a
+  lower integrity level, or the pipe's label is lower than §7.1 allows or
+  cannot be read, it closes the pipe without writing anything
+  (`auth.server-unverified`, then `Waiting` with normal backoff). When it
+  cannot open or read the server process or its token but the label is no
+  lower than the companion's own level, the server becomes verified only when
+  its challenge proof verifies. `StatusChangedEventArgs.ServerVerified`
+  reports which.
 - **Status and backoff.** `StatusChanged` fires on every state change with the
   reason code. Normal backoff is 1 s, doubling, × uniform(0.8, 1.2), and never
   more than `MaxRetryDelay` (30 s): each delay is min(base × uniform(1 − j,
@@ -3232,9 +3256,9 @@ handler rules and validation order. Specifically:
   level and has read the pairing file, whose challenge proof therefore
   verifies: against such a process it relies on the host's pairing-file label
   (§6.2). The package README and the security notes on the documentation site
-  state this. An optional native check (`GetNamedPipeServerProcessId` plus the owner
-  and integrity tests of §7.1) is a release gate to decide before the package
-  is published.
+  state this. An optional native check (`GetNamedPipeServerProcessId` plus the
+  owner, integrity and label tests of §7.1) is a release gate to decide before
+  the package is published.
 
 ---
 

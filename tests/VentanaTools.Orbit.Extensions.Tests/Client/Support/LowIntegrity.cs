@@ -27,6 +27,7 @@ internal static partial class LowIntegrity
     private const uint CreateNoWindow = 0x08000000;
     private const uint Infinite = 0xFFFFFFFF;
     private const uint WaitTimeout = 0x102;
+    private const uint DaclSecurityInformation = 0x4;
 
     /// <summary>Windows PowerShell, which every supported Windows has.</summary>
     public static string WindowsPowerShell { get; } =
@@ -98,6 +99,31 @@ internal static partial class LowIntegrity
         }
 
         public uint Id { get; }
+
+        /// <summary>
+        /// Gives the process an empty, protected access-control list, as the process itself can do to its own
+        /// object (its owner keeps only the right to read and change that list), so that no other process of the
+        /// user can open it any more. This handle was opened before and keeps its access.
+        /// </summary>
+        public void DenyEveryone()
+        {
+            if (!ConvertStringSecurityDescriptorToSecurityDescriptor("D:P", 1, out var descriptor, 0))
+            {
+                throw new Win32Exception(Marshal.GetLastPInvokeError());
+            }
+
+            try
+            {
+                if (!SetKernelObjectSecurity(_handle, DaclSecurityInformation, descriptor))
+                {
+                    throw new Win32Exception(Marshal.GetLastPInvokeError());
+                }
+            }
+            finally
+            {
+                LocalFree(descriptor);
+            }
+        }
 
         /// <summary>The exit code, or null when the process still runs after <paramref name="timeout"/>.</summary>
         public async Task<int?> WaitForExitAsync(TimeSpan timeout)
@@ -216,4 +242,14 @@ internal static partial class LowIntegrity
 
     [LibraryImport("kernel32.dll")]
     private static partial nint LocalFree(nint memory);
+
+    [LibraryImport("advapi32.dll", EntryPoint = "ConvertStringSecurityDescriptorToSecurityDescriptorW", SetLastError = true,
+        StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool ConvertStringSecurityDescriptorToSecurityDescriptor(string descriptor, uint revision, out nint result,
+        nint length);
+
+    [LibraryImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetKernelObjectSecurity(nint handle, uint information, nint descriptor);
 }

@@ -542,18 +542,45 @@ public sealed class CompanionPeerTests
     public async Task ALowIntegrityProcessThatHoldsThePipeNameIsRefusedBeforeAnyByteIsWritten()
     {
         // A Low-integrity process of the same user can read a pairing file that has no mandatory label and create the
-        // pipe while the host is not listening. Its pipe is owned by the user, so only the process check refuses it.
+        // pipe while the host is not listening. Its pipe is owned by the user, so the owner check passes; the process
+        // check and the pipe's label each refuse it.
         await using var host = new IndependentHost(new TestHandler(), start: false, listen: false);
-        var script = "$p = New-Object System.IO.Pipes.NamedPipeServerStream('" + host.PipeName + "', 'InOut', 1, 'Byte', 'Asynchronous'); "
-            + "if (-not $p.WaitForConnectionAsync().Wait(60000)) { exit 30 }; $b = New-Object byte[] 1; $r = $p.ReadAsync($b, 0, 1); "
-            + "if (-not $r.Wait(15000)) { exit 20 }; exit (10 + $r.Result)";
-        using var squatter = LowIntegrity.Start("\"" + LowIntegrity.WindowsPowerShell + "\" -NoProfile -NonInteractive -Command \"" + script + "\"");
+        using var squatter = StartLowIntegritySquatter(host.PipeName);
         host.StartClient();
         var refused = await host.WaitForStatusAsync(ConnectionState.Waiting, ReasonCode.AuthServerUnverified, seconds: 60);
         Assert.False(refused.ServerVerified);
 
         // 10: the squatter saw the client close without a byte; 11 would mean the client wrote hello to it.
         Assert.Equal(10, await squatter.WaitForExitAsync(TimeSpan.FromSeconds(30)));
+    }
+
+    [WindowsFact]
+    public async Task ALowIntegritySquatterThatDeniesAccessToItselfIsStillRefusedByItsPipeLabel()
+    {
+        // Without any privilege the squatter can give its own process an empty access-control list, so the process check
+        // cannot open it. Windows still labels its pipe Low, and the squatter can neither raise nor remove that label.
+        await using var host = new IndependentHost(new TestHandler(), start: false, listen: false);
+        using var squatter = StartLowIntegritySquatter(host.PipeName);
+        await ClientHarness.WaitForAsync(() => !PipeNatives.PipeIsMissing(host.PipeName), "the squatter's pipe", seconds: 60);
+        squatter.DenyEveryone();
+        Assert.Equal(ServerCheck.Unchecked, PipeNatives.CheckProcess(squatter.Id));
+
+        host.StartClient();
+        var refused = await host.WaitForStatusAsync(ConnectionState.Waiting, ReasonCode.AuthServerUnverified, seconds: 60);
+        Assert.False(refused.ServerVerified);
+        Assert.Equal(10, await squatter.WaitForExitAsync(TimeSpan.FromSeconds(30)));
+    }
+
+    /// <summary>
+    /// A Low-integrity Windows PowerShell that creates the pipe, waits for one connection and exits with 10 plus the
+    /// number of bytes it read from it (10: closed without a byte, 11: the client wrote to it).
+    /// </summary>
+    private static LowIntegrity.LowProcess StartLowIntegritySquatter(string pipeName)
+    {
+        var script = "$p = New-Object System.IO.Pipes.NamedPipeServerStream('" + pipeName + "', 'InOut', 1, 'Byte', 'Asynchronous'); "
+            + "if (-not $p.WaitForConnectionAsync().Wait(60000)) { exit 30 }; $b = New-Object byte[] 1; $r = $p.ReadAsync($b, 0, 1); "
+            + "if (-not $r.Wait(15000)) { exit 20 }; exit (10 + $r.Result)";
+        return LowIntegrity.Start("\"" + LowIntegrity.WindowsPowerShell + "\" -NoProfile -NonInteractive -Command \"" + script + "\"");
     }
 
     [ElevatedWindowsFact]

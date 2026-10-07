@@ -4,6 +4,7 @@
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.AccessControl;
 using System.Security.Principal;
 using Microsoft.Win32.SafeHandles;
 
@@ -89,10 +90,12 @@ internal sealed class InMemoryTransport : ICompanionTransport
 /// <summary>
 /// The named-pipe transport (contract §7.1): the pipe must be owned by the current user
 /// (<see cref="PipeOptions.CurrentUserOnly"/>) and is opened with identification-level
-/// impersonation. Before any byte is written, the server process's user and integrity level are
-/// checked: a server that passes is verified, a server whose process runs as another user or at a
-/// lower integrity level is refused (<c>auth.server-unverified</c>), and a server whose process
-/// cannot be opened or read stays unverified until its challenge proof verifies.
+/// impersonation. Before any byte is written, the server process's user and integrity level and the
+/// pipe's mandatory label are checked: a server that passes is verified; a server whose process runs
+/// as another user or at a lower integrity level, or whose pipe was created at a lower integrity
+/// level, is refused (<c>auth.server-unverified</c>); and a server whose process cannot be opened or
+/// read, but whose pipe label is no lower than this process's level, stays unverified until its
+/// challenge proof verifies.
 /// </summary>
 [SupportedOSPlatform("windows")]
 internal sealed class PipeTransport : ICompanionTransport
@@ -144,7 +147,8 @@ internal sealed class PipeTransport : ICompanionTransport
         var check = PipeNatives.CheckServer(pipe.SafePipeHandle);
         if (check == ServerCheck.Refused)
         {
-            // Another user's or a lower-integrity process holds the pipe name: nothing was written to it.
+            // Another user's or a lower-integrity process holds the pipe name, or its pipe was created at a lower
+            // integrity level: nothing was written to it.
             await pipe.DisposeAsync().ConfigureAwait(false);
             return TransportConnection.Failed(ReasonCode.AuthServerUnverified);
         }
@@ -153,16 +157,25 @@ internal sealed class PipeTransport : ICompanionTransport
     }
 }
 
-/// <summary>What the operating system says about a pipe server's process (contract §7.1).</summary>
+/// <summary>What the operating system says about a pipe server's process and its pipe (contract §7.1).</summary>
 internal enum ServerCheck
 {
-    /// <summary>It runs as the current user at an integrity level no lower than this process's.</summary>
+    /// <summary>
+    /// It runs as the current user at an integrity level no lower than this process's, and its pipe's
+    /// label is no lower than Medium or this process's level, whichever is lower.
+    /// </summary>
     Verified = 1,
 
-    /// <summary>Its process or token could not be opened or read; it is unverified until its challenge proof verifies.</summary>
+    /// <summary>
+    /// Its process or token could not be opened or read, but its pipe's label is no lower than this
+    /// process's integrity level; it is unverified until its challenge proof verifies.
+    /// </summary>
     Unchecked = 2,
 
-    /// <summary>It runs as another user or at a lower integrity level; the client writes nothing to it.</summary>
+    /// <summary>
+    /// It runs as another user or at a lower integrity level, or its pipe's label is lower than the
+    /// check allows or cannot be read; the client writes nothing to it.
+    /// </summary>
     Refused = 3,
 }
 
@@ -175,6 +188,14 @@ internal static partial class PipeNatives
     private const uint TokenQuery = 0x0008;
     private const int TokenUserClass = 1;
     private const int TokenIntegrityLevelClass = 25;
+    private const int SeKernelObject = 6;
+    private const uint LabelSecurityInformation = 0x10;
+    private const byte SystemMandatoryLabelAceType = 0x11;
+    private const int MaximumSecurityDescriptorLength = 64 * 1024;
+    private const string LabelSidPrefix = "S-1-16-";
+
+    /// <summary>Medium integrity (S-1-16-8192), the level of an object that carries no mandatory label.</summary>
+    internal const uint MediumIntegrity = 0x2000;
 
     /// <summary>Whether no instance of the pipe exists; never connects to it.</summary>
     public static bool PipeIsMissing(string pipeName)
@@ -187,16 +208,130 @@ internal static partial class PipeNatives
         return Marshal.GetLastPInvokeError() == ErrorFileNotFound;
     }
 
-    /// <summary>Checks the pipe's server process (contract §7.1). Any failure to check means <see cref="ServerCheck.Unchecked"/>.</summary>
+    /// <summary>
+    /// Checks the pipe's server process and the pipe's mandatory label (contract §7.1). A process that
+    /// cannot be checked counts as <see cref="ServerCheck.Unchecked"/>; a label that cannot be read
+    /// refuses the server.
+    /// </summary>
     public static ServerCheck CheckServer(SafePipeHandle pipe)
     {
+        ServerCheck process;
         try
         {
-            return GetNamedPipeServerProcessId(pipe, out var processId) ? CheckProcess(processId) : ServerCheck.Unchecked;
+            process = GetNamedPipeServerProcessId(pipe, out var processId) ? CheckProcess(processId) : ServerCheck.Unchecked;
         }
         catch (SystemException)
         {
-            return ServerCheck.Unchecked;
+            process = ServerCheck.Unchecked;
+        }
+
+        return process == ServerCheck.Refused ? ServerCheck.Refused : WithLabel(process, PipeLabel(pipe), OwnIntegrity());
+    }
+
+    /// <summary>
+    /// Combines the process check with the pipe's label (contract §7.1). Windows labels an object with
+    /// its creator's integrity level when that level is below Medium, and the creator cannot raise or
+    /// remove the label, so the label still shows a lower-integrity creator after that process has
+    /// denied everyone access to itself to defeat the process check. A pipe created at Medium or above
+    /// carries no label and counts as Medium, so after a passed process check the label must reach
+    /// Medium or this process's level, whichever is lower; otherwise it must reach this process's
+    /// level. A label or own level that could not be read refuses the server.
+    /// </summary>
+    /// <param name="process">The process check: <see cref="ServerCheck.Verified"/> or <see cref="ServerCheck.Unchecked"/>.</param>
+    /// <param name="pipeLabel">The pipe's integrity level (the label's relative identifier), or null when it could not be read.</param>
+    /// <param name="ownLevel">This process's integrity level (relative identifier), or null when it could not be read.</param>
+    internal static ServerCheck WithLabel(ServerCheck process, uint? pipeLabel, uint? ownLevel)
+    {
+        if (process == ServerCheck.Refused || pipeLabel is not { } label || ownLevel is not { } own)
+        {
+            return ServerCheck.Refused;
+        }
+
+        var floor = process == ServerCheck.Verified ? Math.Min(own, MediumIntegrity) : own;
+        return label < floor ? ServerCheck.Refused : process;
+    }
+
+    /// <summary>
+    /// The pipe's integrity level, read through the client's own handle, which has <c>READ_CONTROL</c>
+    /// because the owner check needed it: the lowest mandatory label that applies to the pipe itself,
+    /// Medium when it has none, or null when it cannot be read.
+    /// </summary>
+    internal static uint? PipeLabel(SafeHandle pipe)
+    {
+        nint descriptor = 0;
+        try
+        {
+            if (GetSecurityInfo(pipe, SeKernelObject, LabelSecurityInformation, 0, 0, 0, 0, out descriptor) != 0 || descriptor == 0)
+            {
+                return null;
+            }
+
+            var length = GetSecurityDescriptorLength(descriptor);
+            if (length <= 0 || length > MaximumSecurityDescriptorLength)
+            {
+                return null;
+            }
+
+            var bytes = new byte[length];
+            Marshal.Copy(descriptor, bytes, 0, length);
+            return LowestLabel(new RawSecurityDescriptor(bytes, 0));
+        }
+        catch (SystemException)
+        {
+            return null;
+        }
+        finally
+        {
+            if (descriptor != 0)
+            {
+                _ = LocalFree(descriptor);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The lowest integrity level among the mandatory labels that apply to the object itself (an
+    /// inherit-only label applies only to children), Medium when there is none, or null when a label
+    /// is malformed.
+    /// </summary>
+    internal static uint? LowestLabel(RawSecurityDescriptor descriptor)
+    {
+        uint? lowest = null;
+        foreach (var ace in descriptor.SystemAcl ?? new RawAcl(GenericAcl.AclRevision, 0))
+        {
+            if ((byte)ace.AceType != SystemMandatoryLabelAceType || (ace.AceFlags & AceFlags.InheritOnly) != 0)
+            {
+                continue;
+            }
+
+            // SYSTEM_MANDATORY_LABEL_ACE: the header, a 4-byte mask (the label's policy), then the label's SID.
+            if (ace is not CustomAce custom || custom.GetOpaque() is not { Length: >= 4 + 8 } opaque)
+            {
+                return null;
+            }
+
+            if (Rid(new SecurityIdentifier(opaque, 4)) is not { } rid)
+            {
+                return null;
+            }
+
+            lowest = lowest is { } current ? Math.Min(current, rid) : rid;
+        }
+
+        return lowest ?? MediumIntegrity;
+    }
+
+    /// <summary>This process's integrity level (relative identifier), or null when it cannot be read.</summary>
+    private static uint? OwnIntegrity()
+    {
+        try
+        {
+            using var self = WindowsIdentity.GetCurrent(TokenAccessLevels.Query);
+            return IntegrityRid(self.Token);
+        }
+        catch (SystemException)
+        {
+            return null;
         }
     }
 
@@ -247,15 +382,18 @@ internal static partial class PipeNatives
     private static uint? IntegrityRid(nint token)
     {
         var sid = TokenSid(token, TokenIntegrityLevelClass);
-        if (sid is null)
-        {
-            return null;
-        }
+        return sid is null ? null : Rid(sid);
+    }
 
+    /// <summary>The level of a mandatory-label SID (S-1-16-<i>rid</i>), or null for any other SID.</summary>
+    private static uint? Rid(SecurityIdentifier sid)
+    {
         var value = sid.Value;
-        var last = value.LastIndexOf('-');
-        return last >= 0 && uint.TryParse(value.AsSpan(last + 1), System.Globalization.NumberStyles.None,
-            System.Globalization.CultureInfo.InvariantCulture, out var rid) ? rid : null;
+        return value.StartsWith(LabelSidPrefix, StringComparison.Ordinal)
+            && uint.TryParse(value.AsSpan(LabelSidPrefix.Length), System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var rid)
+            ? rid
+            : null;
     }
 
     /// <summary>The SID at the start of a TOKEN_USER or TOKEN_MANDATORY_LABEL (both begin with SID_AND_ATTRIBUTES).</summary>
@@ -298,4 +436,14 @@ internal static partial class PipeNatives
     [LibraryImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static unsafe partial bool GetTokenInformation(nint token, int informationClass, byte* information, int length, out int returnLength);
+
+    [LibraryImport("advapi32.dll")]
+    private static partial uint GetSecurityInfo(SafeHandle handle, int objectType, uint securityInformation, nint owner, nint group,
+        nint dacl, nint sacl, out nint securityDescriptor);
+
+    [LibraryImport("advapi32.dll")]
+    private static partial int GetSecurityDescriptorLength(nint securityDescriptor);
+
+    [LibraryImport("kernel32.dll")]
+    private static partial nint LocalFree(nint memory);
 }

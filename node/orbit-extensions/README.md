@@ -145,9 +145,10 @@ pass a `ManualClock` to drive backoff, deadlines, pings and renewal without wait
   pairing file: that squatter's challenge proof verifies, and the SDK would then run its
   sessions and invocations. Against such a process the Node SDK relies on the host writing
   pairing files with a mandatory label that lower-integrity processes cannot read. The .NET SDK
-  verifies the pipe's owner and the server process, and refuses a lower-integrity server,
-  before it writes anything. An optional native check for the Node SDK is a release gate to decide before
-  the package is published.
+  verifies the pipe's owner, the server process and the pipe's integrity label, and refuses a
+  lower-integrity server before it writes anything, whether or not the pairing file is labelled.
+  An optional native check for the Node SDK is a release gate to decide before the package is
+  published.
 
 ## Developing this package
 
