@@ -406,10 +406,28 @@ public sealed class CompanionClient
                 }
 
                 if ((outcome.Reason == ReasonCode.ManifestMismatch || outcome.Reason == ReasonCode.AuthIdentityChanged)
-                    && _internals.ReloadManifest is { } reload
-                    && await reload(cancellationToken).ConfigureAwait(false) is { } changed)
+                    && _internals.ReloadManifest is { } reload)
                 {
-                    ReplaceManifest(changed);
+                    ExtensionManifest? changed;
+                    try
+                    {
+                        changed = await reload(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        // A stop or a restart that lands while extension.json is re-read.
+                        break;
+                    }
+                    catch (Exception)
+                    {
+                        // A manifest that cannot be re-read is no change; the next attempt uses the current one.
+                        changed = null;
+                    }
+
+                    if (changed is not null)
+                    {
+                        ReplaceManifest(changed);
+                    }
                 }
             }
 

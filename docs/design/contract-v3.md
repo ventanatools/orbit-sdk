@@ -2684,7 +2684,7 @@ Behaviour the SDK guarantees:
   | any `pairing.*` code | `Stopped`; `CompanionApp` waits for the pairing file to change |
   | `auth.registration-mismatch`, `protocol.version-unsupported`, `auth.host-mismatch`, `auth.server-proof-invalid` | from a verified server: `Stopped`, because retrying cannot help until the pairing or a version changes; from a server that is not verified: `Waiting`, normal backoff |
   | `auth.proof-invalid`, `host.access-revoked` | `Stopped` (they only arrive after the challenge verified, so the server is verified) |
-  | `manifest.mismatch`, `auth.identity-changed` | `Waiting`, retrying every `MaxRetryDelay`; `CompanionApp` re-reads `extension.json` before each retry, and retries at once when `extension.json` or the pairing file changes |
+  | `manifest.mismatch`, `auth.identity-changed` | `Waiting`, retrying every `MaxRetryDelay`; `CompanionApp` re-reads `extension.json` before each retry, and retries at once when `extension.json` or the pairing file changes. A re-read that fails, or finds an invalid file, leaves the current manifest; a stop or restart that lands during it ends the run with `Stopped` and no reason, never an error |
   | `host.not-running`, `host.turned-off` | `Waiting`, backoff capped at `HostAbsentMaxRetryDelay` (5 s), because probing a missing pipe costs the host nothing |
   | `host.paused`, or an unknown code with `retryAfterMs` | `Waiting` for at least `retryAfterMs`: from a verified server max(normal, min(`retryAfterMs`, 300,000 ms)); otherwise min(max(normal, `retryAfterMs`), `MaxRetryDelay`) |
   | `host.reloaded` | `Connecting` at once, once; then normal backoff |

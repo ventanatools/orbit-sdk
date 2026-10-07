@@ -288,6 +288,65 @@ public sealed class StatusAndBackoffTests
     }
 
     [Fact]
+    public async Task AStopThatLandsWhileTheManifestIsReReadEndsTheRunWithoutAnError()
+    {
+        // CompanionApp restarts the client when the pairing changes, which can happen while the wait after
+        // manifest.mismatch has ended and extension.json is being re-read.
+        var clock = new TestClock();
+        ClientHarness? harness = null;
+        harness = new ClientHarness(new TestHandler(), options: new CompanionClientOptions { TimeProvider = clock, RetryJitter = 0 },
+            reloadManifest: token =>
+            {
+                harness!.Cancel();
+                token.ThrowIfCancellationRequested();
+                return Task.FromResult<ExtensionManifest?>(null);
+            });
+        await using (harness)
+        {
+            harness.Start();
+            var waiting = await MismatchAsync(harness);
+            clock.Advance(waiting.RetryIn!.Value);
+            await harness.Run.WaitAsync(TimeSpan.FromSeconds(10));
+            var last = harness.Statuses[^1];
+            Assert.Equal(ConnectionState.Stopped, last.State);
+            Assert.Null(last.Reason);
+        }
+    }
+
+    [Fact]
+    public async Task AManifestThatCannotBeReReadLeavesTheCurrentOneAndTheClientRetries()
+    {
+        var clock = new TestClock();
+        var reloads = 0;
+        await using var harness = new ClientHarness(new TestHandler(), options: new CompanionClientOptions { TimeProvider = clock, RetryJitter = 0 },
+            reloadManifest: _ =>
+            {
+                Interlocked.Increment(ref reloads);
+                throw new InvalidOperationException("The manifest reader failed.");
+            });
+        harness.Start();
+        var waiting = await MismatchAsync(harness);
+        clock.Advance(waiting.RetryIn!.Value);
+        var second = await harness.NextPeerAsync();
+        Assert.Equal(ManifestWriter.ComputeHash(harness.Manifest), (await second.ReadHelloAsync()).ManifestHash);
+        Assert.Equal(1, Volatile.Read(ref reloads));
+        Assert.False(harness.Run.IsFaulted);
+    }
+
+    /// <summary>Authenticates the first connection, then refuses it with <c>manifest.mismatch</c>; returns the <c>Waiting</c> status.</summary>
+    private static async Task<StatusChangedEventArgs> MismatchAsync(ClientHarness harness)
+    {
+        var peer = await harness.NextPeerAsync();
+        await peer.ReadHelloAsync();
+        await peer.SendAsync(peer.BuildChallenge(new HostScript()));
+        Assert.IsType<AuthenticateMessage>(await peer.ReadAsync(ConnectionPhase.Handshake));
+        await peer.SendAsync(new ErrorMessage { Code = ReasonCode.ManifestMismatch });
+        var waiting = await harness.WaitForStatusAsync(status => status.State == ConnectionState.Waiting, "waiting");
+        Assert.Equal(ReasonCode.ManifestMismatch, waiting.Reason);
+        return waiting;
+    }
+
+    [Fact]
     public async Task AServerThatFailsTheOwnerCheckIsNeverWrittenToAndCannotHoldTheSdk()
     {
         var clock = new TestClock();

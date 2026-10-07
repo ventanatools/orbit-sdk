@@ -110,7 +110,8 @@ internal sealed class ClientHarness : IAsyncDisposable
     private int _refusals;
 
     public ClientHarness(IContributionHandler handler, ExtensionManifest? manifest = null, CompanionClientOptions? options = null,
-        bool serverVerified = true, IReadOnlyList<string>? offered = null, string hostId = TestHosts.Id, Func<double>? random = null)
+        bool serverVerified = true, IReadOnlyList<string>? offered = null, string hostId = TestHosts.Id, Func<double>? random = null,
+        Func<CancellationToken, Task<ExtensionManifest?>>? reloadManifest = null)
     {
         Manifest = manifest ?? TestManifests.Countdown;
         Pairing = new Pairing(hostId, PipeNames.Create(hostId, "test", "a8c06b3027d3fc4a", RegistrationId), RegistrationId, Manifest.Id,
@@ -121,6 +122,7 @@ internal sealed class ClientHarness : IAsyncDisposable
             Observer = Observer,
             OfferedCapabilities = offered ?? [Capabilities.TestEcho],
             Random = random ?? (() => 0.5),
+            ReloadManifest = reloadManifest,
         });
         Client.StatusChanged += (_, e) =>
         {
@@ -217,6 +219,9 @@ internal sealed class ClientHarness : IAsyncDisposable
         await WaitForAsync(() => (found = Statuses.Skip(skip).FirstOrDefault(match)) is not null, what);
         return found!;
     }
+
+    /// <summary>Cancels the run without waiting for it, as a stop or restart from another thread does.</summary>
+    public void Cancel() => _stop.Cancel();
 
     public async Task StopAsync()
     {
