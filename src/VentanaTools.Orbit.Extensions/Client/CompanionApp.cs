@@ -119,6 +119,13 @@ public static class CompanionApp
     public static CompanionArguments ParseArguments(string[] args)
     {
         ArgumentNullException.ThrowIfNull(args);
+        return TryParseArguments(args, out var usage) ?? throw new ArgumentException(usage, nameof(args));
+    }
+
+    /// <summary>Reads the command line; returns null with the usage sentence when a recognized option has no value.</summary>
+    internal static CompanionArguments? TryParseArguments(string[] args, out string? usage)
+    {
+        usage = null;
         string? manifest = null;
         string? pairing = null;
         var verbose = false;
@@ -127,11 +134,14 @@ public static class CompanionApp
         {
             switch (args[i])
             {
+                case "--manifest" or "--pairing" when i + 1 >= args.Length:
+                    usage = args[i] + " needs a value.";
+                    return null;
                 case "--manifest":
-                    manifest = Value(args, ref i, "--manifest");
+                    manifest = args[++i];
                     break;
                 case "--pairing":
-                    pairing = Value(args, ref i, "--pairing");
+                    pairing = args[++i];
                     break;
                 case "--verbose":
                     verbose = true;
@@ -159,14 +169,10 @@ public static class CompanionApp
         ArgumentNullException.ThrowIfNull(handler);
         options ??= new CompanionAppOptions();
         var output = options.Output ?? Console.Error;
-        CompanionArguments parsed;
-        try
+        if (TryParseArguments(args, out var usage) is not { } parsed)
         {
-            parsed = ParseArguments(args);
-        }
-        catch (ArgumentException error)
-        {
-            output.WriteLine("ventana: " + error.Message);
+            // The usage sentence alone, as the Node SDK prints it.
+            output.WriteLine("ventana: " + usage);
             return 2;
         }
 
@@ -198,17 +204,6 @@ public static class CompanionApp
                 Unhook(onCancel);
             }
         }
-    }
-
-    private static string Value(string[] args, ref int index, string option)
-    {
-        if (index + 1 >= args.Length)
-        {
-            throw new ArgumentException(option + " needs a value.", nameof(args));
-        }
-
-        index++;
-        return args[index];
     }
 
     private static bool Hook(ConsoleCancelEventHandler handler)

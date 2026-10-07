@@ -2802,7 +2802,9 @@ Behaviour the SDK guarantees:
 - **Arguments.** It recognizes `--manifest <path>`, `--pairing <path>` and
   `--verbose`. Every other argument is left for the author
   (`ParseArguments(args).Remaining`). A recognized option without its value
-  exits 2.
+  prints `ventana: <option> needs a value.` (for example
+  `ventana: --manifest needs a value.`, the same line the Node SDK prints) and
+  exits 2; `ParseArguments` throws `ArgumentException` for it.
 - **Manifest.** `--manifest`, else `extension.json` in `AppContext.BaseDirectory`,
   else in the current directory. It is read with `ManifestReader.ReadFileAsync`.
   An invalid manifest prints one line per error diagnostic,

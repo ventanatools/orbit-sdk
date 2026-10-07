@@ -40,7 +40,11 @@ public sealed class CompanionAppTests : IDisposable
         var output = new StringWriter();
         Assert.Equal(2, await CompanionApp.RunCoreAsync(["--manifest"], new TestHandler(), new CompanionAppOptions { Output = output }, null,
             CancellationToken.None));
-        Assert.Contains("--manifest needs a value", output.ToString(), StringComparison.Ordinal);
+        Assert.Equal("ventana: --manifest needs a value." + Environment.NewLine, output.ToString());
+        var pairing = new StringWriter();
+        Assert.Equal(2, await CompanionApp.RunCoreAsync(["--verbose", "--pairing"], new TestHandler(), new CompanionAppOptions { Output = pairing }, null,
+            CancellationToken.None));
+        Assert.Equal("ventana: --pairing needs a value." + Environment.NewLine, pairing.ToString());
     }
 
     [Fact]
