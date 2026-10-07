@@ -166,6 +166,12 @@ public sealed class ValidateTests
         }
 
         // A file another program holds open with no sharing cannot be read: tool.io-error, and no path in the message.
+        // Only Windows enforces FileShare.None; elsewhere the lock is advisory.
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         var locked = folder.Write("extension.json", "{}");
         using (new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
         {
