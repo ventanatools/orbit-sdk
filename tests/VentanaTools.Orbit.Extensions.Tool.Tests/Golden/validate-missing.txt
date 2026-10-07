@@ -5,9 +5,17 @@ exit 3
   "version": "{version}",
   "command": "validate",
   "ok": false,
-  "diagnostics": [],
+  "diagnostics": [
+    {
+      "code": "tool.path-missing",
+      "path": "",
+      "message": "The file or folder does not exist.",
+      "severity": "Error",
+      "file": "extension.json"
+    }
+  ],
   "summary": {
-    "errors": 0,
+    "errors": 1,
     "warnings": 0
   }
 }

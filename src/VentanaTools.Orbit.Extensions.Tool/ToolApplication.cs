@@ -28,6 +28,15 @@ internal static class ToolApplication
             }
 
             console.Error.WriteLine("Run '" + ToolIdentity.CommandName + " --help' for usage.");
+
+            // A script that asked for JSON still gets one object, with a code, on standard output.
+            if (own.Contains("--json", StringComparer.Ordinal) && result.CommandResult.Command != root)
+            {
+                var report = new DiagnosticReport(console, result.CommandResult.Command.Name, json: true);
+                report.AddUsage();
+                return report.Write(ExitCodes.Usage);
+            }
+
             return ExitCodes.Usage;
         }
 
@@ -251,7 +260,14 @@ internal static class ToolApplication
         if (hasSeparator && !allowPassThrough)
         {
             console.Fail(command + " takes no arguments after --.");
-            return ExitCodes.Usage;
+            if (!json)
+            {
+                return ExitCodes.Usage;
+            }
+
+            var usage = new DiagnosticReport(console, command, json);
+            usage.AddUsage();
+            return usage.Write(ExitCodes.Usage);
         }
 
         _ = passThrough;
@@ -266,8 +282,10 @@ internal static class ToolApplication
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
+            var report = new DiagnosticReport(console, command, json);
+            report.AddIoError();
             console.Fail(error.Message);
-            return ExitCodes.InputOutput;
+            return report.Write(ExitCodes.InputOutput);
         }
         catch (ReaderDefectException defect)
         {

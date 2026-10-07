@@ -131,6 +131,53 @@ public sealed class ValidateTests
         Golden.Match("validate-missing", empty, folder.Path);
     }
 
+    [Fact]
+    public async Task WithJsonEveryFailureCarriesACodeOnStandardOutput()
+    {
+        // A CI script that parses --json learns why a command failed without reading standard error.
+        using var folder = new TempFolder();
+        foreach (var (args, code, file) in new (string[] Args, string Code, string? File)[]
+        {
+            (["validate", "nope", "--json"], "tool.path-missing", "nope"),
+            (["verify", "nope" + ActiveHost.Extension, "--json"], "tool.path-missing", "nope" + ActiveHost.Extension),
+            (["pack", "--json"], "tool.path-missing", "extension.pack.json"),
+            (["link", "--json"], "tool.path-missing", "extension.json"),
+        })
+        {
+            var run = await ToolHarness.RunAsync(folder.Path, args);
+            Assert.Equal(3, run.ExitCode);
+            using var document = JsonDocument.Parse(run.Out);
+            var root = document.RootElement;
+            Assert.False(root.GetProperty("ok").GetBoolean());
+            Assert.Equal(1, root.GetProperty("summary").GetProperty("errors").GetInt32());
+            var diagnostic = Assert.Single(root.GetProperty("diagnostics").EnumerateArray().ToList());
+            Assert.Equal(code, diagnostic.GetProperty("code").GetString());
+            Assert.Equal(file, diagnostic.GetProperty("file").GetString());
+            Assert.DoesNotContain(folder.Path, diagnostic.GetProperty("message").GetString()!, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var args in new[] { new[] { "validate", "--bogus", "--json" }, ["validate", "--json", "--", "extra"] })
+        {
+            var usage = await ToolHarness.RunAsync(folder.Path, args);
+            Assert.Equal(2, usage.ExitCode);
+            using var document = JsonDocument.Parse(usage.Out);
+            Assert.Equal("validate", document.RootElement.GetProperty("command").GetString());
+            Assert.Equal("tool.usage", Assert.Single(document.RootElement.GetProperty("diagnostics").EnumerateArray().ToList()).GetProperty("code").GetString());
+        }
+
+        // A file another program holds open with no sharing cannot be read: tool.io-error, and no path in the message.
+        var locked = folder.Write("extension.json", "{}");
+        using (new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            var run = await ToolHarness.RunAsync(folder.Path, "validate", "extension.json", "--json");
+            Assert.Equal(3, run.ExitCode);
+            using var document = JsonDocument.Parse(run.Out);
+            var diagnostic = Assert.Single(document.RootElement.GetProperty("diagnostics").EnumerateArray().ToList());
+            Assert.Equal("tool.io-error", diagnostic.GetProperty("code").GetString());
+            Assert.False(diagnostic.TryGetProperty("file", out _));
+        }
+    }
+
     private static List<string> Describe(JsonElement diagnostics) =>
         diagnostics.EnumerateArray().Select(item => string.Join(' ',
             item.GetProperty("code").GetString(),

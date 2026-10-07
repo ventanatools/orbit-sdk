@@ -33,6 +33,7 @@ internal static class PackCommand
             if (!File.Exists(required))
             {
                 console.Fail(console.Display(required) + " does not exist.");
+                report.AddPathMissing(console.Display(required));
                 return report.Write(ExitCodes.InputOutput);
             }
         }

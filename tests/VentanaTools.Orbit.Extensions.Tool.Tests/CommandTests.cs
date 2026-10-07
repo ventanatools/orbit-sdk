@@ -148,6 +148,15 @@ public sealed class ExitCodeTests
         Golden.Match("usage-extension-id", run, Repository.Root);
     }
 
+    [Theory]
+    [InlineData("MyWidget", "MyWidget")]
+    [InlineData("My Widget", "\"My Widget\"")]
+    [InlineData("src/My Widget", "\"src/My Widget\"")]
+    [InlineData("a&b", "\"a&b\"")]
+    [InlineData("it's", "\"it's\"")]
+    public void NewQuotesTheFolderOfItsCdHintWhenAShellWouldSplitIt(string folder, string shown) =>
+        Assert.Equal(shown, NewCommand.ShellArgument(folder));
+
     [Fact]
     public async Task NewRefusesAHostThatIsNotActiveBeforeCreatingAnything()
     {

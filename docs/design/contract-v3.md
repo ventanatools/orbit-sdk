@@ -3266,7 +3266,7 @@ Ventana tooling verbs `new`, `validate`, `pack`, `verify` and `test` (§2.7).
 
 | Command | Purpose |
 |---|---|
-| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same arguments plus `--package-source <feed>`; it also passes `--display-name` and `--no-tests` to the template. It refuses an `--extension-id` outside the third-party grammar with the id code, and a `--host` that is not an active registry host (`<id> is not an active host id; use one of: <active ids>. [--host]`), with exit 2 before anything is created. If the template pack is not installed, prints the install command, which installs it from the package file in the feed, and exits 3. After creating a Node project it copies the Node SDK tarball from the feed into `vendor/`, then prints the next commands. |
+| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same arguments plus `--package-source <feed>`; it also passes `--display-name` and `--no-tests` to the template. It refuses an `--extension-id` outside the third-party grammar with the id code, and a `--host` that is not an active registry host (`<id> is not an active host id; use one of: <active ids>. [--host]`), with exit 2 before anything is created. If the template pack is not installed, prints the install command, which installs it from the package file in the feed, and exits 3. After creating a Node project it copies the Node SDK tarball from the feed into `vendor/`, then prints the next commands, quoting the folder of the `cd` hint when it holds a space or a character PowerShell or cmd treats specially. |
 | `orbit-ext validate [<path>] [--host <id>] [--json] [--warnings-as-errors]` | Validates an `extension.json`, a folder containing one (with its `strings/` folder), or a package file. Default path: the current directory. |
 | `orbit-ext pack [<project-dir>] [-o <output-dir>] [--host <id>] [--force] [--json]` | Builds a package from `extension.pack.json` (§11.3), running its `build` step first when it has one. |
 | `orbit-ext verify <package> [--host <id>] [--json]` | Verifies a package (§5.7) and prints its id, version, hosts, contributions, file count, size and package hash. |
@@ -3335,8 +3335,8 @@ both the MSBuild origin and the `--json` `file`. A finding about a package
 entry is shown as `<package>!/<entry>` (for example
 `example.countdown-0.3.0.orbitextension!/extension.json(4,11)`), and an
 archive-structure finding as the package path alone. A finding about no file
-(`tool.internal-error`, `json.internal-error`) uses the command name as its
-origin and has no `file`. `--json` omits `file`, `line` and `column` when they
+(`tool.internal-error`, `json.internal-error`, `tool.io-error`, `tool.usage`)
+uses the command name as its origin and has no `file`. `--json` omits `file`, `line` and `column` when they
 are absent, and escapes every character outside printable ASCII.
 
 `--json` writes one JSON object to standard output:
@@ -3356,6 +3356,19 @@ are absent, and escapes every character outside printable ASCII.
 
 `verify` and `pack` add `"package": { "path", "sha256", "id", "version", "hosts", "files", "bytes" }`.
 `simulate --json` writes one transcript entry per line instead.
+
+A failure always carries a code, so `"ok": false` never comes with an empty
+`diagnostics` array. Besides the catalog's codes, the tool uses four tool-only
+codes, each an `Error` with a fixed message and an empty `path`:
+`tool.internal-error` (exit 4, below); `tool.path-missing` (exit 3), "The file
+or folder does not exist.", with `file` the missing path as the author would
+type it (a missing `<path>`, package, `extension.json`, `extension.pack.json` or
+script); `tool.io-error` (exit 3), "A file or folder could not be read or
+written.", with no `file`, because the operating system's message, which may
+name paths, goes to standard error only; and `tool.usage` (exit 2), "The command
+line is not valid.", written only when the command line asked for `--json`, so a
+script that parses the output still gets one object. Each also prints its
+sentence to standard error.
 
 Exit codes:
 

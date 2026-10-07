@@ -61,7 +61,10 @@ A finding inside a package names the entry after `!/`, for example
 the tool writes one object: `tool`, `version`, `command`, `ok`, `diagnostics`
 (`code`, `path`, `message`, `severity`, `file`, `line`, `column`) and `summary`;
 `pack` and `verify` add `package`, `link` adds `pairing`. `simulate --json`
-writes one transcript entry per line.
+writes one transcript entry per line. A failure always carries a code: a missing
+path is `tool.path-missing` (with `file`), a file that cannot be read or written
+is `tool.io-error`, and a command line the tool cannot run is `tool.usage`
+(written when you asked for `--json`).
 
 The tool prints diagnostic messages, paths and your own file names. It never
 prints file contents, pairing secrets, nonces or proofs.
@@ -72,8 +75,8 @@ prints file contents, pairing secrets, nonces or proofs.
 |---|---|
 | 0 | Success. |
 | 1 | Error diagnostics (or warnings with `--warnings-as-errors`); a failed simulation expectation; no valid pairing (`link`); a failed test (`test`). |
-| 2 | Usage error. |
-| 3 | A path is missing or unreadable, the output exists, or the template pack is missing. |
+| 2 | Usage error (`tool.usage` with `--json`). |
+| 3 | A path is missing or unreadable (`tool.path-missing`, `tool.io-error`), the output exists, or the template pack is missing. |
 | 4 | Internal error: `json.internal-error` from a reader, `tool.internal-error` otherwise. |
 | 5 | `simulate`, `run` or `test` could not start the program. |
 

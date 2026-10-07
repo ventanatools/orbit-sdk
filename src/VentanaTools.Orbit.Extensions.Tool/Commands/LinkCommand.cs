@@ -27,6 +27,7 @@ internal static class LinkCommand
         if (!File.Exists(manifestPath))
         {
             console.Fail(console.Display(manifestPath) + " does not exist.");
+            report.AddPathMissing(console.Display(manifestPath));
             return report.Write(ExitCodes.InputOutput);
         }
 

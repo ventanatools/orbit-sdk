@@ -60,6 +60,15 @@ internal sealed class DiagnosticReport(ToolConsole console, string command, bool
     /// <summary>The code the tool reports for its own defects (contract §11.1).</summary>
     public const string ToolInternalError = "tool.internal-error";
 
+    /// <summary>The tool-only code for a file or folder the command needs that does not exist (exit 3).</summary>
+    public const string ToolPathMissing = "tool.path-missing";
+
+    /// <summary>The tool-only code for a file or folder that could not be read or written (exit 3).</summary>
+    public const string ToolIoError = "tool.io-error";
+
+    /// <summary>The tool-only code for a command line the tool cannot run (exit 2), written only with <c>--json</c>.</summary>
+    public const string ToolUsage = "tool.usage";
+
     private readonly List<ReportedDiagnostic> _items = [];
 
     public IReadOnlyList<ReportedDiagnostic> Items => _items;
@@ -103,13 +112,28 @@ internal sealed class DiagnosticReport(ToolConsole console, string command, bool
         Add(DiagnosticCatalog.Create(code, path, null, line, column), file);
 
     /// <summary>Adds <c>tool.internal-error</c>, the tool-only code for a defect of the tool itself.</summary>
-    public void AddToolInternalError() => _items.Add(new ReportedDiagnostic
+    public void AddToolInternalError() => AddTool(ToolInternalError, "The tool failed in a way it does not describe.", "Report it, with the command you ran.", null);
+
+    /// <summary>Adds <c>tool.path-missing</c> for <paramref name="file"/>, shown as the author would type it.</summary>
+    public void AddPathMissing(string file) =>
+        AddTool(ToolPathMissing, "The file or folder does not exist.", "Check the path, or run the command in the project folder.", file);
+
+    /// <summary>Adds <c>tool.io-error</c>; the operating system's message goes to standard error only, because it may name paths.</summary>
+    public void AddIoError() =>
+        AddTool(ToolIoError, "A file or folder could not be read or written.", "Check that the path exists, is not in use and is not read-only.", null);
+
+    /// <summary>Adds <c>tool.usage</c>; the parser's messages go to standard error.</summary>
+    public void AddUsage() =>
+        AddTool(ToolUsage, "The command line is not valid.", "Run the command with --help.", null);
+
+    private void AddTool(string code, string message, string fix, string? file) => _items.Add(new ReportedDiagnostic
     {
-        Code = ToolInternalError,
+        Code = code,
         Path = string.Empty,
-        Message = "The tool failed in a way it does not describe.",
+        Message = message,
         Severity = DiagnosticSeverity.Error,
-        Fix = "Report it, with the command you ran.",
+        File = file,
+        Fix = fix,
     });
 
     /// <summary>Writes the report and returns the exit code: 0 when <see cref="Ok"/>, else 1.</summary>

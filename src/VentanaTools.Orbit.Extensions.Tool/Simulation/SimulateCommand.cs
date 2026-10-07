@@ -38,6 +38,7 @@ internal static class SimulateCommand
         if (!File.Exists(manifestPath))
         {
             console.Fail(console.Display(manifestPath) + " does not exist.");
+            report.AddPathMissing(console.Display(manifestPath));
             return report.Write(ExitCodes.InputOutput);
         }
 
@@ -54,6 +55,7 @@ internal static class SimulateCommand
             if (!File.Exists(scriptPath))
             {
                 console.Fail(console.Display(scriptPath) + " does not exist.");
+                report.AddPathMissing(console.Display(scriptPath));
                 return report.Write(ExitCodes.InputOutput);
             }
 

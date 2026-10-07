@@ -16,6 +16,7 @@ internal static class VerifyCommand
         if (!File.Exists(path))
         {
             console.Fail(console.Display(path) + " does not exist.");
+            report.AddPathMissing(console.Display(path));
             return report.Write(ExitCodes.InputOutput);
         }
 

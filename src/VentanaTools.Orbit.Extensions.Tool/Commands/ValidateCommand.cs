@@ -20,6 +20,7 @@ internal static class ValidateCommand
             if (!File.Exists(manifestPath))
             {
                 console.Fail(console.FolderName(target) + " contains no " + ExtensionFiles.ManifestName + ".");
+                report.AddPathMissing(console.Display(manifestPath));
                 return report.Write(ExitCodes.InputOutput);
             }
 
@@ -31,6 +32,7 @@ internal static class ValidateCommand
         if (!File.Exists(target))
         {
             console.Fail(console.Display(target) + " does not exist.");
+            report.AddPathMissing(console.Display(target));
             return report.Write(ExitCodes.InputOutput);
         }
 

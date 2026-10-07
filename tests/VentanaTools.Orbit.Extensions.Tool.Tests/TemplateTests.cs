@@ -235,8 +235,10 @@ public sealed class TemplateTests(TemplateFeed feed, ITestOutputHelper output) :
     [WindowsFact]
     public void TheNoTestsOptionLeavesOutTheTestProject()
     {
-        var folder = Path.Combine(feed.Projects, "no-tests");
-        feed.Run(feed.Tool, ["new", "action", "-n", "Plain", "-o", folder, "--no-tests", "--feed", feed.Feed, "--debug:custom-hive", feed.Hive], feed.Projects);
+        var folder = Path.Combine(feed.Projects, "no tests");
+        var created = feed.Run(feed.Tool, ["new", "action", "-n", "Plain", "-o", folder, "--no-tests", "--feed", feed.Feed, "--debug:custom-hive", feed.Hive],
+            feed.Projects);
+        Assert.Contains("  cd \"no tests\"", created, StringComparison.Ordinal);
         Assert.False(Directory.Exists(Path.Combine(folder, "tests")));
         Assert.DoesNotContain("Tests", File.ReadAllText(Path.Combine(folder, "Plain.slnx")), StringComparison.Ordinal);
         output.WriteLine(feed.Run("dotnet", ["build", "-nologo", "-warnaserror"], folder));

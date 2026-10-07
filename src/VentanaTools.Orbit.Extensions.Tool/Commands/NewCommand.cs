@@ -123,6 +123,10 @@ internal static class NewCommand
 {
     public static IReadOnlyList<string> Kinds { get; } = ["action", "widget", "node"];
 
+    /// <summary>A path quoted for PowerShell and cmd when it holds a space or a character either shell treats specially.</summary>
+    internal static string ShellArgument(string text) =>
+        text.Any(c => char.IsWhiteSpace(c) || "&;()'`$,{}@#^%!".Contains(c, StringComparison.Ordinal)) ? "\"" + text + "\"" : text;
+
     public static async Task<int> RunAsync(ToolConsole console, string kind, NewOptions options, CancellationToken cancellationToken)
     {
         if (options.ExtensionId is { } id && (ExtensionIds.Classify(id, IdOrigin.ThirdParty) ?? (id.Contains('/', StringComparison.Ordinal) ? DiagnosticCodes.IdGrammar : null)) is { } code)
@@ -233,7 +237,7 @@ internal static class NewCommand
         console.Out.WriteLine("Next:");
         if (folder != console.WorkingDirectory)
         {
-            console.Out.WriteLine("  cd " + console.Display(folder));
+            console.Out.WriteLine("  cd " + ShellArgument(console.Display(folder)));
         }
 
         if (kind == "node")
