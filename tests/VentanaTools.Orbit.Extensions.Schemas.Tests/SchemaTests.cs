@@ -259,6 +259,38 @@ public sealed class FixtureAgreementTests
     }
 
     [Theory]
+    [InlineData("name", 80)]
+    [InlineData("description", 512)]
+    public void TheSchemaCountsCharactersWhereTheReaderCountsUtf16CodeUnits(string member, int limit)
+    {
+        // Contract §3.6 and §11.5: maxLength counts code points, the readers UTF-16 code units. A character outside the
+        // Basic Multilingual Plane is one of the first and two of the second, so text of such characters within the
+        // reader's limit passes both, and one character more (41 for a name) passes the schema alone, refused by the
+        // reader-only rule string.too-long listed above.
+        const string Astral = "\U0001F600";
+        var countdown = File.ReadAllBytes(Repository.PathOf("fixtures/manifests/valid/countdown.json"));
+        for (var count = limit / 2; count <= (limit / 2) + 1; count++)
+        {
+            var manifest = System.Text.Json.Nodes.JsonNode.Parse(countdown)!.AsObject();
+            manifest[member] = string.Concat(Enumerable.Repeat(Astral, count));
+            var bytes = System.Text.Encoding.UTF8.GetBytes(manifest.ToJsonString());
+            Assert.True(Repository.Accepts(ActiveManifestSchema, bytes), member + " of " + count + " characters");
+            var errors = ManifestReader.Read(bytes).Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToList();
+            if (count * 2 <= limit)
+            {
+                Assert.Empty(errors);
+            }
+            else
+            {
+                var error = Assert.Single(errors);
+                Assert.Equal(DiagnosticCodes.StringTooLong, error.Code);
+                Assert.Equal("/" + member, error.Path);
+                Assert.Contains(error.Code, ReaderOnly.Keys);
+            }
+        }
+    }
+
+    [Theory]
     [InlineData("templates/content/action-csharp/extension.json")]
     [InlineData("templates/content/widget-csharp/extension.json")]
     [InlineData("templates/content/node/extension.json")]

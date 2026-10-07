@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dev.ventana.tools/schemas/extensions/orbit/manifest.v3.json",
   "title": "Extension manifest, schema 3",
-  "description": "extension.json: the declaration of an extension and its contributions (contract §3). Readers also check rules a schema cannot express: reserved publishers, ids inside the extension's namespace, unique ids and values, default among the choices, format characters and the full URL rule.",
+  "description": "extension.json: the declaration of an extension and its contributions (contract §3). Readers also check rules a schema cannot express: reserved publishers, ids inside the extension's namespace, unique ids and values, default among the choices, format characters, the full URL rule, and text lengths in UTF-16 code units where maxLength counts characters.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "name", "description", "version", "hosts", "contributions"],
@@ -161,10 +161,12 @@
       ]
     },
     "name": {
+      "description": "A name or label: at most 80 UTF-16 code units, as readers count them. maxLength counts characters instead, so a name with characters outside the Basic Multilingual Plane, such as emoji, can pass this schema and still be too long for a reader (string.too-long).",
       "$ref": "#/$defs/text",
       "maxLength": 80
     },
     "longText": {
+      "description": "A description: at most 512 UTF-16 code units, as readers count them. maxLength counts characters instead, so a description with characters outside the Basic Multilingual Plane, such as emoji, can pass this schema and still be too long for a reader (string.too-long).",
       "$ref": "#/$defs/text",
       "maxLength": 512
     },

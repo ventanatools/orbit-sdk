@@ -541,7 +541,9 @@ Allowed format characters, because scripts and mixed-direction names need them:
 | U+200F | Right-to-left mark (RLM) |
 | U+061C | Arabic letter mark (ALM) |
 
-Lengths are counted in UTF-16 code units after JSON unescaping. The warning
+Lengths are counted in UTF-16 code units after JSON unescaping. The JSON
+Schemas cannot count them that way (§11.5), so readers alone enforce the limits
+for text outside the Basic Multilingual Plane. The warning
 `text.long` is raised when a `name` is longer than 32 text elements, because
 hosts truncate longer names in compact places.
 
@@ -3770,6 +3772,16 @@ the schema and the reader; schema-only rules (none may be stricter than the
 reader) and reader-only rules (cross-member checks such as `default` ∈
 `choices`) are listed in the test. The URL segment is the host id, never a
 documentation slug.
+
+Text lengths are one of the reader-only rules. A schema's `maxLength` counts
+characters (code points), while the limits of §3.6 count UTF-16 code units, and a
+character outside the Basic Multilingual Plane, such as an emoji, is two units. So
+a name of 41 such characters (82 units) passes the schema's `maxLength` of 80 and
+is refused by a reader with `string.too-long`; the schemas state this in their
+descriptions. No pattern can close the gap portably, because JSON Schema
+validators run ECMA-262 patterns over code points or over UTF-16 code units
+depending on the implementation. A schema is never stricter than the readers,
+which have the last word.
 
 ### 11.6 Building
 
