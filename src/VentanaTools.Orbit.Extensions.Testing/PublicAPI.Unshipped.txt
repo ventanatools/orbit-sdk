@@ -66,6 +66,8 @@ VentanaTools.Orbit.Extensions.Testing.RecordingSession.Publications.get -> Syste
 VentanaTools.Orbit.Extensions.Testing.RecordingSession.RunAsync(VentanaTools.Orbit.Extensions.IContributionHandler! handler, System.TimeSpan? timeout = null) -> System.Threading.Tasks.Task!
 VentanaTools.Orbit.Extensions.Testing.RecordingSession.Session.get -> VentanaTools.Orbit.Extensions.Session!
 VentanaTools.Orbit.Extensions.Testing.RecordingSession.Stop() -> void
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.WaitForFaceAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.Face!>!
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.WaitForPublicationsAsync(int count, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 VentanaTools.Orbit.Extensions.Testing.TestHostSession
 VentanaTools.Orbit.Extensions.Testing.TestHostSession.ContributionId.get -> string!
 VentanaTools.Orbit.Extensions.Testing.TestHostSession.RefusedCode.get -> VentanaTools.Orbit.Extensions.ReasonCode?

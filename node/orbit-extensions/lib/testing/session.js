@@ -25,6 +25,8 @@ class RecordingSession {
     #controller = new AbortController();
     #publications = [];
     #lastFace = undefined;
+    #faceCursor = 0;
+    #waiters = new Set();
     #clock;
     #start;
 
@@ -37,6 +39,7 @@ class RecordingSession {
             if (command.failure) publication.failure = command.failure;
             this.#publications.push(Object.freeze(publication));
             if (kind !== "AfterStop") this.#lastFace = publication.face;
+            for (const wake of [...this.#waiters]) wake();
         };
         this.session = new Session({
             id: newId(),
@@ -78,13 +81,65 @@ class RecordingSession {
     }
 
     /**
-     * Runs `handler.runSession(session, signal)`. An AbortError after stop is a normal completion;
-     * with `timeoutMs`, rejects when the handler has not ended in time.
+     * Waits for the next face the handler shows (a SetFace), in publication order: the first call
+     * resolves with the first face, each later call with the face after the one the previous call
+     * resolved with, at once when it is already recorded. The timeout is real time, whatever the
+     * session's clock, so a test that drives a ManualClock cannot hang here.
+     */
+    waitForFace(timeoutMs = 2000) {
+        return this.#waitFor(() => {
+            while (this.#faceCursor < this.#publications.length) {
+                const publication = this.#publications[this.#faceCursor++];
+                if (publication.kind === "SetFace" && publication.face) return { value: publication.face };
+            }
+            return undefined;
+        }, timeoutMs, "No further face was published within " + timeoutMs + " ms.");
+    }
+
+    /** Waits until at least `count` publications of any kind are recorded; the timeout is real time. */
+    waitForPublications(count, timeoutMs = 2000) {
+        if (!Number.isInteger(count) || count < 0) throw new TypeError("count must be a non-negative integer.");
+        return this.#waitFor(() => (this.#publications.length >= count ? { value: undefined } : undefined), timeoutMs,
+            "Fewer than " + count + " publications were recorded within " + timeoutMs + " ms.");
+    }
+
+    #waitFor(check, timeoutMs, message) {
+        const found = check();
+        if (found) return Promise.resolve(found.value);
+        return new Promise((resolve, reject) => {
+            const wake = () => {
+                const result = check();
+                if (!result) return;
+                done();
+                resolve(result.value);
+            };
+            const timer = setTimeout(() => {
+                done();
+                reject(new Error(message));
+            }, timeoutMs);
+            const done = () => {
+                clearTimeout(timer);
+                this.#waiters.delete(wake);
+            };
+            this.#waiters.add(wake);
+        });
+    }
+
+    /**
+     * Runs `handler.runSession(session, signal)`. The handler runs up to its first await before
+     * run returns, so a face it publishes before awaiting is already recorded; use waitForFace or
+     * waitForPublications before asserting on later faces. An AbortError after stop is a normal
+     * completion; with `timeoutMs`, rejects when the handler has not ended in time.
      */
     async run(handler, { timeoutMs } = {}) {
         if (!handler || typeof handler.runSession !== "function") return;
         const signal = this.#controller.signal;
-        const running = Promise.resolve().then(() => handler.runSession(this.session, signal));
+        let running;
+        try {
+            running = Promise.resolve(handler.runSession(this.session, signal));
+        } catch (error) {
+            running = Promise.reject(error);
+        }
         let timer;
         try {
             if (typeof timeoutMs === "number") {

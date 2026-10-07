@@ -38,7 +38,8 @@ runCompanion(process.argv.slice(2), {
   async runSession(session, signal) {
     const now = new Date();
     session.setFace({ line1: now.toLocaleTimeString(session.uiLanguage), goodForSeconds: 60, renew: true });
-    await new Promise((resolve) => signal.addEventListener("abort", resolve)); // keep running until stopped
+    // Keep running until stopped (the signal may already be aborted).
+    if (!signal.aborted) await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
   },
 }).then((code) => process.exit(code));
 ```
@@ -98,7 +99,17 @@ test("the manifest is valid", () => {
   assertManifestValid(require("node:path").join(__dirname, "..", "extension.json"));
 });
 
-test("the widget publishes a face", async () => {
+test("the widget's first face shows the time", async () => {
+  const manifest = assertManifestValid(require("node:path").join(__dirname, "..", "extension.json"));
+  const recording = createTestSession({ manifest, contributionId: "example.clock/time" });
+  const run = recording.run(require("../handler.js"));
+  const face = await recording.waitForFace(2000);
+  assert.ok(face.line1);
+  recording.stop();
+  await run;
+});
+
+test("the widget publishes a face through a real client", async () => {
   const manifest = assertManifestValid(require("node:path").join(__dirname, "..", "extension.json"));
   const host = await startTestHost({ manifest, handler: require("../handler.js") });
   try {
@@ -111,7 +122,9 @@ test("the widget publishes a face", async () => {
 });
 ```
 
-`createTestSession` records what a session handler publishes without a connection.
+`createTestSession` records what a session handler publishes without a connection; await
+`waitForFace` (or `waitForPublications`) before asserting, because the handler keeps running
+after `run` returns.
 `startTestHost` runs a real `CompanionClient` against an in-memory host that speaks real frames;
 pass a `ManualClock` to drive backoff, deadlines, pings and renewal without waiting.
 

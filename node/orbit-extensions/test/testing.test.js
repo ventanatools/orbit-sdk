@@ -149,3 +149,58 @@ test("assertManifestValid throws listing every error, for a path or an object", 
         fs.rmSync(folder, { recursive: true, force: true });
     }
 });
+
+test("the documented pattern sees the first face every time: run, waitForFace, assert, stop, await", async () => {
+    const widget = {
+        async runSession(session, signal) {
+            session.setFace({ line1: "4:59", goodForSeconds: 60, renew: true });
+            if (!signal.aborted) await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+        },
+    };
+    for (let attempt = 0; attempt < 100; attempt++) {
+        const recording = createTestSession({ manifest: countdown(), contributionId: STATUS });
+        const run = recording.run(widget);
+        const face = await recording.waitForFace(2000);
+        assert.equal(face.line1, "4:59");
+        recording.stop();
+        await run;
+        assert.deepEqual(recording.publications.map((p) => p.kind), ["SetFace"]);
+    }
+});
+
+test("run starts the handler before it returns, so a stop right away comes after the first face", async () => {
+    const recording = createTestSession({ manifest: countdown(), contributionId: STATUS });
+    const run = recording.run({
+        async runSession(session, signal) {
+            session.setFace({ line1: "first", goodForSeconds: 5 });
+            if (!signal.aborted) await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+        },
+    });
+    assert.equal(recording.lastFace.line1, "first");
+    recording.stop();
+    await run;
+    assert.deepEqual(recording.publications.map((p) => p.kind), ["SetFace"]);
+});
+
+test("waitForFace resolves faces in order and its timeout is real time; waitForPublications counts every kind", async () => {
+    const clock = new ManualClock();
+    const recording = createTestSession({ manifest: countdown(), contributionId: STATUS, clock });
+    const { session } = recording;
+    session.setFace({ line1: "one", goodForSeconds: 5 });
+    session.clearFace();
+    session.setFace({ line1: "two", goodForSeconds: 5 });
+    assert.equal((await recording.waitForFace(1000)).line1, "one");
+    assert.equal((await recording.waitForFace(1000)).line1, "two");
+    const third = recording.waitForFace(10000);
+    session.setFace({ line1: "three", goodForSeconds: 5 });
+    assert.equal((await third).line1, "three");
+    // The manual clock never moves, yet the timeout ends the wait.
+    await assert.rejects(recording.waitForFace(50), /No further face/);
+    await recording.waitForPublications(4, 1000);
+    const fifth = recording.waitForPublications(5, 10000);
+    recording.stop();
+    session.setFace({ line1: "late", goodForSeconds: 5 });
+    await fifth;
+    await assert.rejects(recording.waitForFace(50), /No further face/);
+    assert.throws(() => recording.waitForPublications(-1), TypeError);
+});

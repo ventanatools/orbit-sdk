@@ -20,10 +20,16 @@ using VentanaTools.Orbit.Extensions.Testing;
 
 using var recording = TestSessions.FromManifest(manifest, "example.clock/time");
 var run = recording.RunAsync(new TimeWidget());
-// assert on recording.LastFace or recording.Publications
+var face = await recording.WaitForFaceAsync(TimeSpan.FromSeconds(5));
+// assert on face, recording.LastFace or recording.Publications
 recording.Stop();
 await run;   // an OperationCanceledException after Stop is a normal completion
 ```
+
+The handler keeps running after `RunAsync` returns, so wait before you assert:
+`WaitForFaceAsync` returns the faces in the order they were published, and
+`WaitForPublicationsAsync(count, timeout)` waits for any kind of publication.
+Their timeouts are real time, even when the session uses a manual clock.
 
 For an action, pass `TestInvocations.Create(recording)` to your handler's
 `InvokeAsync`.

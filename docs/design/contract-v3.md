@@ -2883,6 +2883,8 @@ public sealed class RecordingSession : IDisposable
     public CancellationToken Cancellation { get; }
     public void Stop();                                           // ends the session as stopSession would
     public Task RunAsync(IContributionHandler handler, TimeSpan? timeout = null);
+    public Task<Face> WaitForFaceAsync(TimeSpan timeout, CancellationToken cancellationToken = default);
+    public Task WaitForPublicationsAsync(int count, TimeSpan timeout, CancellationToken cancellationToken = default);
     public void Dispose();
 }
 public enum PublicationKind { SetFace = 1, ClearFace = 2, Fail = 3, AfterStop = 4 }
@@ -2983,6 +2985,16 @@ public static class ExtensionConformance
 public sealed class ConformanceException : InvalidOperationException { public IReadOnlyList<string> Failures { get; } }
                                                                   // also the three standard exception constructors
 ```
+
+`RecordingSession.RunAsync` runs the handler up to its first `await` before it
+returns, outside any synchronization context, and the rest on the thread pool,
+so a face published before the first `await` is recorded before `RunAsync`
+returns and a `Stop` right after it never comes first. The handler keeps
+running after that, so tests wait before asserting: `WaitForFaceAsync` returns
+the `SetFace` faces in publication order (each call the one after the face the
+previous call returned) and `WaitForPublicationsAsync` waits until that many
+publications of any kind are recorded. Both time out in real time, whatever the
+session's clock, with a `TimeoutException`.
 
 `StartSessionAsync` returns once the companion has accepted or refused the
 session (and, when it refused, once the `sessionRefused` frame is in the
@@ -3125,7 +3137,8 @@ interface Session {
 }
 
 // require("@ventanatools/orbit-extensions/testing")
-createTestSession({ manifest, contributionId, settings?, uiLanguage? })   // records publications like RecordingSession
+createTestSession({ manifest, contributionId, settings?, uiLanguage? })   // records publications like RecordingSession, with
+                                                                          // run, stop, waitForFace and waitForPublications
 startTestHost({ manifest, handler, hostId?, limits?, capabilities? })     // a real CompanionClient over an in-memory duplex
 assertManifestValid(path, options?)                                       // synchronous; throws an Error named
                                                                           // "ConformanceError" with a failures array

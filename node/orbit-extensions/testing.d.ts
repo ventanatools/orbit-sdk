@@ -34,8 +34,15 @@ export interface RecordingSession {
     readonly signal: AbortSignal;
     /** Ends the session as stopSession would. */
     stop(): void;
-    /** Runs handler.runSession; an AbortError after stop is a normal completion. */
+    /**
+     * Runs handler.runSession, which runs up to its first await before run returns; an AbortError
+     * after stop is a normal completion.
+     */
     run(handler: Handler, options?: { timeoutMs?: number }): Promise<void>;
+    /** The next face the handler shows (SetFace), in publication order; the timeout (default 2000) is real time. */
+    waitForFace(timeoutMs?: number): Promise<RecordedFace>;
+    /** Resolves once at least `count` publications of any kind are recorded; the timeout (default 2000) is real time. */
+    waitForPublications(count: number, timeoutMs?: number): Promise<void>;
 }
 
 /** Fills defaults and checks the settings against the manifest (TypeError when they do not match). */

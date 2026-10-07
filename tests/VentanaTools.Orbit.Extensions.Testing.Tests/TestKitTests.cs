@@ -62,8 +62,7 @@ public sealed class RecordingSessionTests
     {
         using var recording = TestSessions.FromManifest(Manifests.Kit(), Manifests.Widget);
         var run = recording.RunAsync(new GoodWidget());
-        await Manifests.WaitForAsync(() => recording.LastFace is not null, "face");
-        Assert.Equal("small", ((TextLine)recording.LastFace!.Line1!).Text);
+        Assert.Equal("small", ((TextLine)(await recording.WaitForFaceAsync(TimeSpan.FromSeconds(10))).Line1!).Text);
         recording.Stop();
         await run.WaitAsync(TimeSpan.FromSeconds(10));
 
@@ -78,6 +77,68 @@ public sealed class RecordingSessionTests
         await Task.Delay(20);
         time.Advance(TimeSpan.FromSeconds(2));
         await Assert.ThrowsAsync<TimeoutException>(() => waiting);
+    }
+
+    [Fact]
+    public async Task TheDocumentedPatternSeesTheFirstFaceEveryTime()
+    {
+        // RunAsync, wait for the face, assert, Stop, await: the pattern of the XML example, the README and the docs site.
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            using var recording = TestSessions.FromManifest(Manifests.Kit(), Manifests.Widget);
+            var run = recording.RunAsync(new GoodWidget());
+            var face = await recording.WaitForFaceAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal("small", ((TextLine)face.Line1!).Text);
+            recording.Stop();
+            await run.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.DoesNotContain(recording.Publications, publication => publication.Kind == PublicationKind.AfterStop);
+        }
+    }
+
+    [Fact]
+    public async Task AHandlerRunsToItsFirstAwaitBeforeRunAsyncReturns()
+    {
+        using var recording = TestSessions.FromManifest(Manifests.Kit(), Manifests.Widget);
+        var run = recording.RunAsync(new GoodWidget());
+
+        // GoodWidget publishes before it first awaits, so a Stop right away comes after that face, never before it.
+        Assert.Equal("small", ((TextLine)recording.LastFace!.Line1!).Text);
+        recording.Stop();
+        await run.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal([PublicationKind.SetFace], recording.Publications.Select(publication => publication.Kind));
+    }
+
+    [Fact]
+    public async Task WaitForFaceReturnsFacesInOrderAndItsTimeoutIsRealTime()
+    {
+        var time = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
+        using var recording = TestSessions.FromManifest(Manifests.Kit(), Manifests.Widget, time: time);
+        var session = recording.Session;
+        session.SetFace(new Face { Line1 = "one", GoodFor = TimeSpan.FromSeconds(5) });
+        session.ClearFace();
+        session.SetFace(new Face { Line1 = "two", GoodFor = TimeSpan.FromSeconds(5) });
+        Assert.Equal("one", ((TextLine)(await recording.WaitForFaceAsync(TimeSpan.FromSeconds(1))).Line1!).Text);
+        Assert.Equal("two", ((TextLine)(await recording.WaitForFaceAsync(TimeSpan.FromSeconds(1))).Line1!).Text);
+        var third = recording.WaitForFaceAsync(TimeSpan.FromSeconds(10));
+        Assert.False(third.IsCompleted);
+        session.SetFace(new Face { Line1 = "three", GoodFor = TimeSpan.FromSeconds(5) });
+        Assert.Equal("three", ((TextLine)(await third).Line1!).Text);
+
+        // The session's manual clock never moves, yet the timeout ends the wait.
+        await Assert.ThrowsAsync<TimeoutException>(() => recording.WaitForFaceAsync(TimeSpan.FromMilliseconds(50)));
+        await recording.WaitForPublicationsAsync(4, TimeSpan.FromSeconds(1));
+        var fifth = recording.WaitForPublicationsAsync(5, TimeSpan.FromSeconds(10));
+        Assert.False(fifth.IsCompleted);
+        recording.Stop();
+        session.SetFace(new Face { Line1 = "late", GoodFor = TimeSpan.FromSeconds(5) });
+        await fifth;
+
+        // A face after stop is a publication, but no face is shown.
+        await Assert.ThrowsAsync<TimeoutException>(() => recording.WaitForFaceAsync(TimeSpan.FromMilliseconds(50)));
+        await Assert.ThrowsAsync<TimeoutException>(() => recording.WaitForPublicationsAsync(6, TimeSpan.FromMilliseconds(50)));
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => recording.WaitForFaceAsync(TimeSpan.FromSeconds(10), cancelled.Token));
     }
 
     [Fact]

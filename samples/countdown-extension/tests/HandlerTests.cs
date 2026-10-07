@@ -14,13 +14,26 @@ public sealed class HandlerTests
     private static async Task<ExtensionManifest> ManifestAsync() =>
         (await ManifestReader.ReadFileAsync("extension.json")).Value ?? throw new InvalidOperationException("extension.json is invalid.");
 
-    private static async Task UntilAsync(Func<bool> condition)
+    /// <summary>
+    /// Advances the fake clock a second at a time until the session publishes its next face. The
+    /// handler may not be waiting on the clock yet when it first moves, so one step can be too few.
+    /// </summary>
+    private static async Task<Face> AdvanceUntilNextFaceAsync(RecordingSession session, FakeTimeProvider time)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!condition())
+        for (var step = 0; step < 100; step++)
         {
-            await Task.Delay(5, timeout.Token);
+            time.Advance(TimeSpan.FromSeconds(1));
+            try
+            {
+                return await session.WaitForFaceAsync(TimeSpan.FromMilliseconds(50));
+            }
+            catch (TimeoutException)
+            {
+                // Not waiting on the clock yet: advance again.
+            }
         }
+
+        throw new TimeoutException("The session published no face while the clock advanced.");
     }
 
     [Fact]
@@ -30,35 +43,32 @@ public sealed class HandlerTests
         var handler = new CountdownHandler(time);
         using var status = TestSessions.FromManifest(await ManifestAsync(), CountdownChoices.StatusId, time: time);
         var running = status.RunAsync(handler);
-        await UntilAsync(() => status.Publications.Count == 1);
-        Assert.Equal(new TextLine { Text = "5:00" }, status.LastFace!.Line1);
-        Assert.Equal(new TextLine { Text = "Ready" }, status.LastFace.Line2);
-        Assert.True(status.LastFace.Renew);
+        var ready = await status.WaitForFaceAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(new TextLine { Text = "5:00" }, ready.Line1);
+        Assert.Equal(new TextLine { Text = "Ready" }, ready.Line2);
+        Assert.True(ready.Renew);
 
         using var timer = TestSessions.FromManifest(await ManifestAsync(), CountdownChoices.TimerId,
             new Dictionary<string, string> { ["mode"] = "start", ["duration"] = "one-minute" }, time);
         Assert.Equal(InvokeResult.Done, await handler.InvokeAsync(TestInvocations.Create(timer), CancellationToken.None));
-        await UntilAsync(() => status.Publications.Count == 2);
-        Assert.Equal(new TextLine { Text = "1:00" }, status.LastFace!.Line1);
-        Assert.Equal(FaceState.Playing, status.LastFace.State);
+        var started = await status.WaitForFaceAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(new TextLine { Text = "1:00" }, started.Line1);
+        Assert.Equal(FaceState.Playing, started.State);
 
-        // While it runs, the face follows the clock. The handler waits on the fake clock, so keep
-        // advancing it until the handler's next wake has published (it may not be waiting yet).
-        await UntilAsync(() =>
-        {
-            time.Advance(TimeSpan.FromSeconds(1));
-            return status.LastFace!.Line1 != new TextLine { Text = "1:00" };
-        });
-        Assert.Equal(FaceState.Playing, status.LastFace!.State);
+        // While it runs, the face follows the clock.
+        var ticked = await AdvanceUntilNextFaceAsync(status, time);
+        Assert.NotEqual(new TextLine { Text = "1:00" }, ticked.Line1);
+        Assert.Equal(FaceState.Playing, ticked.State);
 
         // A pause shows the time left at once, and the face stays true until the next pick.
         using var pause = TestSessions.FromManifest(await ManifestAsync(), CountdownChoices.TimerId,
             new Dictionary<string, string> { ["mode"] = "pause" }, time);
         Assert.Equal(InvokeResult.Done, await handler.InvokeAsync(TestInvocations.Create(pause), CancellationToken.None));
-        await UntilAsync(() => status.LastFace!.State == FaceState.Paused);
+        var shown = await status.WaitForFaceAsync(TimeSpan.FromSeconds(5));
         var paused = CountdownHandler.CreateFace(handler.Countdown.Read(), null, System.Globalization.CultureInfo.InvariantCulture);
-        Assert.Equal(paused.Line1, status.LastFace!.Line1);
-        Assert.True(status.LastFace.Renew);
+        Assert.Equal(FaceState.Paused, shown.State);
+        Assert.Equal(paused.Line1, shown.Line1);
+        Assert.True(shown.Renew);
         status.Stop();
         await running;
         Assert.DoesNotContain(status.Publications, publication => publication.Kind == PublicationKind.AfterStop);
@@ -97,7 +107,9 @@ public sealed class HandlerTests
         Assert.Equal(new TextLine { Text = "1:00" }, (await host.WaitForFaceAsync(status, TimeSpan.FromSeconds(5))).Face.Line1);
         time.Advance(TimeSpan.FromSeconds(20));
         Assert.Equal(TestInvokeOutcomeKind.Done, (await host.InvokeAsync(pause)).Kind);
-        await UntilAsync(() => handler.Countdown.Read().Phase == CountdownPhase.Paused);
+
+        // The handler applies a pick before it answers, so the countdown is paused once the result arrives.
+        Assert.Equal(CountdownPhase.Paused, handler.Countdown.Read().Phase);
         Assert.Equal(TimeSpan.FromSeconds(40), handler.Countdown.Read().Remaining);
         Assert.Empty(host.Faults);
     }

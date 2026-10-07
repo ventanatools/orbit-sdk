@@ -12,15 +12,6 @@ public sealed class StateHandlerTests
     private static async Task<ExtensionManifest> ManifestAsync() =>
         (await ManifestReader.ReadFileAsync("extension.json")).Value ?? throw new InvalidOperationException("extension.json is invalid.");
 
-    private static async Task UntilAsync(Func<bool> condition)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            await Task.Delay(5, timeout.Token);
-        }
-    }
-
     [Fact]
     public void TheStateChangesOnlyWhenSetToTheOtherValue()
     {
@@ -53,17 +44,15 @@ public sealed class StateHandlerTests
         var handler = new StateHandler();
         using var status = TestSessions.FromManifest(await ManifestAsync(), StateHandler.StatusId);
         var running = status.RunAsync(handler);
-        await UntilAsync(() => status.Publications.Count == 1);
-        Assert.Equal(new TextLine { Text = "Off" }, status.LastFace!.Line1);
+        Assert.Equal(new TextLine { Text = "Off" }, (await status.WaitForFaceAsync(TimeSpan.FromSeconds(5))).Line1);
 
         using var turnOn = TestSessions.FromManifest(await ManifestAsync(), StateHandler.SetStateId);
         Assert.Equal(InvokeResult.Done, await handler.InvokeAsync(TestInvocations.Create(turnOn), CancellationToken.None));
-        await UntilAsync(() => status.Publications.Count == 2);
-        Assert.Equal(new TextLine { Text = "On" }, status.LastFace!.Line1);
+        Assert.Equal(new TextLine { Text = "On" }, (await status.WaitForFaceAsync(TimeSpan.FromSeconds(5))).Line1);
 
         // Setting the same value again changes nothing, so nothing is published.
         Assert.Equal(InvokeResult.Done, await handler.InvokeAsync(TestInvocations.Create(turnOn), CancellationToken.None));
-        await Task.Delay(50);
+        await Assert.ThrowsAsync<TimeoutException>(() => status.WaitForPublicationsAsync(3, TimeSpan.FromMilliseconds(100)));
         Assert.Equal(2, status.Publications.Count);
         status.Stop();
         await running;

@@ -11,7 +11,8 @@ namespace VentanaTools.Orbit.Extensions.Testing;
 /// <code>
 /// using var recording = TestSessions.FromManifest(manifest, "example.clock/time");
 /// var run = recording.RunAsync(new TimeWidget());
-/// // … assert on recording.LastFace …
+/// var face = await recording.WaitForFaceAsync(TimeSpan.FromSeconds(5));
+/// // … assert on face …
 /// recording.Stop();
 /// await run;
 /// </code>
@@ -76,6 +77,8 @@ public sealed class RecordingSession : IDisposable
     private readonly TimeProvider _time;
     private readonly long _start;
     private Face? _lastFace;
+    private int _faceCursor;
+    private TaskCompletionSource? _published;
 
     internal RecordingSession(string contributionId, Provides provides, IReadOnlyDictionary<string, string> settings, string uiLanguage,
         TimeProvider time)
@@ -131,9 +134,13 @@ public sealed class RecordingSession : IDisposable
     }
 
     /// <summary>
-    /// Runs the handler's <see cref="IContributionHandler.RunSessionAsync"/> on the thread pool,
-    /// as the client does, and waits for it. An <see cref="OperationCanceledException"/> after
-    /// <see cref="Stop"/> is a normal completion; any other exception is rethrown.
+    /// Runs the handler's <see cref="IContributionHandler.RunSessionAsync"/> and waits for it. The
+    /// handler runs up to its first <c>await</c> before this method returns, outside any
+    /// synchronization context, so a face it publishes before awaiting is already recorded; the
+    /// rest runs on the thread pool, as with the client. Use <see cref="WaitForFaceAsync"/> or
+    /// <see cref="WaitForPublicationsAsync"/> before asserting on later faces. An
+    /// <see cref="OperationCanceledException"/> after <see cref="Stop"/> is a normal completion;
+    /// any other exception is rethrown.
     /// </summary>
     /// <param name="handler">The handler.</param>
     /// <param name="timeout">How long to wait on the session's clock; null to wait until it ends.</param>
@@ -142,7 +149,7 @@ public sealed class RecordingSession : IDisposable
     public async Task RunAsync(IContributionHandler handler, TimeSpan? timeout = null)
     {
         ArgumentNullException.ThrowIfNull(handler);
-        var run = Task.Run(() => handler.RunSessionAsync(Session, _token));
+        var run = Start(handler);
         try
         {
             if (timeout is { } bound)
@@ -160,6 +167,67 @@ public sealed class RecordingSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// Waits for the next face the handler shows (<see cref="PublicationKind.SetFace"/>), in
+    /// publication order: the first call returns the first face, and each later call the face after
+    /// the one the previous call returned, at once when it is already recorded.
+    /// </summary>
+    /// <param name="timeout">How long to wait, in real time whatever the session's clock, so a test that drives a manual clock cannot hang here.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The face, as cleaned for sending.</returns>
+    /// <exception cref="TimeoutException">No further face was published within <paramref name="timeout"/>.</exception>
+    public async Task<Face> WaitForFaceAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        var started = TimeProvider.System.GetTimestamp();
+        while (true)
+        {
+            Task published;
+            lock (_gate)
+            {
+                for (; _faceCursor < _publications.Count; _faceCursor++)
+                {
+                    if (_publications[_faceCursor] is { Kind: PublicationKind.SetFace, Face: { } face })
+                    {
+                        _faceCursor++;
+                        return face;
+                    }
+                }
+
+                published = (_published ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+            }
+
+            await WaitAsync(published, timeout, started, "No further face was published within the timeout.", cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Waits until at least <paramref name="count"/> publications of any kind are recorded (<see cref="Publications"/>).</summary>
+    /// <param name="count">The number of publications to wait for.</param>
+    /// <param name="timeout">How long to wait, in real time whatever the session's clock.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>A task that completes when the publications are recorded.</returns>
+    /// <exception cref="TimeoutException">Fewer publications were recorded within <paramref name="timeout"/>.</exception>
+    public async Task WaitForPublicationsAsync(int count, TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        var started = TimeProvider.System.GetTimestamp();
+        while (true)
+        {
+            Task published;
+            lock (_gate)
+            {
+                if (_publications.Count >= count)
+                {
+                    return;
+                }
+
+                published = (_published ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+            }
+
+            await WaitAsync(published, timeout, started, "Fewer publications than expected were recorded within the timeout.", cancellationToken)
+                .ConfigureAwait(false);
+        }
+    }
+
     /// <summary>Stops the session and releases its token.</summary>
     public void Dispose()
     {
@@ -167,9 +235,47 @@ public sealed class RecordingSession : IDisposable
         _cancellation.Dispose();
     }
 
+    private static async Task WaitAsync(Task published, TimeSpan timeout, long started, string message, CancellationToken cancellationToken)
+    {
+        var remaining = timeout - TimeProvider.System.GetElapsedTime(started);
+        if (remaining <= TimeSpan.Zero)
+        {
+            throw new TimeoutException(message);
+        }
+
+        try
+        {
+            await published.WaitAsync(remaining, TimeProvider.System, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            throw new TimeoutException(message);
+        }
+    }
+
+    /// <summary>Calls the handler up to its first await with no synchronization context, so its continuations run on the thread pool.</summary>
+    private Task Start(IContributionHandler handler)
+    {
+        var context = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(null);
+        try
+        {
+            return handler.RunSessionAsync(Session, _token) ?? Task.CompletedTask;
+        }
+        catch (Exception error)
+        {
+            return Task.FromException(error);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+        }
+    }
+
     private void Record(PublicationKind kind, FaceCommand command)
     {
         var face = command.Face is { } wire ? FaceRules.ToFace(wire, command.Renew) : null;
+        TaskCompletionSource? published;
         lock (_gate)
         {
             _publications.Add(new RecordedPublication
@@ -183,7 +289,12 @@ public sealed class RecordingSession : IDisposable
             {
                 _lastFace = face;
             }
+
+            published = _published;
+            _published = null;
         }
+
+        published?.TrySetResult();
     }
 
     private sealed class Sink : ISessionSink
