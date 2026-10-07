@@ -184,9 +184,7 @@ VentanaTools.Orbit.Extensions.Face.Renew.init -> void
 VentanaTools.Orbit.Extensions.Face.State.get -> VentanaTools.Orbit.Extensions.FaceState
 VentanaTools.Orbit.Extensions.Face.State.init -> void
 VentanaTools.Orbit.Extensions.FaceLine
-VentanaTools.Orbit.Extensions.FaceLine.FaceLine(VentanaTools.Orbit.Extensions.FaceLine! original) -> void
 VentanaTools.Orbit.Extensions.FacePicture
-VentanaTools.Orbit.Extensions.FacePicture.FacePicture(VentanaTools.Orbit.Extensions.FacePicture! original) -> void
 VentanaTools.Orbit.Extensions.FaceState
 VentanaTools.Orbit.Extensions.FaceState.None = 1 -> VentanaTools.Orbit.Extensions.FaceState
 VentanaTools.Orbit.Extensions.FaceState.Off = 5 -> VentanaTools.Orbit.Extensions.FaceState
@@ -200,7 +198,6 @@ VentanaTools.Orbit.Extensions.Failure.Network = 3 -> VentanaTools.Orbit.Extensio
 VentanaTools.Orbit.Extensions.Failure.NoResult = 4 -> VentanaTools.Orbit.Extensions.Failure
 VentanaTools.Orbit.Extensions.Failure.UnsupportedInput = 1 -> VentanaTools.Orbit.Extensions.Failure
 VentanaTools.Orbit.Extensions.GlyphPicture
-VentanaTools.Orbit.Extensions.GlyphPicture.Equals(VentanaTools.Orbit.Extensions.GlyphPicture? other) -> bool
 VentanaTools.Orbit.Extensions.GlyphPicture.Glyph.get -> string!
 VentanaTools.Orbit.Extensions.GlyphPicture.Glyph.init -> void
 VentanaTools.Orbit.Extensions.GlyphPicture.GlyphPicture() -> void
@@ -276,7 +273,6 @@ VentanaTools.Orbit.Extensions.NetworkUse.Internet = 3 -> VentanaTools.Orbit.Exte
 VentanaTools.Orbit.Extensions.NetworkUse.LocalNetwork = 2 -> VentanaTools.Orbit.Extensions.NetworkUse
 VentanaTools.Orbit.Extensions.NetworkUse.None = 1 -> VentanaTools.Orbit.Extensions.NetworkUse
 VentanaTools.Orbit.Extensions.NoPicture
-VentanaTools.Orbit.Extensions.NoPicture.Equals(VentanaTools.Orbit.Extensions.NoPicture? other) -> bool
 VentanaTools.Orbit.Extensions.NoPicture.NoPicture() -> void
 VentanaTools.Orbit.Extensions.Outcome
 VentanaTools.Orbit.Extensions.Outcome.Done = 1 -> VentanaTools.Orbit.Extensions.Outcome
@@ -458,7 +454,6 @@ VentanaTools.Orbit.Extensions.StringsReadOptions.Manifest.init -> void
 VentanaTools.Orbit.Extensions.StringsReadOptions.StringsReadOptions() -> void
 VentanaTools.Orbit.Extensions.StringsReader
 VentanaTools.Orbit.Extensions.TextLine
-VentanaTools.Orbit.Extensions.TextLine.Equals(VentanaTools.Orbit.Extensions.TextLine? other) -> bool
 VentanaTools.Orbit.Extensions.TextLine.Text.get -> string!
 VentanaTools.Orbit.Extensions.TextLine.Text.init -> void
 VentanaTools.Orbit.Extensions.TextLine.TextLine() -> void
@@ -698,8 +693,8 @@ VentanaTools.Orbit.Extensions.Wire.WireFace.State.get -> VentanaTools.Orbit.Exte
 VentanaTools.Orbit.Extensions.Wire.WireFace.State.init -> void
 VentanaTools.Orbit.Extensions.Wire.WireFace.WireFace() -> void
 VentanaTools.Orbit.Extensions.Wire.WireMessage
-abstract VentanaTools.Orbit.Extensions.FaceLine.<Clone>$() -> VentanaTools.Orbit.Extensions.FaceLine!
-abstract VentanaTools.Orbit.Extensions.FacePicture.<Clone>$() -> VentanaTools.Orbit.Extensions.FacePicture!
+abstract VentanaTools.Orbit.Extensions.FaceLine.Equals(VentanaTools.Orbit.Extensions.FaceLine? other) -> bool
+abstract VentanaTools.Orbit.Extensions.FacePicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
 abstract VentanaTools.Orbit.Extensions.Wire.WireMessage.Type.get -> string!
 const VentanaTools.Orbit.Extensions.DiagnosticCodes.ChoiceLabelRequired = "choice.label-required" -> string!
 const VentanaTools.Orbit.Extensions.DiagnosticCodes.ChoiceValueDuplicate = "choice.value-duplicate" -> string!
@@ -821,28 +816,19 @@ override VentanaTools.Orbit.Extensions.Diagnostic.ToString() -> string!
 override VentanaTools.Orbit.Extensions.Face.Equals(object? obj) -> bool
 override VentanaTools.Orbit.Extensions.Face.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.Face.ToString() -> string!
-override VentanaTools.Orbit.Extensions.FaceLine.Equals(object? obj) -> bool
-override VentanaTools.Orbit.Extensions.FaceLine.GetHashCode() -> int
-override VentanaTools.Orbit.Extensions.FaceLine.ToString() -> string!
-override VentanaTools.Orbit.Extensions.FacePicture.Equals(object? obj) -> bool
-override VentanaTools.Orbit.Extensions.FacePicture.GetHashCode() -> int
-override VentanaTools.Orbit.Extensions.FacePicture.ToString() -> string!
-override VentanaTools.Orbit.Extensions.GlyphPicture.<Clone>$() -> VentanaTools.Orbit.Extensions.GlyphPicture!
-override VentanaTools.Orbit.Extensions.GlyphPicture.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.GlyphPicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
 override VentanaTools.Orbit.Extensions.GlyphPicture.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.GlyphPicture.ToString() -> string!
 override VentanaTools.Orbit.Extensions.InvokeResult.Equals(object? obj) -> bool
 override VentanaTools.Orbit.Extensions.InvokeResult.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.InvokeResult.ToString() -> string!
-override VentanaTools.Orbit.Extensions.NoPicture.<Clone>$() -> VentanaTools.Orbit.Extensions.NoPicture!
-override VentanaTools.Orbit.Extensions.NoPicture.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.NoPicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
 override VentanaTools.Orbit.Extensions.NoPicture.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.NoPicture.ToString() -> string!
 override VentanaTools.Orbit.Extensions.Pairing.ToString() -> string!
 override VentanaTools.Orbit.Extensions.ReasonCode.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.ReasonCode.ToString() -> string!
-override VentanaTools.Orbit.Extensions.TextLine.<Clone>$() -> VentanaTools.Orbit.Extensions.TextLine!
-override VentanaTools.Orbit.Extensions.TextLine.Equals(object? obj) -> bool
+override VentanaTools.Orbit.Extensions.TextLine.Equals(VentanaTools.Orbit.Extensions.FaceLine? other) -> bool
 override VentanaTools.Orbit.Extensions.TextLine.GetHashCode() -> int
 override VentanaTools.Orbit.Extensions.TextLine.ToString() -> string!
 override VentanaTools.Orbit.Extensions.Wire.AuthenticateMessage.Type.get -> string!
@@ -861,9 +847,10 @@ override VentanaTools.Orbit.Extensions.Wire.SessionRefusedMessage.Type.get -> st
 override VentanaTools.Orbit.Extensions.Wire.SetFaceMessage.Type.get -> string!
 override VentanaTools.Orbit.Extensions.Wire.StartSessionMessage.Type.get -> string!
 override VentanaTools.Orbit.Extensions.Wire.StopSessionMessage.Type.get -> string!
-override sealed VentanaTools.Orbit.Extensions.GlyphPicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
-override sealed VentanaTools.Orbit.Extensions.NoPicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
-override sealed VentanaTools.Orbit.Extensions.TextLine.Equals(VentanaTools.Orbit.Extensions.FaceLine? other) -> bool
+override abstract VentanaTools.Orbit.Extensions.FaceLine.GetHashCode() -> int
+override abstract VentanaTools.Orbit.Extensions.FacePicture.GetHashCode() -> int
+override sealed VentanaTools.Orbit.Extensions.FaceLine.Equals(object? obj) -> bool
+override sealed VentanaTools.Orbit.Extensions.FacePicture.Equals(object? obj) -> bool
 static VentanaTools.Orbit.Extensions.CompanionApp.ParseArguments(string![]! args) -> VentanaTools.Orbit.Extensions.CompanionArguments!
 static VentanaTools.Orbit.Extensions.CompanionApp.RunAsync(string![]! args, VentanaTools.Orbit.Extensions.IContributionHandler! handler, VentanaTools.Orbit.Extensions.CompanionAppOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 static VentanaTools.Orbit.Extensions.ExtensionIds.Classify(string? id, VentanaTools.Orbit.Extensions.IdOrigin origin, System.Collections.Generic.IReadOnlyCollection<string!>? reservedPublishers = null) -> string?
@@ -881,8 +868,6 @@ static VentanaTools.Orbit.Extensions.FacePicture.Glyph(string! glyph) -> Ventana
 static VentanaTools.Orbit.Extensions.FacePicture.None.get -> VentanaTools.Orbit.Extensions.FacePicture!
 static VentanaTools.Orbit.Extensions.FacePicture.operator !=(VentanaTools.Orbit.Extensions.FacePicture? left, VentanaTools.Orbit.Extensions.FacePicture? right) -> bool
 static VentanaTools.Orbit.Extensions.FacePicture.operator ==(VentanaTools.Orbit.Extensions.FacePicture? left, VentanaTools.Orbit.Extensions.FacePicture? right) -> bool
-static VentanaTools.Orbit.Extensions.GlyphPicture.operator !=(VentanaTools.Orbit.Extensions.GlyphPicture? left, VentanaTools.Orbit.Extensions.GlyphPicture? right) -> bool
-static VentanaTools.Orbit.Extensions.GlyphPicture.operator ==(VentanaTools.Orbit.Extensions.GlyphPicture? left, VentanaTools.Orbit.Extensions.GlyphPicture? right) -> bool
 static VentanaTools.Orbit.Extensions.HostRegistry.Find(string! id) -> VentanaTools.Orbit.Extensions.HostInfo?
 static VentanaTools.Orbit.Extensions.HostRegistry.FirstActive(System.Collections.Generic.IEnumerable<string!>! hostIds, System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.HostInfo!>? knownHosts = null) -> VentanaTools.Orbit.Extensions.HostInfo?
 static VentanaTools.Orbit.Extensions.HostRegistry.Known.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.HostInfo!>!
@@ -898,8 +883,6 @@ static VentanaTools.Orbit.Extensions.ManifestReader.ReadFileAsync(string! path, 
 static VentanaTools.Orbit.Extensions.ManifestReader.Validate(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null) -> VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.ExtensionManifest!>!
 static VentanaTools.Orbit.Extensions.ManifestWriter.ComputeHash(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest) -> string!
 static VentanaTools.Orbit.Extensions.ManifestWriter.Write(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, bool indented = true) -> byte[]!
-static VentanaTools.Orbit.Extensions.NoPicture.operator !=(VentanaTools.Orbit.Extensions.NoPicture? left, VentanaTools.Orbit.Extensions.NoPicture? right) -> bool
-static VentanaTools.Orbit.Extensions.NoPicture.operator ==(VentanaTools.Orbit.Extensions.NoPicture? left, VentanaTools.Orbit.Extensions.NoPicture? right) -> bool
 static VentanaTools.Orbit.Extensions.Packaging.PackageReader.Read(System.ReadOnlyMemory<byte> archive, VentanaTools.Orbit.Extensions.Packaging.PackageReadOptions? options = null) -> VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.Packaging.ExtensionPackage!>!
 static VentanaTools.Orbit.Extensions.Packaging.PackageReader.ReadFileAsync(string! path, VentanaTools.Orbit.Extensions.Packaging.PackageReadOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.Packaging.ExtensionPackage!>!>!
 static VentanaTools.Orbit.Extensions.Packaging.PackageWriter.Write(VentanaTools.Orbit.Extensions.Packaging.PackageContents! contents) -> byte[]!
@@ -988,8 +971,6 @@ static VentanaTools.Orbit.Extensions.ReasonCode.operator !=(VentanaTools.Orbit.E
 static VentanaTools.Orbit.Extensions.ReasonCode.operator ==(VentanaTools.Orbit.Extensions.ReasonCode left, VentanaTools.Orbit.Extensions.ReasonCode right) -> bool
 static VentanaTools.Orbit.Extensions.StringsReader.Read(System.ReadOnlySpan<byte> utf8, string! fileTag, VentanaTools.Orbit.Extensions.StringsReadOptions! options) -> VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.ExtensionStrings!>!
 static VentanaTools.Orbit.Extensions.StringsReader.ReadFileAsync(string! path, VentanaTools.Orbit.Extensions.StringsReadOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.ReadResult<VentanaTools.Orbit.Extensions.ExtensionStrings!>!>!
-static VentanaTools.Orbit.Extensions.TextLine.operator !=(VentanaTools.Orbit.Extensions.TextLine? left, VentanaTools.Orbit.Extensions.TextLine? right) -> bool
-static VentanaTools.Orbit.Extensions.TextLine.operator ==(VentanaTools.Orbit.Extensions.TextLine? left, VentanaTools.Orbit.Extensions.TextLine? right) -> bool
 static VentanaTools.Orbit.Extensions.TextRules.CheckDeclarationText(string? value, int maxUnits) -> string?
 static VentanaTools.Orbit.Extensions.TextRules.Clean(string? text, int maxElements, int maxUnits) -> string?
 static VentanaTools.Orbit.Extensions.TextRules.IsChoiceValue(string? value) -> bool
@@ -1016,10 +997,4 @@ static VentanaTools.Orbit.Extensions.Wire.TokenBucket.CostOf(int frameBytes) -> 
 static readonly VentanaTools.Orbit.Extensions.Wire.Framing.PartialFrameTimeout -> System.TimeSpan
 virtual VentanaTools.Orbit.Extensions.ContributionHandler.InvokeAsync(VentanaTools.Orbit.Extensions.Invocation! invocation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.InvokeResult>!
 virtual VentanaTools.Orbit.Extensions.ContributionHandler.RunSessionAsync(VentanaTools.Orbit.Extensions.Session! session, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-virtual VentanaTools.Orbit.Extensions.FaceLine.EqualityContract.get -> System.Type!
-virtual VentanaTools.Orbit.Extensions.FaceLine.Equals(VentanaTools.Orbit.Extensions.FaceLine? other) -> bool
-virtual VentanaTools.Orbit.Extensions.FaceLine.PrintMembers(System.Text.StringBuilder! builder) -> bool
-virtual VentanaTools.Orbit.Extensions.FacePicture.EqualityContract.get -> System.Type!
-virtual VentanaTools.Orbit.Extensions.FacePicture.Equals(VentanaTools.Orbit.Extensions.FacePicture? other) -> bool
-virtual VentanaTools.Orbit.Extensions.FacePicture.PrintMembers(System.Text.StringBuilder! builder) -> bool
 ~override VentanaTools.Orbit.Extensions.ReasonCode.Equals(object obj) -> bool

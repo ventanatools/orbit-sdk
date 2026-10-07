@@ -235,9 +235,10 @@ public enum Outcome
 
 /// <summary>
 /// A face's picture (contract §7.7.1). Each variant mirrors a <c>$type</c>; further variants
-/// arrive with capabilities.
+/// arrive with capabilities. The hierarchy is closed: only this library defines variants, and
+/// pictures compare by value.
 /// </summary>
-public abstract record FacePicture
+public abstract class FacePicture : IEquatable<FacePicture>
 {
     private protected FacePicture()
     {
@@ -250,23 +251,66 @@ public abstract record FacePicture
     /// <param name="glyph">One private-use glyph (contract §3.7).</param>
     /// <returns>The picture.</returns>
     public static GlyphPicture Glyph(string glyph) => new() { Glyph = glyph };
+
+    /// <summary>Whether two pictures are equal by value.</summary>
+    /// <param name="left">A picture, or null.</param>
+    /// <param name="right">A picture, or null.</param>
+    /// <returns>Whether they are equal.</returns>
+    public static bool operator ==(FacePicture? left, FacePicture? right) => left is null ? right is null : left.Equals(right);
+
+    /// <summary>Whether two pictures differ by value.</summary>
+    /// <param name="left">A picture, or null.</param>
+    /// <param name="right">A picture, or null.</param>
+    /// <returns>Whether they differ.</returns>
+    public static bool operator !=(FacePicture? left, FacePicture? right) => !(left == right);
+
+    /// <summary>Whether <paramref name="other"/> is the same variant with the same values.</summary>
+    /// <param name="other">Another picture, or null.</param>
+    /// <returns>Whether they are equal.</returns>
+    public abstract bool Equals(FacePicture? other);
+
+    /// <inheritdoc/>
+    public sealed override bool Equals(object? obj) => Equals(obj as FacePicture);
+
+    /// <inheritdoc/>
+    public abstract override int GetHashCode();
 }
 
 /// <summary>No picture (<c>"$type": "none"</c>).</summary>
-public sealed record NoPicture : FacePicture;
+public sealed class NoPicture : FacePicture
+{
+    /// <inheritdoc/>
+    public override bool Equals(FacePicture? other) => other is NoPicture;
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => 1;
+
+    /// <inheritdoc/>
+    public override string ToString() => "NoPicture { }";
+}
 
 /// <summary>A glyph picture (<c>"$type": "glyph"</c>).</summary>
-public sealed record GlyphPicture : FacePicture
+public sealed class GlyphPicture : FacePicture
 {
     /// <summary>One private-use glyph (contract §3.7).</summary>
     public new required string Glyph { get; init; }
+
+    /// <inheritdoc/>
+    public override bool Equals(FacePicture? other) => other is GlyphPicture picture && string.Equals(Glyph, picture.Glyph, StringComparison.Ordinal);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => Glyph is null ? 0 : StringComparer.Ordinal.GetHashCode(Glyph);
+
+    /// <inheritdoc/>
+    public override string ToString() => "GlyphPicture { Glyph = " + Glyph + " }";
 }
 
 /// <summary>
 /// One line of a face (contract §7.7.1). A string converts to a <see cref="TextLine"/>, so
-/// <c>Line1 = "4:59"</c> works. Further variants arrive with capabilities.
+/// <c>Line1 = "4:59"</c> works. Further variants arrive with capabilities. The hierarchy is
+/// closed: only this library defines variants, and lines compare by value.
 /// </summary>
-public abstract record FaceLine
+public abstract class FaceLine : IEquatable<FaceLine>
 {
     private protected FaceLine()
     {
@@ -275,13 +319,45 @@ public abstract record FaceLine
     /// <summary>Makes a <see cref="TextLine"/> from text; null stays null.</summary>
     /// <param name="text">The line's text.</param>
     public static implicit operator FaceLine?(string? text) => text is null ? null : new TextLine { Text = text };
+
+    /// <summary>Whether two lines are equal by value.</summary>
+    /// <param name="left">A line, or null.</param>
+    /// <param name="right">A line, or null.</param>
+    /// <returns>Whether they are equal.</returns>
+    public static bool operator ==(FaceLine? left, FaceLine? right) => left is null ? right is null : left.Equals(right);
+
+    /// <summary>Whether two lines differ by value.</summary>
+    /// <param name="left">A line, or null.</param>
+    /// <param name="right">A line, or null.</param>
+    /// <returns>Whether they differ.</returns>
+    public static bool operator !=(FaceLine? left, FaceLine? right) => !(left == right);
+
+    /// <summary>Whether <paramref name="other"/> is the same variant with the same values.</summary>
+    /// <param name="other">Another line, or null.</param>
+    /// <returns>Whether they are equal.</returns>
+    public abstract bool Equals(FaceLine? other);
+
+    /// <inheritdoc/>
+    public sealed override bool Equals(object? obj) => Equals(obj as FaceLine);
+
+    /// <inheritdoc/>
+    public abstract override int GetHashCode();
 }
 
 /// <summary>A text line (<c>"$type": "text"</c>).</summary>
-public sealed record TextLine : FaceLine
+public sealed class TextLine : FaceLine
 {
     /// <summary>The text. Receivers clean it and cut it to the display limits.</summary>
     public required string Text { get; init; }
+
+    /// <inheritdoc/>
+    public override bool Equals(FaceLine? other) => other is TextLine line && string.Equals(Text, line.Text, StringComparison.Ordinal);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => Text is null ? 0 : StringComparer.Ordinal.GetHashCode(Text);
+
+    /// <inheritdoc/>
+    public override string ToString() => "TextLine { Text = " + Text + " }";
 }
 
 /// <summary>A host's id and version, as the handshake carries them.</summary>

@@ -148,6 +148,62 @@ public sealed class PublicShapeTests
         Assert.DoesNotContain(type.GetFields(BindingFlags.NonPublic | BindingFlags.Instance), field => Regex.IsMatch(field.Name, "^<.+>P$"));
     }
 
+    [Theory]
+    [InlineData(typeof(FacePicture))]
+    [InlineData(typeof(FaceLine))]
+    public void TheFacePartHierarchiesAreClosed(Type root)
+    {
+        // New variants arrive with capabilities (contract §9.1), so no other assembly may derive one.
+        Assert.True(root.IsAbstract);
+        foreach (var type in root.Assembly.GetExportedTypes().Where(root.IsAssignableFrom))
+        {
+            Assert.True(type == root || type.IsSealed, type + " is not sealed.");
+            foreach (var constructor in type.IsSealed ? [] : type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                Assert.True(constructor.IsPrivate || constructor.IsAssembly || constructor.IsFamilyAndAssembly,
+                    type + " has a constructor another assembly can call: " + constructor);
+            }
+        }
+    }
+
+    [Fact]
+    public void CodeOutsideTheLibraryCannotDeriveAFacePart()
+    {
+        var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
+            .Select(path => MetadataReference.CreateFromFile(path))
+            .Append(MetadataReference.CreateFromFile(typeof(FaceLine).Assembly.Location))
+            .ToArray();
+        Assert.Empty(Errors("var line = (FaceLine)\"4:59\"; var picture = FacePicture.Glyph(\"\\uE916\"); System.Console.WriteLine(line == new TextLine { Text = \"4:59\" });"));
+        Assert.Contains("CS8864", Errors("sealed record MyLine : FaceLine { public MyLine() : base((FaceLine)\"x\"!) { } }"));
+        Assert.Contains("CS0122", Errors("sealed class MyLine : FaceLine { public override bool Equals(FaceLine? other) => false; public override int GetHashCode() => 0; }"));
+        Assert.Contains("CS0122", Errors("sealed class MyPicture : FacePicture { public override bool Equals(FacePicture? other) => false; public override int GetHashCode() => 0; }"));
+
+        string[] Errors(string source)
+        {
+            var tree = CSharpSyntaxTree.ParseText("using VentanaTools.Orbit.Extensions;\n" + source, new CSharpParseOptions(LanguageVersion.Latest));
+            var compilation = CSharpCompilation.Create("Outside", [tree], references, new CSharpCompilationOptions(
+                OutputKind.ConsoleApplication, nullableContextOptions: NullableContextOptions.Enable));
+            return compilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                .Select(diagnostic => diagnostic.Id).ToArray();
+        }
+    }
+
+    [Fact]
+    public void FacePartsCompareByValue()
+    {
+        FaceLine? converted = "4:59";
+        Assert.Equal(converted, new TextLine { Text = "4:59" });
+        Assert.True(converted == new TextLine { Text = "4:59" });
+        Assert.True(converted != new TextLine { Text = "5:00" });
+        Assert.Equal(new TextLine { Text = "4:59" }.GetHashCode(), converted!.GetHashCode());
+        Assert.Equal(FacePicture.Glyph("\uE916"), new GlyphPicture { Glyph = "\uE916" });
+        Assert.NotEqual(FacePicture.Glyph("\uE916"), FacePicture.None);
+        Assert.Equal(FacePicture.None, new NoPicture());
+        Assert.Equal(new Face { Line1 = "a", Picture = FacePicture.Glyph("\uE916"), GoodFor = TimeSpan.FromSeconds(1) },
+            new Face { Line1 = "a", Picture = FacePicture.Glyph("\uE916"), GoodFor = TimeSpan.FromSeconds(1) });
+        Assert.Equal("TextLine { Text = 4:59 }", converted.ToString());
+    }
+
     [Fact]
     public void TheShapeRuleCatchesPositionalRecordsAndPrimaryConstructors()
     {

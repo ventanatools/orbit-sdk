@@ -8,11 +8,24 @@ using Xunit;
 
 namespace VentanaTools.Orbit.Extensions.Tests.Client;
 
-/// <summary>A picture variant this SDK version does not know: no capability makes it effective.</summary>
-internal sealed record FuturePicture : FacePicture;
+/// <summary>
+/// A picture variant this SDK version does not know: no capability makes it effective. Only this
+/// test assembly, a friend of the library, can derive one.
+/// </summary>
+internal sealed class FuturePicture : FacePicture
+{
+    public override bool Equals(FacePicture? other) => other is FuturePicture;
+
+    public override int GetHashCode() => 2;
+}
 
 /// <summary>A line variant this SDK version does not know.</summary>
-internal sealed record FutureLine : FaceLine;
+internal sealed class FutureLine : FaceLine
+{
+    public override bool Equals(FaceLine? other) => other is FutureLine;
+
+    public override int GetHashCode() => 2;
+}
 
 /// <summary>Sessions, faces and invocations (contract §7.6 to §7.8, §9.2).</summary>
 public sealed class SessionTests

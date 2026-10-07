@@ -2104,19 +2104,24 @@ public enum Failure { UnsupportedInput = 1, NeedsSetup = 2, Network = 3, NoResul
 public enum Outcome { Done = 1, Refused = 2, Failed = 3, Unsupported = 4 }
 
 // Face parts, used by both the wire records and the client API (§7.7.1). Each variant mirrors a "$type".
-// The hierarchies are closed (private protected constructors); new variants arrive with capabilities.
-public abstract record FacePicture
+// The hierarchies are closed: abstract classes whose only constructor is private protected, and sealed
+// variants, so no other assembly can derive one (a non-sealed record cannot be closed: its copy
+// constructor must be protected). Parts compare by value (Equals, GetHashCode, == and !=); new
+// variants arrive with capabilities.
+public abstract class FacePicture : IEquatable<FacePicture>
 {
     public static FacePicture None { get; }                       // { "$type": "none" }
     public static GlyphPicture Glyph(string glyph);
+    public abstract bool Equals(FacePicture? other);
 }
-public sealed record NoPicture : FacePicture;
-public sealed record GlyphPicture : FacePicture { public required string Glyph { get; init; } }   // "glyph"
-public abstract record FaceLine
+public sealed class NoPicture : FacePicture { }
+public sealed class GlyphPicture : FacePicture { public required string Glyph { get; init; } }    // "glyph"
+public abstract class FaceLine : IEquatable<FaceLine>
 {
     public static implicit operator FaceLine?(string? text);      // Line1 = "4:59" makes a TextLine
+    public abstract bool Equals(FaceLine? other);
 }
-public sealed record TextLine : FaceLine { public required string Text { get; init; } }          // "text"
+public sealed class TextLine : FaceLine { public required string Text { get; init; } }           // "text"
 
 public sealed class HostIdentity { public required string Id { get; init; } public required string Version { get; init; } }
 
