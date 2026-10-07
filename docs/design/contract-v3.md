@@ -3240,6 +3240,15 @@ overload stays binary compatible.
   host creates the hosted service. A process runs one companion: a second
   `AddCompanion` throws `InvalidOperationException`, and a factory that returns
   null fails the host's start with it.
+- **Handler lifetime.** The handler lives as long as the companion. The generic
+  overloads resolve `THandler` once and refuse a registration of it with another
+  lifetime than singleton, made before or after `AddCompanion` (such as the
+  transient typed client `AddHttpClient<THandler>()` adds): the host's start fails
+  with `InvalidOperationException`, because a transient or scoped instance held
+  for the life of the process (a typed `HttpClient`, a `DbContext`) would never
+  recycle its connections or end. A handler takes shorter-lived services through
+  `IHttpClientFactory` and `IServiceScopeFactory`, with a scope per session or
+  invocation.
 - **Validation.** A validator registered with the options checks them when the
   host starts (`ValidateOnStart`), never in `AddCompanion`, so values set later
   are checked too: a `Client` option outside the ranges `CompanionClient` accepts

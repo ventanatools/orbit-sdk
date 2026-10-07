@@ -140,7 +140,9 @@ protocol-2 source preview, `Orbit.Extensions.Protocol` and `Orbit.Extensions.Sdk
   a hosted service with `CompanionApp`'s discovery, status and exit codes, logs
   each status through `ILogger` with a fixed event id (a wait is a Warning only
   when its reason needs a person, and a repeated status is logged once), and
-  stops with the host. `CompanionServiceOptions` follows the options pattern
+  stops with the host. The handler is a singleton for the life of the companion
+  (a registration with a shorter lifetime, such as `AddHttpClient<THandler>()`'s,
+  fails the start). `CompanionServiceOptions` follows the options pattern
   (`Configure<CompanionServiceOptions>` and configuration binding apply) and is
   validated when the host starts.
   The tool carries it into the feed `orbit-ext new` prepares.

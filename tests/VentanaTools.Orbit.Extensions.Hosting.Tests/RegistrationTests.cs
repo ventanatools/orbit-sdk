@@ -62,6 +62,39 @@ public sealed class RegistrationTests
         Assert.Same(mine, provider.GetRequiredService<ClockWidget>());
     }
 
+    [Theory]
+    [InlineData(true, ServiceLifetime.Transient)]
+    [InlineData(false, ServiceLifetime.Transient)]
+    [InlineData(false, ServiceLifetime.Scoped)]
+    public async Task AHandlerRegisteredWithAShorterLifetimeFailsTheHostsStart(bool before, ServiceLifetime lifetime)
+    {
+        // AddHttpClient<THandler>() registers its typed client as transient: held for the life of the process, one
+        // instance would never recycle its connections, and a scoped one would never end. Before or after AddCompanion,
+        // the registration the container would resolve is refused.
+        var logs = new CapturingLoggerProvider();
+        var registration = new ServiceDescriptor(typeof(ClockWidget), typeof(ClockWidget), lifetime);
+        using var host = TestHosts.Build(logs, services =>
+        {
+            services.AddSingleton(new Clock());
+            if (before)
+            {
+                services.Add(registration);
+            }
+
+            services.AddCompanion<ClockWidget>(options => options.Arguments = []);
+            if (!before)
+            {
+                services.Add(registration);
+            }
+        });
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
+        Assert.Contains(nameof(ClockWidget) + " is registered as " + lifetime + ", but a companion's handler lives as long as the companion",
+            error.Message, StringComparison.Ordinal);
+        Assert.Contains("IHttpClientFactory and IServiceScopeFactory", error.Message, StringComparison.Ordinal);
+        Assert.Empty(logs.Companion);
+    }
+
     [Fact]
     public void TheFactoryRunsOnceWhenTheHostCreatesTheServiceWithTheApplicationsServices()
     {

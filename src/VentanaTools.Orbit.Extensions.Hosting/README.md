@@ -8,10 +8,11 @@ file watching, status and exit codes as `CompanionApp.RunAsync`, logged through
 Ctrl+C or shutdown.
 
 Use it when your companion already is, or wants to be, a Generic Host app: its
-handler needs services (an `HttpClient`, configuration, a database, your own
-types), it runs other hosted services beside the companion, or its logs go where
-the rest of your logs go. For a companion that is only a handler,
-`CompanionApp.RunAsync` in the author package is all you need.
+handler needs services (HTTP clients, configuration, a database, your own types;
+see [Handler lifetime](#handler-lifetime) for the short-lived ones), it runs
+other hosted services beside the companion, or its logs go where the rest of
+your logs go. For a companion that is only a handler, `CompanionApp.RunAsync` in
+the author package is all you need.
 
 It is a preview, versions in lockstep with `VentanaTools.Orbit.Extensions` and
 depends on exactly the same version of it. Its other dependencies are
@@ -78,7 +79,7 @@ Save connection info.`), and connects once you save the connection info in Orbit
 
 | Call | Does |
 |---|---|
-| `AddCompanion<THandler>()` | Registers `THandler` as a singleton, unless the application registered it already, and runs the companion with it. Its constructor's parameters come from the container. |
+| `AddCompanion<THandler>()` | Registers `THandler` as a singleton, unless the application registered it already (as a singleton too), and runs the companion with it. Its constructor's parameters come from the container. |
 | `AddCompanion<THandler>(options => …)` | The same, with options. |
 | `AddCompanion(provider => handler)` | Runs the companion with the handler the factory returns, created once when the host starts. Use it for a `ContributionRouter` or a handler built by hand. |
 | `AddCompanion(provider => handler, options => …)` | The same, with options. |
@@ -87,6 +88,30 @@ A process runs one companion, for one manifest: a second `AddCompanion` throws
 `InvalidOperationException`. `AddCompanion` is marked for Windows, like
 `CompanionApp.RunAsync`, because the connection is a named pipe; companion
 projects target `net10.0-windows`, as the templates do.
+
+## Handler lifetime
+
+Your handler lives as long as the companion: `AddCompanion<THandler>()` resolves
+it once, as a singleton, and a factory overload calls its factory once. Take
+shorter-lived services through a factory, so they are created and released while
+the handler stays:
+
+- **HTTP.** Inject `IHttpClientFactory` (register it with
+  `services.AddHttpClient()`, from `Microsoft.Extensions.Http`) and create a
+  client for each request or session, so its connections are recycled and DNS
+  changes reach you. Don't make the handler a typed client with
+  `AddHttpClient<THandler>()`: that registers `THandler` as transient, and one
+  typed client held for the life of the process never recycles its connections.
+- **Scoped services**, such as an Entity Framework Core `DbContext`. Inject
+  `IServiceScopeFactory`, create a scope for each session
+  (`await using var scope = scopes.CreateAsyncScope();` at the start of
+  `RunSessionAsync`) or each invocation (in `InvokeAsync`), and resolve the
+  scoped services from `scope.ServiceProvider`.
+
+`AddCompanion<THandler>()` refuses a registration of `THandler` with any lifetime
+but singleton, made before or after it, such as the transient one
+`AddHttpClient<THandler>()` adds: the host's start fails with
+`InvalidOperationException`, instead of one instance being held for good.
 
 ## Options
 
