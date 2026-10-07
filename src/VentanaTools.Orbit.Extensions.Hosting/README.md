@@ -144,6 +144,21 @@ are checked when the host starts: a `Client` option out of its range, or a
 `ManifestPath` or `PairingPath` that is set but empty, stops the start with
 `OptionsValidationException`, whose message names the option.
 
+The host reads `appsettings.json` from its content root, which is the current
+folder, while the companion looks for `extension.json` beside the program first:
+started from another folder, it would find its manifest but not its settings.
+Keep settings beside the program (`<None Update="appsettings.json"
+CopyToOutputDirectory="PreserveNewest" />` in the project) and make that folder
+the content root:
+
+```csharp
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory,
+});
+```
+
 ## Stopping and exit codes
 
 When the host stops (Ctrl+C, a service stop, `StopApplication`), the companion's
