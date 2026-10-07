@@ -32,8 +32,7 @@ namespace VentanaTools.Orbit.Extensions.Hosting;
 /// <example>
 /// <code>
 /// var builder = Host.CreateApplicationBuilder(args);
-/// builder.Services.AddSingleton(TimeProvider.System);
-/// builder.Services.AddCompanion&lt;TimeWidget&gt;();
+/// builder.Services.AddCompanion&lt;ClockWidget&gt;();
 /// await builder.Build().RunAsync();
 /// </code>
 /// </example>
