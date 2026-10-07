@@ -15,6 +15,7 @@ body:
       options:
         - Author package (.NET)
         - Test kit
+        - Generic Host add-on
         - Tool
         - Templates
         - Node SDK
