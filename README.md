@@ -57,8 +57,9 @@ trimming analysis, `LibraryImport` for the pipe's server checks, and the current
 Orbit's SDK follows the Ventana conventions
 ([contract §2.7](docs/design/contract-v3.md#27-ventana-conventions)): the
 extension id grammar and reserved publishers, the manifest identity block and
-setting rows, the diagnostics shape, the failure vocabulary, the tooling verbs,
-the test-kit names and the licensing pattern. Lollipop gets a separate SDK, which
+setting rows, the declaration text rule and its limits, the diagnostics shape,
+the failure vocabulary, the tooling verbs, the test-kit names and the licensing
+pattern. Lollipop gets a separate SDK, which
 is expected to follow the same Ventana conventions; these packages do not target
 it.
 

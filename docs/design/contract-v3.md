@@ -288,6 +288,7 @@ to follow the same conventions.
 | The manifest identity block (`$schema`, `schemaVersion`, `id`, `name`, `description`, `version`, `hosts`) | §3.2 |
 | The setting-row shape `{ id, kind, name, description, default, choices[{ value, name }] }`, with PascalCase kind tokens such as `Choice` | §3.3.1 |
 | The declaration text rule | §3.6; `fixtures/text-rules.json` |
+| The declaration text limits, in UTF-16 code units: a name (of an extension or a contribution) 80, a description 512, a label (the publisher's name, a setting's or a choice's name) 80, the same for each translation; and the warning `text.long` for a name or label longer than 32 text elements | §3.2, §3.3, §3.6, §3.10; `fixtures/text-rules.json` (`declarationLimits`) |
 | The diagnostics shape (`code`, `path` as a JSON Pointer, `message`, `severity`, `line`, `column`) and dotted code names | §4; `fixtures/codes/diagnostics.json` |
 | The failure vocabulary (`UnsupportedInput`, `NeedsSetup`, `Network`, `NoResult`, `AppUnavailable`, and capability-gated product tokens such as `LlmUnavailable`) | §7.8 |
 | The reason-code grammar (dotted lowercase codes in an open registry) | §2.4, §8 |
@@ -543,7 +544,12 @@ Lengths are counted in UTF-16 code units after JSON unescaping. The warning
 `text.long` is raised when a `name` is longer than 32 text elements, because
 hosts truncate longer names in compact places.
 
-The rule is published as the conformance fixture `fixtures/text-rules.json`.
+The rule is published as the conformance fixture `fixtures/text-rules.json`,
+with the limits of §3.2, §3.3 and §3.3.1 as `declarationLimits`: 80 units for a
+`name`, 512 for a `description`, 80 for a label (`publisher.name` and the name of
+every setting and choice), and 32 text elements before `text.long`. A strings
+file's translation has the limit of the member it translates (§3.10). The limits
+are a Ventana convention (§2.7), so another product's SDK can run the same file.
 
 ### 3.7 Glyph rule
 
@@ -3869,7 +3875,7 @@ fixtures for the Ventana conventions (`ids.json`, `reserved-publishers.json`,
 | `fixtures/hosts.json` | The host-id registry of §2.3: the single product definition. With `reserved-publishers.json`, the only fixture that names products, and the only one the codename script edits (its `reservedIds` excepted). |
 | `fixtures/ids.json` | Id grammar cases with the expected code for each origin, including Windows device names (`con`, `nul`, `com1`, `lpt9`, any case) as a first segment. Its reserved-publisher cases use only the reserved names that are not products (`ventana`, `ventanatools`, `ext`); tests iterate `reserved-publishers.json` for the others. |
 | `fixtures/reserved-publishers.json` | The reserved publisher list of §3.5. |
-| `fixtures/text-rules.json` | Declaration-text accept/reject cases (including ZWJ, ZWNJ, LRM, RLM, ALM accepted and U+200B, U+202E, U+FEFF, astral noncharacters refused) and face-text cleaning cases with expected output, including over-long text, U+200B and tag-sequence flag emoji passed through `SetFace` (which must not throw, §9.2). |
+| `fixtures/text-rules.json` | Declaration-text accept/reject cases (including ZWJ, ZWNJ, LRM, RLM, ALM accepted and U+200B, U+202E, U+FEFF, astral noncharacters refused), the declaration text limits (`declarationLimits`, §3.6), and face-text cleaning cases with expected output, including over-long text, U+200B and tag-sequence flag emoji passed through `SetFace` (which must not throw, §9.2). |
 | `fixtures/codes/diagnostics.json` | The diagnostic code table of §4.4. |
 | `fixtures/codes/precedence.json` | The one-diagnostic-per-path precedence of §4.2, with a case for each overlap (unknown enumeration value, empty name, missing id). |
 | `fixtures/codes/reason-codes.json` | The reason-code catalog of §8.3, with disposition, audiences, Pre and violation flags, fix and help anchor. |

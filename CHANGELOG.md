@@ -150,7 +150,10 @@ protocol-2 source preview, `Orbit.Extensions.Protocol` and `Orbit.Extensions.Sdk
   simulation files.
 - The golden test vectors of the contract's Appendix A in `fixtures/`, shared by
   the .NET SDK, the Node SDK and the host, and the host-id registry
-  `fixtures/hosts.json` (`HostRegistry`).
+  `fixtures/hosts.json` (`HostRegistry`). `fixtures/text-rules.json` also states
+  the declaration text limits as a Ventana convention (`declarationLimits`: 80
+  UTF-16 units for a name or label, 512 for a description, `text.long` past 32
+  text elements), which both SDKs' readers and the schemas are tested against.
 - Public API tracking, package validation, SourceLink, symbol packages, and
   release notes that link to the version's section of this changelog.
 - CI: CodeQL, Dependabot, a Native AOT publish of the Countdown sample, and a

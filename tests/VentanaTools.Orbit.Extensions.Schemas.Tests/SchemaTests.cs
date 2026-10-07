@@ -98,6 +98,25 @@ public sealed class SchemaFileTests
             Directory.EnumerateFiles(Repository.SchemaFolder).Select(Path.GetFileName).Order(StringComparer.Ordinal));
     }
 
+    [Theory]
+    [InlineData("manifest.v3.json")]
+    [InlineData("strings.v3.json")]
+    public void TheTextLengthsAreTheDeclarationLimitsOfTheTextRulesFixture(string name)
+    {
+        // The shared limits (contract §2.7, fixtures/text-rules.json): names and labels share $defs/name,
+        // every description $defs/longText.
+        using var rules = JsonDocument.Parse(File.ReadAllBytes(Repository.PathOf("fixtures/text-rules.json")));
+        var limits = rules.RootElement.GetProperty("declarationLimits");
+        foreach (var host in HostRegistry.Known.Where(host => host.Status == HostStatus.Active))
+        {
+            using var schema = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Repository.SchemaFolder, host.Id, name)));
+            var defs = schema.RootElement.GetProperty("$defs");
+            Assert.Equal(limits.GetProperty("name").GetInt32(), defs.GetProperty("name").GetProperty("maxLength").GetInt32());
+            Assert.Equal(limits.GetProperty("label").GetInt32(), defs.GetProperty("name").GetProperty("maxLength").GetInt32());
+            Assert.Equal(limits.GetProperty("description").GetInt32(), defs.GetProperty("longText").GetProperty("maxLength").GetInt32());
+        }
+    }
+
     [Fact]
     public void TheSchemasNameNoProductOutsideTheirHostKeyedIds()
     {

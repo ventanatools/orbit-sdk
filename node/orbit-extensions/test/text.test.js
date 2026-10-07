@@ -65,6 +65,49 @@ test("fixtures/text-rules.json: each face part is cleaned with its display limit
     }
 });
 
+test("fixtures/text-rules.json: the manifest reader holds each declaration string to its limit", () => {
+    const limits = rules.declarationLimits;
+    const base = fixtureJson("manifests/valid/countdown.json");
+    const members = [
+        [["name"], "name"],
+        [["description"], "description"],
+        [["publisher", "name"], "label"],
+        [["contributions", 0, "name"], "name"],
+        [["contributions", 0, "description"], "description"],
+        [["contributions", 0, "settings", 1, "name"], "label"],
+        [["contributions", 0, "settings", 1, "description"], "description"],
+        [["contributions", 0, "settings", 0, "choices", 0, "name"], "label"],
+    ];
+    for (const [segments, kind] of members) {
+        const pointer = "/" + segments.join("/");
+        for (const [length, expected] of [[limits[kind], []], [limits[kind] + 1, [["string.too-long", pointer]]]]) {
+            const manifest = structuredClone(base);
+            let target = manifest;
+            for (const segment of segments.slice(0, -1)) target = target[segment];
+            target[segments.at(-1)] = "a".repeat(length);
+            const errors = validateManifest(manifest, testOptions).diagnostics.filter((d) => d.severity === "Error");
+            assert.deepEqual(errors.map((d) => [d.code, d.path]), expected, pointer + ", " + length + " units");
+        }
+    }
+});
+
+test("fixtures/text-rules.json: a name longer than longNameElements is only a warning", () => {
+    const elements = rules.declarationLimits.longNameElements;
+    const base = fixtureJson("manifests/valid/countdown.json");
+    for (const segments of [["name"], ["publisher", "name"], ["contributions", 0, "name"], ["contributions", 0, "settings", 0, "name"],
+        ["contributions", 0, "settings", 0, "choices", 0, "name"]]) {
+        const pointer = "/" + segments.join("/");
+        for (const [length, expected] of [[elements, []], [elements + 1, [["text.long", "Warning"]]]]) {
+            const manifest = structuredClone(base);
+            let target = manifest;
+            for (const segment of segments.slice(0, -1)) target = target[segment];
+            target[segments.at(-1)] = "a".repeat(length);
+            const found = validateManifest(manifest, testOptions).diagnostics.filter((d) => d.path === pointer);
+            assert.deepEqual(found.map((d) => [d.code, d.severity]), expected, pointer + ", " + length + " elements");
+        }
+    }
+});
+
 test("fixtures/text-rules.json: the shared grammars accept and refuse their cases", () => {
     const check = {
         settingId: text.isSettingId,
