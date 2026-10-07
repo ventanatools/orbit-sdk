@@ -3263,6 +3263,13 @@ overload stays binary compatible.
   pairing discovery, first-run wait, file watching, statuses, callbacks and exit
   codes. It never delays the host's start with file reads, and it does not hook
   Ctrl+C: the host owns shutdown.
+- **The command line.** By default the companion and the host read the same
+  command line, and the host's configuration takes it as `--key value` pairs, so
+  a value-less `--verbose` followed by another option takes that option as its
+  value (`--verbose --environment Development` leaves the host's environment
+  unset). Authors put `--verbose` last or write `--verbose true`:
+  `CompanionApp`'s parser (§9.2) reads the flag and leaves `true` among the
+  arguments the add-on ignores.
 - **Stopping.** When the host stops, the run is cancelled as `RunAsync` is: the
   connection closes, sessions end, their handlers' tokens are cancelled, and the
   hosted service completes with exit code 0. When the companion stops by itself

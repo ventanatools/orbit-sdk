@@ -23,6 +23,11 @@ public sealed class CompanionServiceOptions
     /// from, as <see cref="CompanionApp.RunAsync"/> reads its <c>args</c>; null (the default) for the
     /// process's own command line without the program name. Other arguments are ignored.
     /// </summary>
+    /// <remarks>
+    /// The host reads the process's command line too, as <c>--key value</c> pairs, so a value-less
+    /// <c>--verbose</c> before another option takes that option as its value. Put <c>--verbose</c>
+    /// last, or write <c>--verbose true</c>.
+    /// </remarks>
     public IReadOnlyList<string>? Arguments { get; set; }
 
     /// <summary>The manifest to load; overrides <c>--manifest</c>.</summary>

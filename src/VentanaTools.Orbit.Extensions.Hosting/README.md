@@ -128,6 +128,12 @@ Without a path, the companion finds `extension.json` beside the program, then in
 the current folder, and the connection info in the per-user folder Orbit's
 **Save connection info** writes to, exactly as `CompanionApp.RunAsync` does.
 
+The host reads the same command line as `--key value` pairs, so a value-less
+`--verbose` followed by another option takes that option as its value:
+`--verbose --environment Development` leaves the environment at Production. Put
+`--verbose` last (`--environment Development --verbose`), or write
+`--verbose true`; the companion reads `--verbose` and ignores the `true`.
+
 `CompanionServiceOptions` follows the .NET options pattern. Set the options in
 `AddCompanion`'s delegate, with `services.Configure<CompanionServiceOptions>(…)`,
 or from configuration, for example

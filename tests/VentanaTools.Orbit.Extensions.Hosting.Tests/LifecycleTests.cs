@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Channels;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -66,6 +67,24 @@ public sealed class LifecycleTests
         Assert.Equal(LogLevel.Error, exited.Level);
         Assert.Equal(3, exited.Values["ExitCode"]);
         Assert.Contains("stopping the application", exited.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("--environment Development --verbose")]
+    [InlineData("--verbose true --environment Development")]
+    public void TheDocumentedVerboseFormsLeaveTheHostsOwnArgumentsIntact(string arguments)
+    {
+        // The Generic Host reads its command line as --key value pairs; contract §9.5 tells authors to put --verbose
+        // last or to write --verbose true, which both parsers then read as meant.
+        string[] args = arguments.Split(' ');
+        Assert.Equal(Environments.Development, Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { Args = args }).Environment.EnvironmentName);
+        Assert.True(CompanionApp.ParseArguments(args).Verbose);
+
+        // Why: a value-less --verbose before another option takes that option as its value.
+        string[] first = ["--verbose", "--environment", "Development"];
+        var misread = new ConfigurationBuilder().AddCommandLine(first).Build();
+        Assert.Null(misread[HostDefaults.EnvironmentKey]);
+        Assert.Equal("--environment", misread["verbose"]);
     }
 
     [Fact]
@@ -308,9 +327,11 @@ public sealed class LifecycleTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task TheHostsFixedTextIsLoggedOnlyWithVerbose(bool verbose)
+    [InlineData("--verbose", true)]
+    [InlineData("--environment Development --verbose", true)]
+    [InlineData("--verbose true --environment Development", true)]
+    [InlineData("--environment Development", false)]
+    public async Task TheHostsFixedTextIsLoggedOnlyWithVerbose(string arguments, bool verbose)
     {
         using var files = new CompanionFiles();
         files.WritePairing();
@@ -319,7 +340,7 @@ public sealed class LifecycleTests
         var waited = new TaskCompletionSource<StatusChangedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var host = Build(logs, files, options =>
         {
-            options.Arguments = verbose ? ["--verbose"] : [];
+            options.Arguments = arguments.Split(' ');
             options.TestTransport = HostPeer.Accepting(connections);
             // The callback runs after the status and the host's text are logged, in the same event, so once it has
             // seen the wait, everything the add-on logs for it is in the log.
