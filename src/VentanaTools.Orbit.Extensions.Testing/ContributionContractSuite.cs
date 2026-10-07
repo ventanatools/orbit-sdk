@@ -8,9 +8,8 @@ namespace VentanaTools.Orbit.Extensions.Testing;
 
 /// <summary>
 /// Checks that an extension's handler keeps the authoring contract (contract §9.3), against a real
-/// <see cref="CompanionClient"/> on a <see cref="CompanionTestHost"/> driven by a manual clock, so
-/// its timing checks finish without real waiting. Derive from it in your test project and call
-/// <see cref="AssertAllAsync"/> from a test.
+/// <see cref="CompanionClient"/> on a <see cref="CompanionTestHost"/> driven by a manual clock.
+/// Derive from it in your test project and call <see cref="AssertAllAsync"/> from a test.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,8 +26,15 @@ namespace VentanaTools.Orbit.Extensions.Testing;
 /// <para>
 /// Invocations run only for the contributions listed in <see cref="InvokeContributions"/>, and those
 /// checks run the real action: each invocation must settle before the SDK's deadline, and a
-/// cancelled invocation must end within the cancellation bound. Handlers that measure time should
-/// use <see cref="Session.Time"/>.
+/// cancelled invocation must end within the cancellation bound.
+/// </para>
+/// <para>
+/// Time: while a session check waits, the manual clock moves ahead in steps up to the bound, so a
+/// handler that waits on <see cref="Session.Time"/> sees the bound pass at once. A check fails only
+/// when its bound has also passed in real time, so real work (network, files, a save on stop)
+/// counts against the same bound; a failing check therefore takes the bound in real time. While an
+/// invocation runs, the manual clock follows real time and never runs ahead of it, so the SDK's
+/// invocation deadline is real time too.
 /// </para>
 /// </remarks>
 /// <example>
@@ -52,10 +58,13 @@ public abstract class ContributionContractSuite
     /// <summary>The contributions whose invocations the suite runs. These run the real action. Empty by default.</summary>
     protected virtual IEnumerable<string> InvokeContributions => [];
 
-    /// <summary>How long a widget may take to publish its first face with every default, on the suite's clock.</summary>
+    /// <summary>How long a widget may take to publish its first face with every default, on the suite's clock and in real time.</summary>
     protected virtual TimeSpan InitialFaceTimeout => TimeSpan.FromSeconds(2);
 
-    /// <summary>How long a handler may run after cancellation; the client's <see cref="CompanionClientOptions.HandlerStopTimeout"/> by default.</summary>
+    /// <summary>
+    /// How long a handler may run after cancellation, on the suite's clock and in real time; the
+    /// client's <see cref="CompanionClientOptions.HandlerStopTimeout"/> by default.
+    /// </summary>
     protected virtual TimeSpan CancellationBound => new CompanionClientOptions().HandlerStopTimeout;
 
     /// <summary>The most setting combinations checked per contribution, defaults first.</summary>
@@ -135,6 +144,7 @@ public abstract class ContributionContractSuite
     /// <summary>One run of the checks.</summary>
     private sealed class SuiteRun
     {
+        private static readonly TimeSpan RealTimePoll = TimeSpan.FromMilliseconds(10);
         private readonly ContributionContractSuite _suite;
         private readonly ManualTimeProvider _time;
         private readonly List<string> _failures;
@@ -161,11 +171,14 @@ public abstract class ContributionContractSuite
             }
 
             var face = (contribution.Provides & Provides.Face) != 0;
+
+            // Only a missing first face with every default is a failure, so only that wait keeps a real-time floor.
             await WaitUntilAsync(() => (face && session.FaceCount > 0) || host.Observer.SessionEnded(session.SessionId),
-                _suite.InitialFaceTimeout).ConfigureAwait(false);
+                _suite.InitialFaceTimeout, realTime: face && defaults).ConfigureAwait(false);
             if (face && defaults && session.FaceCount == 0)
             {
-                _failures.Add(label + ": no first face within " + Seconds(_suite.InitialFaceTimeout) + " with every default.");
+                _failures.Add(label + ": no first face within " + Seconds(_suite.InitialFaceTimeout)
+                    + " with every default (host and real time); publish a first face before slow work, or raise InitialFaceTimeout.");
             }
 
             await host.Client.FlushEventsAsync().ConfigureAwait(false);
@@ -180,11 +193,12 @@ public abstract class ContributionContractSuite
 
             var faultsAtStop = host.Faults.Count;
             await host.StopSessionAsync(session).ConfigureAwait(false);
-            var ended = await WaitUntilAsync(() => host.Observer.SessionEnded(session.SessionId), _suite.CancellationBound).ConfigureAwait(false);
+            var ended = await WaitUntilAsync(() => host.Observer.SessionEnded(session.SessionId), _suite.CancellationBound, realTime: true)
+                .ConfigureAwait(false);
             if (!ended)
             {
                 _failures.Add(label + ": RunSessionAsync did not end within " + Seconds(_suite.CancellationBound)
-                    + " after the session stopped; pass the cancellation token to every await.");
+                    + " after the session stopped (host and real time); pass the cancellation token to every await and keep work after cancellation short.");
             }
 
             await Settle().ConfigureAwait(false);
@@ -224,13 +238,14 @@ public abstract class ContributionContractSuite
             var deadline = TimeSpan.FromMilliseconds(Math.Max(1_000, host.Limits.ForCompanion().InvokeTimeoutMs - 3_000));
             var faultsBefore = host.Faults.Count;
             var invocation = host.StartInvoke(session);
-            await WaitUntilAsync(() => invocation.Result.IsCompleted, deadline + TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+            await FollowRealTimeUntilAsync(() => invocation.Result.IsCompleted, deadline + TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
             if (host.Observer.DeadlineReached(invocation.RequestId) || !invocation.Result.IsCompleted)
             {
-                _failures.Add(label + ": the invocation did not settle before the SDK's deadline of " + Seconds(deadline) + ".");
+                _failures.Add(label + ": the invocation did not settle before the SDK's deadline of " + Seconds(deadline) + " (real time).");
             }
 
-            await WaitUntilAsync(() => host.Observer.InvocationEnded(invocation.RequestId), _suite.CancellationBound).ConfigureAwait(false);
+            await WaitUntilAsync(() => host.Observer.InvocationEnded(invocation.RequestId), _suite.CancellationBound, realTime: true)
+                .ConfigureAwait(false);
             await host.Client.FlushEventsAsync().ConfigureAwait(false);
             foreach (var fault in host.Faults.Skip(faultsBefore).Where(item => item.RequestId == invocation.RequestId && item.Kind == HandlerFault.InvalidResult))
             {
@@ -239,21 +254,25 @@ public abstract class ContributionContractSuite
 
             var cancelled = host.StartInvoke(session);
             await host.CancelAsync(cancelled).ConfigureAwait(false);
-            if (!await WaitUntilAsync(() => host.Observer.InvocationEnded(cancelled.RequestId), _suite.CancellationBound).ConfigureAwait(false))
+            if (!await WaitUntilAsync(() => host.Observer.InvocationEnded(cancelled.RequestId), _suite.CancellationBound, realTime: true)
+                .ConfigureAwait(false))
             {
-                _failures.Add(label + ": a cancelled invocation did not end within " + Seconds(_suite.CancellationBound) + ".");
+                _failures.Add(label + ": a cancelled invocation did not end within " + Seconds(_suite.CancellationBound) + " (host and real time).");
             }
 
             await host.StopSessionAsync(session).ConfigureAwait(false);
-            await WaitUntilAsync(() => host.Observer.SessionEnded(session.SessionId), _suite.CancellationBound).ConfigureAwait(false);
+            await WaitUntilAsync(() => host.Observer.SessionEnded(session.SessionId), _suite.CancellationBound, realTime: true).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Waits for <paramref name="condition"/>, advancing the manual clock in small steps up to
         /// <paramref name="bound"/>, with a short real pause per step so asynchronous work can run.
+        /// With <paramref name="realTime"/>, it then keeps waiting, without moving the clock, until
+        /// <paramref name="bound"/> has also passed in real time since the wait began.
         /// </summary>
-        private async Task<bool> WaitUntilAsync(Func<bool> condition, TimeSpan bound)
+        private async Task<bool> WaitUntilAsync(Func<bool> condition, TimeSpan bound, bool realTime = false)
         {
+            var started = Stopwatch.GetTimestamp();
             var step = TimeSpan.FromMilliseconds(Math.Clamp(bound.TotalMilliseconds / 50, 10, 250));
             var advanced = TimeSpan.Zero;
             while (true)
@@ -263,13 +282,52 @@ public abstract class ContributionContractSuite
                     return true;
                 }
 
+                if (advanced < bound)
+                {
+                    _time.Advance(step);
+                    advanced += step;
+                    continue;
+                }
+
+                if (!realTime || Stopwatch.GetElapsedTime(started) >= bound)
+                {
+                    return false;
+                }
+
+                await Task.Delay(RealTimePoll, _cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Waits for <paramref name="condition"/> up to <paramref name="bound"/> in real time, moving
+        /// the manual clock with real time and never ahead of it, so the client's timers fire when
+        /// they would against a real host.
+        /// </summary>
+        private async Task<bool> FollowRealTimeUntilAsync(Func<bool> condition, TimeSpan bound)
+        {
+            var started = Stopwatch.GetTimestamp();
+            var advanced = TimeSpan.Zero;
+            while (true)
+            {
+                if (await PauseAsync(condition).ConfigureAwait(false))
+                {
+                    return true;
+                }
+
+                var elapsed = Stopwatch.GetElapsedTime(started);
                 if (advanced >= bound)
                 {
                     return false;
                 }
 
-                _time.Advance(step);
-                advanced += step;
+                var target = elapsed < bound ? elapsed : bound;
+                if (target > advanced)
+                {
+                    _time.Advance(target - advanced);
+                    advanced = target;
+                }
+
+                await Task.Delay(RealTimePoll, _cancellationToken).ConfigureAwait(false);
             }
         }
 

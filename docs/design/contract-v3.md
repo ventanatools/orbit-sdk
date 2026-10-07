@@ -3017,9 +3017,17 @@ with the settings from `InvokeSettings`, and those checks are documented as
 running the real action: each invocation settles before the SDK's deadline
 (§9.2), and a cancelled invocation ends within the cancellation bound.
 
-The suite drives the SDK's clock with a manual `TimeProvider` that it advances
-only while it waits for a check's bound, so its timing checks finish without
-real waiting. Handlers that measure time should use `Session.Time`.
+The suite drives the SDK's clock and `Session.Time` with a manual
+`TimeProvider`. While a session check waits, it advances that clock in steps up
+to the check's bound, so a handler that waits on `Session.Time` sees the bound
+pass at once; a check fails only when its bound (`InitialFaceTimeout`,
+`CancellationBound`) has also passed in real time, so real work such as a
+network call before the first face or a save after cancellation counts against
+the same bound, and a failing check takes that long in real time. While an
+invocation listed in `InvokeContributions` runs, the clock follows real time
+and never runs ahead of it, so the SDK's invocation deadline is real time too.
+Failure texts name the bound and say "host and real time" (or "real time" for
+the invocation deadline).
 
 ### 9.4 Hello world
 

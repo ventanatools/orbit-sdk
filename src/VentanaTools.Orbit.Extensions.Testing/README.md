@@ -61,8 +61,12 @@ promptly when cancelled, and that an action-only contribution never publishes a
 face. List contributions in `InvokeContributions` to also run their real
 invocations.
 
-The checks drive a manual clock, so their timeouts take no real time. Handlers
-that wait or measure time should use `session.Time`.
+The checks drive a manual clock, so a handler that waits on `session.Time` sees
+a bound pass at once. A check fails only when its bound (2 s for the first face,
+5 s to end after cancellation) has also passed in real time, so a network call
+before the first face or a save after cancellation counts against the same
+bound, and a failing check takes that long. Invocations run with the clock
+following real time, so the SDK's invocation deadline is real time too.
 
 `ExtensionConformance.AssertManifestFileValid("extension.json")` checks a manifest
 file the way a host does. Every `Assert…` method throws `ConformanceException`, an

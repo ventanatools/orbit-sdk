@@ -326,6 +326,37 @@ public sealed class ContractSuiteTests
     }
 
     [Fact]
+    public async Task RealWorkWithinTheBoundsPasses()
+    {
+        // Real time, not the session's clock: a network call before the first face, and a save after cancellation.
+        var handler = new ScriptedHandler
+        {
+            OnSession = async (session, token) =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(400), TimeProvider.System, token);
+                session.SetFace(new Face { Line1 = "fetched", GoodFor = TimeSpan.FromSeconds(60) });
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, token);
+                }
+                finally
+                {
+                    Thread.Sleep(300);
+                }
+            },
+            OnInvoke = async (_, token) =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(400), TimeProvider.System, token);
+                return InvokeResult.Done;
+            },
+        };
+        var manifest = Manifests.Kit(Manifests.Widget1(), Manifests.Action1());
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        Assert.Empty(await new Suite(manifest, () => handler, [Manifests.Action], maxCombinations: 1).CollectFailuresAsync());
+        Assert.True(watch.Elapsed > TimeSpan.FromMilliseconds(400), "The handler's real work ran.");
+    }
+
+    [Fact]
     public async Task ItReportsAHandlerThatPublishesAfterStop()
     {
         var handler = new ScriptedHandler
@@ -415,7 +446,7 @@ public sealed class ContractSuiteTests
     {
         var handler = new ScriptedHandler { OnSession = (_, token) => Task.Delay(Timeout.Infinite, token) };
         var failures = await ExtensionConformance.CollectContractFailuresAsync(Manifests.Kit(Manifests.Widget1()), handler);
-        Assert.Contains(failures, failure => failure.Contains("no first face within 2 s with every default", StringComparison.Ordinal));
+        Assert.Contains(failures, failure => failure.Contains("no first face within 2 s with every default (host and real time)", StringComparison.Ordinal));
         Assert.Single(failures);
     }
 
