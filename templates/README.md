@@ -30,7 +30,7 @@ orbit-ext new widget -n MyWidget --extension-id contoso.my-widget
 | `--extension-id` | `example.` and the lowercased project name | The extension id, `publisher.name` in lowercase letters, digits and single hyphens. |
 | `--host` | the host's current id | The host id written into `hosts`. |
 | `--display-name` | The project name | The extension's name. |
-| `--package-source` | none | A folder of packages. The `nuget.config` then restores the `VentanaTools.Orbit.Extensions*` packages from that folder only, and everything else from nuget.org. `orbit-ext new` always passes its feed. |
+| `--package-source` | the per-user feed | A folder of packages. The `nuget.config` restores the `VentanaTools.Orbit.Extensions*` packages from that folder only, and everything else from nuget.org. Without it (a plain `dotnet new`, or Visual Studio's New Project dialog) the folder is the per-user feed that `orbit-ext new` fills, `%LOCALAPPDATA%\VentanaTools\packages\<version>`, so restore fails until that folder exists and never takes a package with these names from nuget.org. `orbit-ext new` always passes its feed. |
 | `--no-tests` | tests included | The .NET templates only: create no test project. |
 
 The template engine cannot refuse an option value, so an `--extension-id`

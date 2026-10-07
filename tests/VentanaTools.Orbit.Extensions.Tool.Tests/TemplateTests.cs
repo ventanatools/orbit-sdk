@@ -96,7 +96,8 @@ public sealed class TemplateFeed : IDisposable
     }
 
     /// <summary>Runs a program with the isolated package folder; throws with its output when it fails.</summary>
-    public string Run(string program, IEnumerable<string> arguments, string workingDirectory, int expectedExitCode = 0)
+    public string Run(string program, IEnumerable<string> arguments, string workingDirectory, int expectedExitCode = 0,
+        IReadOnlyDictionary<string, string>? environment = null)
     {
         var info = new ProcessStartInfo(ChildProcess.ResolveProgram(program))
         {
@@ -118,6 +119,11 @@ public sealed class TemplateFeed : IDisposable
         info.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0";
         info.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         info.Environment["DOTNET_NOLOGO"] = "1";
+        foreach (var (name, value) in environment ?? new Dictionary<string, string>())
+        {
+            info.Environment[name] = value;
+        }
+
         using var process = Process.Start(info)!;
         var output = new StringBuilder();
         process.OutputDataReceived += (_, line) => { lock (output) { output.AppendLine(line.Data); } };
@@ -197,6 +203,30 @@ public sealed class TemplateTests(TemplateFeed feed, ITestOutputHelper output) :
         output.WriteLine(packed);
         var package = Directory.EnumerateFiles(Path.Combine(folder, "artifacts")).Single();
         output.WriteLine(feed.Run(feed.Tool, ["verify", package], folder));
+    }
+
+    [WindowsFact]
+    public void WithoutAPackageSourceTheExtensionPackagesNeverComeFromNuGetOrg()
+    {
+        // Visual Studio's New Project dialog and a plain dotnet new pass no package source. The packages are not
+        // published, so a same-named package on nuget.org must never be restored in their place.
+        var folder = Path.Combine(feed.Projects, "no-source");
+        feed.Run("dotnet", ["new", ToolIdentity.CommandName + "-action", "-n", "NoSource", "-o", folder, "--debug:custom-hive", feed.Hive],
+            feed.Projects);
+        var config = File.ReadAllText(Path.Combine(folder, "nuget.config"));
+        Assert.Contains("value=\"%LOCALAPPDATA%\\VentanaTools\\packages\\" + feed.Version + "\"", config, StringComparison.Ordinal);
+        var family = ToolIdentity.AuthorPackageId + "*";
+        var mapped = System.Xml.Linq.XDocument.Parse(config).Root!.Element("packageSourceMapping")!.Elements("packageSource")
+            .Where(source => source.Elements("package").Any(package => (string?)package.Attribute("pattern") == family))
+            .Select(source => (string?)source.Attribute("key"));
+        Assert.Equal(["extension-packages"], mapped);
+
+        // While the per-user folder does not exist, restore fails instead of looking elsewhere.
+        var localAppData = Path.Combine(feed.Work, "no-source-local-app-data");
+        Directory.CreateDirectory(localAppData);
+        var restore = feed.Run("dotnet", ["restore", "-nologo"], folder, expectedExitCode: 1,
+            environment: new Dictionary<string, string> { ["LOCALAPPDATA"] = localAppData });
+        Assert.Contains(Path.Combine(localAppData, "VentanaTools", "packages", feed.Version), restore, StringComparison.OrdinalIgnoreCase);
     }
 
     [WindowsFact]
