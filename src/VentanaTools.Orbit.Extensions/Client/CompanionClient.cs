@@ -85,7 +85,7 @@ public sealed class CompanionClientOptions
 public sealed class StatusChangedEventArgs : EventArgs
 {
     internal StatusChangedEventArgs(ConnectionState state, ReasonCode? reason, TimeSpan? retryIn, int attempt, bool serverVerified,
-        HostIdentity? host, int? protocolVersion, string? peerMessage)
+        HostIdentity? host, int? negotiatedVersion, string? peerMessage)
     {
         State = state;
         Reason = reason;
@@ -93,7 +93,7 @@ public sealed class StatusChangedEventArgs : EventArgs
         Attempt = attempt;
         ServerVerified = serverVerified;
         Host = host;
-        ProtocolVersion = protocolVersion;
+        ProtocolVersion = negotiatedVersion;
         PeerMessage = peerMessage;
     }
 
