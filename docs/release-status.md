@@ -58,7 +58,8 @@ folder. Developer mode unlocks author tooling only: it never relaxes consent,
 authentication, limits or text cleaning, and it does not sandbox a companion.
 
 Companions start by hand. A package delivers reviewed, inert files and never
-runs anything; the Countdown package needs the .NET 10 runtime, and the
+runs anything; the Countdown package needs the x64 .NET 10 Runtime (also on
+Windows on Arm), and the
 Photoshop sample needs Node.js 22 or later, Photoshop and Adobe's developer
 tooling.
 

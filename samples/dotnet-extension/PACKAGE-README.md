@@ -1,8 +1,9 @@
 # .NET state sample package
 
 A developer sample: an on/off value kept only in the companion's memory, set by **Set sample
-state** actions and shown by a passive **Sample status** widget. It needs Windows and the .NET 10
-runtime, no account and no network. Install only packages from authors you trust.
+state** actions and shown by a passive **Sample status** widget. It needs Windows and the x64 .NET
+10 Runtime (also on Windows on Arm, where the Arm64 runtime alone does not run it), no account and
+no network. Install only packages from authors you trust.
 
 - `payload/companion/` holds the built companion, `DotnetExtensionSample.exe`, with its
   `extension.json`.

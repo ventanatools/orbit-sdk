@@ -1,8 +1,9 @@
 # Countdown sample package
 
 A developer sample: one local countdown, shared by **Countdown** actions (Start or resume, Pause,
-Reset) and a passive **Countdown status** widget. It needs Windows and the .NET 10 runtime, no
-account and no network. Install only packages from authors you trust.
+Reset) and a passive **Countdown status** widget. It needs Windows and the x64 .NET 10 Runtime
+(also on Windows on Arm, where the Arm64 runtime alone does not run it), no account and no
+network. Install only packages from authors you trust.
 
 - `payload/companion/` holds the built companion, `CountdownExtensionSample.exe`, with its
   `extension.json`.
