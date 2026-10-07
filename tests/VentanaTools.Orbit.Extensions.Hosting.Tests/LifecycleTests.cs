@@ -225,29 +225,43 @@ public sealed class LifecycleTests
         files.WritePairing();
         var logs = new CapturingLoggerProvider();
         var connections = Channel.CreateUnbounded<Stream>();
+        var waited = new TaskCompletionSource<StatusChangedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var host = Build(logs, files, options =>
         {
             options.Arguments = verbose ? ["--verbose"] : [];
             options.TestTransport = HostPeer.Accepting(connections);
+            // The callback runs after the status and the host's text are logged, in the same event, so once it has
+            // seen the wait, everything the add-on logs for it is in the log.
+            options.StatusChanged = status =>
+            {
+                if (status.State == ConnectionState.Waiting)
+                {
+                    waited.TrySetResult(status);
+                }
+            };
         });
         await host.StartAsync().WaitAsync(Timeout);
 
         var peer = await HostPeer.AcceptAsync(connections, files.Secret);
         await peer.HandshakeAsync();
         await peer.SendAsync(new ErrorMessage { Code = ReasonCode.HostTurnedOff, Message = "Turned off." });
-        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 3), "waiting");
+        Assert.Equal(ReasonCode.HostTurnedOff, (await waited.Task.WaitAsync(Timeout)).Reason);
         var waiting = Assert.Single(logs.Companion, entry => entry.EventId.Id == 3);
         Assert.Equal("host.turned-off", waiting.Values["ReasonCode"]);
+        Assert.Equal(LogLevel.Information, waiting.Level);
         var messages = logs.Companion.Where(entry => entry.EventId.Id == 16).ToList();
         if (verbose)
         {
-            Assert.Equal("Turned off.", Assert.Single(messages).Values["HostMessage"]);
-            Assert.Equal(LogLevel.Debug, messages[0].Level);
+            var message = Assert.Single(messages);
+            Assert.Equal("Turned off.", message.Values["HostMessage"]);
+            Assert.Equal(LogLevel.Debug, message.Level);
         }
         else
         {
+            // The host sent its text with the error, and the event that carried it has been logged in full.
             Assert.Empty(messages);
-            Assert.DoesNotContain(logs.Entries, entry => entry.Message.Contains("Turned off.", StringComparison.Ordinal));
+            Assert.DoesNotContain(logs.Entries, entry => entry.Message.Contains("Turned off.", StringComparison.Ordinal)
+                || entry.Values.Values.Any(value => value is string text && text.Contains("Turned off.", StringComparison.Ordinal)));
         }
 
         await host.StopAsync().WaitAsync(Timeout);
