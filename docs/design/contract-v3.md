@@ -3492,7 +3492,7 @@ have no post-actions.
 |---|---|---|
 | `orbit-ext-action` | `VentanaTools.Orbit.Extensions.Templates.Action.CSharp` | A .NET companion with one action that has one `Choice` setting, its handler deriving from `ContributionHandler`; an xUnit test project using `VentanaTools.Orbit.Extensions.Testing`; `extension.json`, `extension.pack.json` (with a `build` step), `PACKAGE-README.md`, a local tool manifest pinning `VentanaTools.Orbit.Extensions.Tool` (command `orbit-ext`), a `nuget.config` (below), a bundled schema copy at `.schemas/manifest.v3.json` that `extension.json`'s `$schema` points to, and `.gitignore` entries for pairing files. |
 | `orbit-ext-widget` | `VentanaTools.Orbit.Extensions.Templates.Widget.CSharp` | The same, with one widget that publishes a face and can be invoked. |
-| `orbit-ext-node` | `VentanaTools.Orbit.Extensions.Templates.Node` | A Node companion using `@ventanatools/orbit-extensions` from `file:./vendor/ventanatools-orbit-extensions-<version>.tgz` (the tarball copied from the feed into `vendor/`), with `node --test` tests using `@ventanatools/orbit-extensions/testing`, and the same JSON files and schema copy. |
+| `orbit-ext-node` | `VentanaTools.Orbit.Extensions.Templates.Node` | A Node companion using `@ventanatools/orbit-extensions` from `file:./vendor/ventanatools-orbit-extensions-<version>.tgz` (the tarball copied from the feed into `vendor/`), with `node --test` tests using `@ventanatools/orbit-extensions/testing` (the manifest check, the action through `createTestSession` and `createTestInvocation`, and a session and an invocation through a real client on `startTestHost`), and the same JSON files and schema copy. |
 
 Parameters (all templates):
 
