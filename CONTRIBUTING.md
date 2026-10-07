@@ -27,10 +27,11 @@ Release` and `dotnet test VentanaTools.Orbit.Extensions.slnx -c Release
 --no-build` need only the .NET SDK; `--filter "Platform!=Windows"` runs the
 portable subset that CI runs on Linux.
 
-Keep the libraries plain .NET 10: the author package and the test kit depend on
-nothing beyond the base class library, and an add-on package such as `.Hosting`
-only on `Microsoft.Extensions.*.Abstractions` packages and the author package.
-Document every public member. Public tests use xUnit's own
+Keep the libraries plain .NET 10. The author package depends only on the base
+class library. The test kit and add-on packages also depend on their author
+package at the exact same version. An add-on's other direct dependencies are
+limited to `Microsoft.Extensions.*.Abstractions` packages and
+`Microsoft.Extensions.Options`. Document every public member. Public tests use xUnit's own
 assertions. Add focused tests for every behavior you change, especially
 authentication, cancellation, session lifetime, framing and untrusted input.
 

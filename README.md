@@ -42,10 +42,11 @@ This repository contains no build or source of the Orbit app itself.
 | `@ventanatools/orbit-extensions` | The Node SDK, in [`node/orbit-extensions`](node/orbit-extensions). Unpublished (`"private": true`); the tool carries its tarball for new Node projects. |
 
 All six version in lockstep. The libraries target `net10.0` (AnyCPU, AOT
-compatible). The author package and the test kit depend only on the .NET base
-class library; an add-on package may also depend on `Microsoft.Extensions.*.Abstractions`
-packages, and the Generic Host add-on depends on
-`Microsoft.Extensions.Hosting.Abstractions` alone.
+compatible). The author package depends only on the base class library. The
+test kit and add-on packages also depend on their author package at the exact
+same version. An add-on's other direct dependencies are limited to
+`Microsoft.Extensions.*.Abstractions` packages and `Microsoft.Extensions.Options`;
+the Generic Host add-on's is `Microsoft.Extensions.Hosting.Abstractions` alone.
 
 The packages target `net10.0` only, with no `netstandard2.0` build. A companion is
 a program that brings or names its own runtime, not a library loaded into an

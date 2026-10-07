@@ -13,8 +13,9 @@
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <ItemGroup>
-    <!-- An add-on package may depend on Microsoft.Extensions abstractions packages; this one needs only the hosting
-         abstractions, which bring dependency injection and logging (contract §9.5). -->
+    <!-- An add-on's other direct dependencies are limited to Microsoft.Extensions.*.Abstractions packages and
+         Microsoft.Extensions.Options (contract §9); this one needs only the hosting abstractions, which bring
+         dependency injection and logging (contract §9.5). -->
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <!-- The add-on runs CompanionApp through its internal output seam, so the package depends on exactly the same
          version of the author package (Directory.Build.targets writes the range as [version]). -->

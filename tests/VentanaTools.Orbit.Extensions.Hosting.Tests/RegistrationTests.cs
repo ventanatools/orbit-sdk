@@ -120,14 +120,16 @@ public sealed class RegistrationTests
     }
 
     [Fact]
-    public void TheAddOnDependsOnlyOnTheBaseClassLibraryTheAuthorPackageAndExtensionsAbstractions()
+    public void TheAddOnDependsOnlyOnTheBaseClassLibraryTheAuthorPackageExtensionsAbstractionsAndOptions()
     {
-        // The dependency rule (contract §2.7, §9.5): an add-on may use Microsoft.Extensions abstractions, nothing else.
+        // The dependency rule (contract §2.7, §9): besides its author package, an add-on's direct dependencies are limited
+        // to Microsoft.Extensions.*.Abstractions packages and Microsoft.Extensions.Options.
         var assembly = typeof(CompanionServiceOptions).Assembly;
         var family = typeof(ExtensionManifest).Assembly.GetName().Name!;
         Assert.All(assembly.GetReferencedAssemblies(), reference =>
             Assert.True(reference.Name!.StartsWith("System", StringComparison.Ordinal) || reference.Name == family
-                || Regex.IsMatch(reference.Name, @"^Microsoft\.Extensions\.[A-Za-z.]+\.Abstractions$"), reference.Name));
+                || Regex.IsMatch(reference.Name, @"^Microsoft\.Extensions\.[A-Za-z.]+\.Abstractions$")
+                || reference.Name == "Microsoft.Extensions.Options", reference.Name));
         Assert.Contains(assembly.GetCustomAttributes<AssemblyMetadataAttribute>(), attribute => attribute.Key == "IsTrimmable" && attribute.Value == "True");
         Assert.Equal([assembly.GetName().Name], assembly.GetExportedTypes().Select(type => type.Namespace!).Distinct());
         Assert.Equal(family + ".Hosting", assembly.GetName().Name);

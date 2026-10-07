@@ -20,8 +20,9 @@ reads the version and run id it wrote to artifacts/build/state.json.
 6. Every template, instantiated through the tool's new command (custom template hive, --feed) in a
    temporary folder outside the repository: its tool manifest pins the new tool, and it builds and
    passes the installed tool's test command.
-7. The Generic Host add-on: its package depends on exactly this version of the author package and on
-   the hosting abstractions alone, the feed new prepares carries it, and its readme's example builds
+7. The dependency rule: the test kit and Generic Host add-on packages depend on exactly this version
+   of the author package, the test kit on nothing else and the add-on otherwise on the hosting
+   abstractions alone. The feed new prepares carries the add-on, and its readme's example builds
    against it from that feed.
 8. Every package's release notes link to its version's section of CHANGELOG.md, or to the changelog
    when the version has no section (a -dev build).
@@ -136,6 +137,24 @@ function Get-PackageNuspec([string]$Path) {
     } finally {
         $archive.Dispose()
     }
+}
+
+# Throws unless the freshly packed package has one dependency group, for net10.0, with exactly the
+# dependencies wanted, each written as '<id> <version range>'.
+function Assert-PackageDependencies([string]$Id, [string[]]$Wanted) {
+    $nuspec = Get-PackageNuspec ([System.IO.Path]::Combine($packages, $Id + '.' + $version + '.nupkg'))
+    $groups = @($nuspec.package.metadata.dependencies.group)
+    if ($groups.Count -ne 1 -or [string]$groups[0].targetFramework -ne 'net10.0') {
+        throw ($Id + ' must have one dependency group, for net10.0.')
+    }
+    $found = New-Object System.Collections.Generic.List[string]
+    foreach ($dependency in @($groups[0].dependency)) { $found.Add([string]$dependency.id + ' ' + [string]$dependency.version) }
+    $foundText = @($found | Sort-Object) -join '; '
+    $wantedText = @($Wanted | Sort-Object) -join '; '
+    if ($foundText -ne $wantedText) {
+        throw ($Id + ' depends on ' + $foundText + '; expected ' + $wantedText + '.')
+    }
+    Write-Host ($Id + ': depends on ' + ($found -join ' and ') + '.')
 }
 
 function Get-FileSha256([string]$Path) {
@@ -383,27 +402,17 @@ try {
     }
 
     # -----------------------------------------------------------------------------------------
-    Write-Step 'The Generic Host add-on package'
-    # An add-on may depend on Microsoft.Extensions abstractions and on exactly this version of the
-    # author package, whose internal output seam it uses (contract section 9.5); nothing else.
+    Write-Step 'The dependencies of the test kit and the Generic Host add-on'
+    # The dependency rule (contract sections 2.7 and 9): the test kit and add-on packages depend on
+    # exactly this version of their author package, whose internal seams they use, and an add-on's
+    # other direct dependencies are limited to Microsoft.Extensions.*.Abstractions packages and
+    # Microsoft.Extensions.Options. The test kit has no other; the add-on has those of section 9.5.
+    Assert-PackageDependencies ($family + '.Testing') @($family + ' [' + $version + ']')
     $packageVersions = [System.IO.File]::ReadAllText((Join-Repository 'Directory.Packages.props'))
     $abstractions = [regex]::Match($packageVersions, '<PackageVersion Include="Microsoft\.Extensions\.Hosting\.Abstractions" Version="([^"]+)"')
     if (-not $abstractions.Success) { throw 'Directory.Packages.props has no Microsoft.Extensions.Hosting.Abstractions version.' }
     $hostingId = $family + '.Hosting'
-    $hostingNuspec = Get-PackageNuspec ([System.IO.Path]::Combine($packages, $hostingId + '.' + $version + '.nupkg'))
-    $groups = @($hostingNuspec.package.metadata.dependencies.group)
-    if ($groups.Count -ne 1 -or [string]$groups[0].targetFramework -ne 'net10.0') {
-        throw ($hostingId + ' must have one dependency group, for net10.0.')
-    }
-    $found = New-Object System.Collections.Generic.List[string]
-    foreach ($dependency in @($groups[0].dependency)) { $found.Add([string]$dependency.id + ' ' + [string]$dependency.version) }
-    $wanted = @(($family + ' [' + $version + ']'), ('Microsoft.Extensions.Hosting.Abstractions ' + $abstractions.Groups[1].Value))
-    $foundText = @($found | Sort-Object) -join '; '
-    $wantedText = @($wanted | Sort-Object) -join '; '
-    if ($foundText -ne $wantedText) {
-        throw ($hostingId + ' depends on ' + $foundText + '; expected ' + $wantedText + '.')
-    }
-    Write-Host ($hostingId + ': depends on ' + ($found -join ' and ') + '.')
+    Assert-PackageDependencies $hostingId @(($family + ' [' + $version + ']'), ('Microsoft.Extensions.Hosting.Abstractions ' + $abstractions.Groups[1].Value))
 
     # -----------------------------------------------------------------------------------------
     Write-Step 'Release notes'

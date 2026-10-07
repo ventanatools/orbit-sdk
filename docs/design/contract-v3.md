@@ -295,7 +295,7 @@ to follow the same conventions.
 | The model of live state: the host starts a session per placement, with a complete, fixed set of setting values and an opaque id, and ends every session with its connection, replaying nothing; each published value carries a lifetime that the host counts from its arrival, never a time of its own; and the host keeps a per-session budget that coalesces values to the newest, under message budgets that throttle before they close, cleaning text instead of refusing it. Lollipop's published signals are expected to reuse this model | §7.6, §7.7, §7.10 |
 | The trust and consent shape: nothing runs until the person consents, extension-supplied text is shown as unverified, access growth asks again, and developer mode never relaxes consent, authentication, limits or text cleaning | §1.4, §5.8, §5.9 |
 | Package and tool naming: `VentanaTools.<Product>.Extensions*` and a `<product>-ext` tool | §2.1, §2.2 |
-| The dependency rule: an SDK's author package and test kit depend only on the base class library; an add-on package (such as `.Hosting`) may also depend on `Microsoft.Extensions.*.Abstractions` packages and on its author package | §9, §9.5 |
+| The dependency rule. The author package depends only on the base class library. The test kit and add-on packages also depend on their author package at the exact same version. An add-on's other direct dependencies are limited to `Microsoft.Extensions.*.Abstractions` packages and `Microsoft.Extensions.Options`. | §9, §9.5 |
 | The tooling verbs `new`, `validate`, `pack`, `verify` and `test` | §11.1 |
 | Test-kit naming (`<package>.Testing`, `RecordingSession`, `ContributionContractSuite`, `ExtensionConformance.AssertAuthoringContractAsync`, `ConformanceException`) | §9.3 |
 | The licensing pattern: Apache-2.0 libraries and tools, MIT-0 samples and templates, Ventana Tools LLC as copyright holder | §2.6 |
@@ -2084,14 +2084,15 @@ methods delegate to `Wire.Handshake`. The test kit is the separate package
 The libraries target `net10.0`, AnyCPU, set `IsAotCompatible` (which implies
 trimming compatibility), track their surface with PublicApiAnalyzers, enable
 package validation, and require XML documentation on every public member (CS1591
-is an error). The author package and the test kit depend only on the base class
-library. An add-on package may also depend on `Microsoft.Extensions.*.Abstractions`
-packages and on the author package, never on a concrete implementation: the
-Generic Host add-on `VentanaTools.Orbit.Extensions.Hosting` (§9.5) depends on
-`Microsoft.Extensions.Hosting.Abstractions` alone. The Testing package and the
-add-on reference the author package with an exact version range (`[x.y.z]`),
-because they use its internal seams (the in-memory transport and `CompanionApp`'s
-output).
+is an error). The author package depends only on the base class library. The
+test kit and add-on packages also depend on their author package at the exact
+same version. An add-on's other direct dependencies are limited to
+`Microsoft.Extensions.*.Abstractions` packages and `Microsoft.Extensions.Options`.
+A concrete implementation, such as `Microsoft.Extensions.Hosting`, is the
+application's to add: the Generic Host add-on `VentanaTools.Orbit.Extensions.Hosting`
+(§9.5) depends on `Microsoft.Extensions.Hosting.Abstractions` alone. The version
+range is exact (`[x.y.z]`) because the test kit and the add-on use the author
+package's internal seams (the in-memory transport and `CompanionApp`'s output).
 
 The packages target `net10.0` only, with no `netstandard2.0` build. A companion
 is a program that brings or names its own runtime, not a library loaded into an
