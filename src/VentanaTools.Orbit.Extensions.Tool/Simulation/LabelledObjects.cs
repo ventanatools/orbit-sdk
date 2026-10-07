@@ -78,8 +78,14 @@ internal static partial class LabelledObjects
     /// Creates the first and only instance of <c>\\.\pipe\</c><paramref name="pipeName"/>: duplex, byte mode,
     /// overlapped, rejecting remote clients, with the security descriptor <paramref name="sddl"/>.
     /// </summary>
-    /// <exception cref="UnauthorizedAccessException">The name is in use, so a first instance cannot be created, or access was denied.</exception>
-    /// <exception cref="IOException">The pipe could not be created for another reason.</exception>
+    /// <exception cref="IOException">
+    /// The name is in use by a server that allows one instance (<c>ERROR_PIPE_BUSY</c>), or the pipe could
+    /// not be created for another reason.
+    /// </exception>
+    /// <exception cref="UnauthorizedAccessException">
+    /// Access was denied (<c>ERROR_ACCESS_DENIED</c>), which includes a name in use by a server that allows
+    /// more than one instance, since a first instance cannot be created then.
+    /// </exception>
     public static SafePipeHandle CreateServerPipe(string pipeName, string sddl)
     {
         var descriptor = Descriptor(sddl);

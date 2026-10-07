@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 
+using System.ComponentModel;
 using System.Globalization;
 using System.IO.Pipes;
 using System.Security.Principal;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using VentanaTools.Orbit.Extensions.Wire;
 using Xunit;
 
 namespace VentanaTools.Orbit.Extensions.Tool.Tests;
@@ -17,6 +20,8 @@ namespace VentanaTools.Orbit.Extensions.Tool.Tests;
 [Trait("Platform", "Windows")]
 public sealed class SimulateTests
 {
+    private const int ErrorPipeBusy = 231;
+
     private static string TestAssembly => typeof(SimulateTests).Assembly.Location;
 
     [WindowsFact]
@@ -61,9 +66,10 @@ public sealed class SimulateTests
         var flags = PipeFacts.Flags(server.SafePipeHandle);
         Assert.Equal(PipeFacts.ServerEnd | PipeFacts.RejectRemoteClients, flags & (PipeFacts.ServerEnd | PipeFacts.RejectRemoteClients));
 
-        // The name stays the first and only instance's (Windows says ERROR_PIPE_BUSY or ERROR_ACCESS_DENIED).
+        // The name stays the first and only instance's: a second server of it gets ERROR_PIPE_BUSY, an IOException.
         var second = Record.Exception(() => SimulatedHost.CreatePipe(name).Dispose());
-        Assert.True(second is IOException or UnauthorizedAccessException, second?.ToString() ?? "a second server took the name");
+        Assert.True(second is IOException { InnerException: Win32Exception { NativeErrorCode: ErrorPipeBusy } },
+            second?.ToString() ?? "a second server took the name");
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         await using var client = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
@@ -78,6 +84,92 @@ public sealed class SimulateTests
     {
         var user = new SecurityIdentifier("S-1-5-21-1-2-3-1001");
         Assert.Equal("O:" + user.Value + "D:P(A;;FA;;;" + user.Value + ")S:(ML;;NRNWNX;;;ME)", SimulatedHost.PipeDescriptor(user));
+    }
+
+    // Disconnecting a named pipe discards what the companion has not read, so after an error frame the simulated host
+    // waits for the companion to close before it readies its pipe's one instance again (contract §8.2). The wait has no
+    // bound here, so only the companion's close can end it: the short probe can only find the instance taken, and the
+    // frame read after it still arrives.
+    [WindowsFact]
+    public async Task AfterAnErrorFrame_TheSimulatedHostWaitsForTheCompanionToClose_SoAFrameReadLateStillArrives()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var registration = SimulationRegistration.Create("example-host", "example.tool-test");
+        var transcript = new TranscriptLines();
+        await using var host = new SimulatedHost(ToolTestManifest(), registration, transcript.Create())
+        {
+            ErrorFlushTimeout = Timeout.InfiniteTimeSpan,
+        };
+        host.Start();
+
+        await using var late = await TryConnectAsync(registration.PipeName, TimeSpan.FromSeconds(10));
+        Assert.True(late is not null, "the companion could not open the pipe");
+        await WriteAsync(late, Hello(Guid.NewGuid().ToString("N")), timeout.Token);
+        await transcript.WaitForAsync("disconnected", timeout.Token);
+
+        await using (var probe = await TryConnectAsync(registration.PipeName, TimeSpan.FromMilliseconds(250)))
+        {
+            Assert.True(probe is null, "the host readied the pipe before the companion read its error frame");
+        }
+
+        var error = Assert.IsType<ErrorMessage>(await ReadAsync(late, ConnectionPhase.Handshake, timeout.Token));
+        Assert.Equal(ReasonCode.AuthRegistrationMismatch, error.Code);
+        await late.DisposeAsync();
+
+        await using var next = await TryConnectAsync(registration.PipeName, TimeSpan.FromSeconds(10));
+        Assert.True(next is not null, "once the companion closed, the host readied the pipe for the next one");
+    }
+
+    [WindowsFact]
+    public async Task ACompanionThatKeepsItsEndOpenAfterAnErrorFrame_IsDisconnectedAfterTheErrorFlushTime()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var registration = SimulationRegistration.Create("example-host", "example.tool-test");
+        await using var host = new SimulatedHost(ToolTestManifest(), registration, new TranscriptLines().Create());
+        Assert.Equal(TimeSpan.FromSeconds(1), host.ErrorFlushTimeout);
+        host.Start();
+
+        await using var stubborn = await TryConnectAsync(registration.PipeName, TimeSpan.FromSeconds(10));
+        Assert.True(stubborn is not null, "the companion could not open the pipe");
+        await WriteAsync(stubborn, Hello(Guid.NewGuid().ToString("N")), timeout.Token);
+        var error = Assert.IsType<ErrorMessage>(await ReadAsync(stubborn, ConnectionPhase.Handshake, timeout.Token));
+        Assert.Equal(ReasonCode.AuthRegistrationMismatch, error.Code);
+
+        // The companion never closes: the bound ends the wait and the host disconnects it.
+        var after = await Record.ExceptionAsync(async () => Assert.Null(await ReadAsync(stubborn, ConnectionPhase.Handshake, timeout.Token)));
+        Assert.True(after is null or IOException, after?.ToString());
+        await using var next = await TryConnectAsync(registration.PipeName, TimeSpan.FromSeconds(10));
+        Assert.True(next is not null, "the host readied the pipe for the next companion");
+    }
+
+    // A stopping host closes its pipe rather than disconnecting it, so the shutdown frame stays readable after
+    // DisposeAsync returns.
+    [WindowsFact]
+    public async Task TheShutdownErrorFrame_StaysReadableAfterTheSimulatedHostStops()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var registration = SimulationRegistration.Create("example-host", "example.tool-test");
+        var manifest = ToolTestManifest();
+        var host = new SimulatedHost(manifest, registration, new TranscriptLines().Create());
+        NamedPipeClientStream companion;
+        try
+        {
+            host.Start();
+            companion = await ConnectAndAuthenticateAsync(host, registration, manifest, timeout.Token);
+        }
+        catch
+        {
+            await host.DisposeAsync();
+            throw;
+        }
+
+        await using (companion)
+        {
+            await host.DisposeAsync();
+
+            var error = Assert.IsType<ErrorMessage>(await ReadAsync(companion, ConnectionPhase.Authenticated, timeout.Token));
+            Assert.Equal(ReasonCode.HostShuttingDown, error.Code);
+        }
     }
 
     private static string Attempt(Func<int> read)
@@ -203,6 +295,152 @@ public sealed class SimulateTests
             var found = actual.FindIndex(at, value => value == item);
             Assert.True(found >= 0, "Missing '" + item + "' after position " + at + " in:\n" + string.Join("\n", actual));
             at = found + 1;
+        }
+    }
+
+    private static ExtensionManifest ToolTestManifest() =>
+        ManifestReader.Read(Encoding.UTF8.GetBytes(TestProject.Manifest("example-host"))).Value
+            ?? throw new InvalidOperationException("The test manifest does not read.");
+
+    private static HelloMessage Hello(string registrationId, string? manifestHash = null) => new()
+    {
+        MinVersion = ProtocolVersions.Min,
+        MaxVersion = ProtocolVersions.Max,
+        RegistrationId = registrationId,
+        ClientNonce = Handshake.NewNonce(),
+        Capabilities = [],
+        Client = new ClientInfo { Name = "tool-tests", Version = "1" },
+        ManifestHash = manifestHash ?? ManifestWriter.ComputeHash(ToolTestManifest()),
+    };
+
+    // The companion's half of the handshake, over a raw client of the simulated host's pipe.
+    private static async Task<NamedPipeClientStream> ConnectAndAuthenticateAsync(SimulatedHost host, SimulationRegistration registration,
+        ExtensionManifest manifest, CancellationToken cancellationToken)
+    {
+        var client = await TryConnectAsync(registration.PipeName, TimeSpan.FromSeconds(10))
+            ?? throw new TimeoutException("The companion could not open the pipe.");
+        try
+        {
+            var hello = Hello(registration.RegistrationId, ManifestWriter.ComputeHash(manifest));
+            await WriteAsync(client, hello, cancellationToken);
+            var challenge = Assert.IsType<ChallengeMessage>(await ReadAsync(client, ConnectionPhase.Handshake, cancellationToken));
+            var transcript = new HandshakeTranscript
+            {
+                HostId = challenge.Host.Id,
+                HostVersion = challenge.Host.Version,
+                RegistrationId = hello.RegistrationId,
+                ClientNonce = hello.ClientNonce,
+                ServerNonce = challenge.ServerNonce,
+                Version = challenge.Version,
+                MinVersion = hello.MinVersion,
+                MaxVersion = hello.MaxVersion,
+                ClientCapabilities = hello.Capabilities,
+                HostCapabilities = challenge.Capabilities,
+                ManifestHash = hello.ManifestHash,
+            };
+            Assert.True(Handshake.VerifyProof(registration.Secret, challenge.Proof, transcript, ProofRole.Server), "the host's proof does not verify");
+            await WriteAsync(client, new AuthenticateMessage { Proof = Handshake.ComputeProof(registration.Secret, transcript, ProofRole.Client) },
+                cancellationToken);
+            Assert.IsType<ReadyMessage>(await ReadAsync(client, ConnectionPhase.PeerVerified, cancellationToken));
+            Assert.True(await host.WaitForConnectionAsync(TimeSpan.FromSeconds(10), cancellationToken), "the host did not take the connection");
+            return client;
+        }
+        catch
+        {
+            await client.DisposeAsync();
+            throw;
+        }
+    }
+
+    // A client of the pipe, or null when no instance became free within the time.
+    private static async Task<NamedPipeClientStream?> TryConnectAsync(string pipeName, TimeSpan within)
+    {
+        var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        try
+        {
+            await client.ConnectAsync((int)within.TotalMilliseconds);
+            return client;
+        }
+        catch (TimeoutException)
+        {
+            await client.DisposeAsync();
+            return null;
+        }
+    }
+
+    private static async Task WriteAsync(Stream stream, WireMessage message, CancellationToken cancellationToken) =>
+        await Framing.WriteFrameAsync(stream, MessageWriter.Write(message), cancellationToken);
+
+    // The host's next message, or null at the end of the stream.
+    private static async Task<WireMessage?> ReadAsync(Stream stream, ConnectionPhase phase, CancellationToken cancellationToken)
+    {
+        var frame = await Framing.ReadFrameAsync(stream, Framing.MaxFrameBytes, TimeProvider.System, cancellationToken);
+        if (frame is null)
+        {
+            return null;
+        }
+
+        var read = MessageReader.Read(frame, Sender.Host, phase);
+        return read.Message ?? throw new InvalidDataException("The host's frame does not read: " + (read.Violation ?? read.Ignored)?.Value);
+    }
+
+    // The simulated host's transcript as JSON lines, for a test that waits on the tool's notes.
+    private sealed class TranscriptLines : TextWriter
+    {
+        private readonly object _gate = new();
+        private readonly StringBuilder _text = new();
+
+        public override Encoding Encoding => Encoding.UTF8;
+
+        public Transcript Create() => new(new ToolConsole
+        {
+            Out = this,
+            Error = Null,
+            In = TextReader.Null,
+            WorkingDirectory = Path.GetTempPath(),
+        }, json: true);
+
+        public override void Write(char value)
+        {
+            lock (_gate)
+            {
+                _text.Append(value);
+            }
+        }
+
+        public override void Write(string? value)
+        {
+            lock (_gate)
+            {
+                _text.Append(value);
+            }
+        }
+
+        // Waits until the transcript has an entry of the type.
+        public async Task WaitForAsync(string type, CancellationToken cancellationToken)
+        {
+            while (!Types().Contains(type, StringComparer.Ordinal))
+            {
+                await Task.Delay(10, cancellationToken);
+            }
+        }
+
+        private List<string> Types()
+        {
+            string text;
+            lock (_gate)
+            {
+                text = _text.ToString();
+            }
+
+            var types = new List<string>();
+            foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                using var entry = JsonDocument.Parse(line);
+                types.Add(entry.RootElement.GetProperty("type").GetString() ?? string.Empty);
+            }
+
+            return types;
         }
     }
 }

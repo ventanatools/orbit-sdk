@@ -117,7 +117,8 @@ internal static class Tokens
 /// A pipe-level fake host for <c>simulate</c> (contract §11.1, §11.2): it creates its pipe exactly
 /// as a host must (§7.1: access for the current user only, a Medium no-read-up label, rejecting
 /// remote clients, the first and only instance of its name, one connection at a time, kept across
-/// reconnects), performs the host's half of the
+/// reconnects, and after an <c>error</c> frame that closes, readied again only once the companion
+/// has closed its end or a second has passed, §8.2), performs the host's half of the
 /// handshake with the temporary registration, validates every frame with the author package's
 /// <see cref="MessageReader"/>, answers and sends pings, enforces the hard rate budget, and
 /// records sessions, faces and results for the prompt, the script runner and the transcript.
@@ -160,6 +161,13 @@ internal sealed class SimulatedHost : IAsyncDisposable
         var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
         _uiLanguage = TextRules.IsLanguageTag(culture) ? culture : "en-US";
     }
+
+    /// <summary>
+    /// After the host writes the <c>error</c> frame of a <c>close</c> code, how long it waits for the
+    /// companion to close its end before it readies the pipe for the next one (contract §8.2): 1 second.
+    /// Tests may change it.
+    /// </summary>
+    internal TimeSpan ErrorFlushTimeout { get; init; } = TimeSpan.FromSeconds(1);
 
     public bool IsConnected
     {
@@ -464,8 +472,14 @@ internal sealed class SimulatedHost : IAsyncDisposable
     /// name, rejecting remote clients, and the security descriptor <see cref="PipeDescriptor"/>, set in
     /// the call that creates it.
     /// </summary>
-    /// <exception cref="UnauthorizedAccessException">The name is in use or access was denied.</exception>
-    /// <exception cref="IOException">The pipe could not be created for another reason.</exception>
+    /// <exception cref="IOException">
+    /// The name is in use by a server that allows one instance, as another simulation's pipe does
+    /// (<c>ERROR_PIPE_BUSY</c>), or the pipe could not be created for another reason.
+    /// </exception>
+    /// <exception cref="UnauthorizedAccessException">
+    /// Access was denied (<c>ERROR_ACCESS_DENIED</c>), which includes a name in use by a server that
+    /// allows more than one instance, since a first instance cannot be created then.
+    /// </exception>
     public static NamedPipeServerStream CreatePipe(string pipeName)
     {
         using var identity = WindowsIdentity.GetCurrent();
@@ -519,6 +533,20 @@ internal sealed class SimulatedHost : IAsyncDisposable
             await connection.RunAsync(token).ConfigureAwait(false);
             EndConnection(connection);
             connection.Ended.TrySetResult();
+
+            // Disconnecting discards what the companion has not read, so the error frame of a close code must
+            // reach it first (contract §8.2, "close").
+            if (connection.ErrorWritten && !token.IsCancellationRequested)
+            {
+                await AwaitCompanionCloseAsync(token).ConfigureAwait(false);
+            }
+
+            // A stopping host closes the pipe instead (DisposeAsync), which leaves an unread frame readable.
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
             try
             {
                 _pipe!.Disconnect();
@@ -527,6 +555,33 @@ internal sealed class SimulatedHost : IAsyncDisposable
             {
                 // Already disconnected.
             }
+        }
+    }
+
+    /// <summary>
+    /// After an <c>error</c> frame and before the pipe is readied again: waits for the companion to close
+    /// its end, as it does once it has read the frame, for at most <see cref="ErrorFlushTimeout"/>. What the
+    /// companion still sends is read and discarded.
+    /// </summary>
+    private async Task AwaitCompanionCloseAsync(CancellationToken stop)
+    {
+        using var bound = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        bound.CancelAfter(ErrorFlushTimeout);
+        var buffer = new byte[512];
+        try
+        {
+            while (await _pipe!.ReadAsync(buffer, bound.Token).ConfigureAwait(false) > 0)
+            {
+                // Discarded: only the companion's close matters now.
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The companion kept its end open past the limit, or the host is stopping: it is disconnected all the same.
+        }
+        catch (Exception error) when (error is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            // The companion closed its end (a broken pipe).
         }
     }
 
@@ -717,9 +772,16 @@ internal sealed class SimulatedHost : IAsyncDisposable
         private int? _outstandingPing;
         private int _nextPing;
         private bool _closing;
+        private volatile bool _errorWritten;
 
         /// <summary>Completed once the host has ended this connection and its sessions.</summary>
         public TaskCompletionSource Ended { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>
+        /// Whether the host wrote the <c>error</c> frame of a <c>close</c> code before closing. Written is not
+        /// read: the frame can still be in the pipe when <see cref="RunAsync"/> returns.
+        /// </summary>
+        public bool ErrorWritten => _errorWritten;
 
         public async Task RunAsync(CancellationToken stop)
         {
@@ -753,7 +815,8 @@ internal sealed class SimulatedHost : IAsyncDisposable
             _writeLock.Dispose();
         }
 
-        public async Task SendAsync(WireMessage message)
+        /// <summary>Writes <paramref name="message"/>; true once its frame is written, false when the connection closed first.</summary>
+        public async Task<bool> SendAsync(WireMessage message)
         {
             var bytes = MessageWriter.Write(message);
             try
@@ -762,7 +825,7 @@ internal sealed class SimulatedHost : IAsyncDisposable
             }
             catch (Exception error) when (error is OperationCanceledException or ObjectDisposedException)
             {
-                return;
+                return false;
             }
 
             try
@@ -776,10 +839,12 @@ internal sealed class SimulatedHost : IAsyncDisposable
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_closed.Token);
                 timeout.CancelAfter(WriteTimeout);
                 await Framing.WriteFrameAsync(stream, bytes, timeout.Token).ConfigureAwait(false);
+                return true;
             }
             catch (Exception error) when (error is OperationCanceledException or IOException or ObjectDisposedException)
             {
                 Close();
+                return false;
             }
             finally
             {
@@ -814,7 +879,10 @@ internal sealed class SimulatedHost : IAsyncDisposable
         }
 
         /// <summary>Sends an <c>error</c> with <paramref name="code"/> when given, then closes (contract §7.5).</summary>
-        public async Task CloseAsync(ReasonCode? code)
+        public Task CloseAsync(ReasonCode? code) => CloseWithAsync(code is { } reason ? new ErrorMessage { Code = reason } : null);
+
+        /// <summary>Sends <paramref name="error"/> when given, then closes, recording whether the frame was written.</summary>
+        private async Task CloseWithAsync(ErrorMessage? error)
         {
             lock (_sync)
             {
@@ -826,9 +894,9 @@ internal sealed class SimulatedHost : IAsyncDisposable
                 _closing = true;
             }
 
-            if (code is { } reason)
+            if (error is not null && await SendAsync(error).ConfigureAwait(false))
             {
-                await SendAsync(new ErrorMessage { Code = reason }).ConfigureAwait(false);
+                _errorWritten = true;
             }
 
             Close();
@@ -865,12 +933,11 @@ internal sealed class SimulatedHost : IAsyncDisposable
 
                 if (Handshake.Negotiate(hello.MinVersion, hello.MaxVersion, ProtocolVersions.Min, ProtocolVersions.Max) is not { } version)
                 {
-                    await SendAsync(new ErrorMessage
+                    await CloseWithAsync(new ErrorMessage
                     {
                         Code = ReasonCode.ProtocolVersionUnsupported,
                         Supported = new VersionRange { MinVersion = ProtocolVersions.Min, MaxVersion = ProtocolVersions.Max },
                     }).ConfigureAwait(false);
-                    Close();
                     return false;
                 }
 
