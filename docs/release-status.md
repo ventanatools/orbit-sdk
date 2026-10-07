@@ -84,9 +84,10 @@ the last three.
 ## Naming
 
 This repository is the source of truth for Orbit's extension SDK, contract,
-samples and fixtures. Lollipop has a separate SDK that follows the same Ventana
-conventions ([contract §2.7](design/contract-v3.md#27-ventana-conventions));
-these packages do not target it.
+samples and fixtures. Lollipop gets a separate SDK, which is expected to follow
+the same Ventana conventions
+([contract §2.7](design/contract-v3.md#27-ventana-conventions)); these packages
+do not target it.
 
 Wire and file-format identifiers are product-neutral. The product name appears
 only in (a) the package family `VentanaTools.<Product>.Extensions*` and its

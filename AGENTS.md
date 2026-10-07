@@ -46,8 +46,8 @@ code follows it, and a behavior change updates it in the same change
 ## Naming
 
 This repository is the source of truth for Orbit's extension SDK, contract,
-samples and fixtures; the Orbit app consumes it. Lollipop has a separate SDK
-that follows the same Ventana conventions
+samples and fixtures; the Orbit app consumes it. Lollipop gets a separate SDK,
+which is expected to follow the same Ventana conventions
 ([contract §2.7](docs/design/contract-v3.md#27-ventana-conventions)).
 
 Wire and file-format identifiers are product-neutral. The product name appears

@@ -47,8 +47,9 @@ Orbit's SDK follows the Ventana conventions
 ([contract §2.7](docs/design/contract-v3.md#27-ventana-conventions)): the
 extension id grammar and reserved publishers, the manifest identity block and
 setting rows, the diagnostics shape, the failure vocabulary, the tooling verbs,
-the test-kit names and the licensing pattern. Lollipop has a separate SDK that
-follows the same conventions; these packages do not target it.
+the test-kit names and the licensing pattern. Lollipop gets a separate SDK, which
+is expected to follow the same Ventana conventions; these packages do not target
+it.
 
 ## Build and verify
 
