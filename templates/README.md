@@ -38,5 +38,20 @@ outside the id grammar creates a project that does not build (.NET) or start
 (Node) until `extension.json` is corrected; `orbit-ext new` refuses such an id
 before it creates anything.
 
+## Windows on Arm
+
+`orbit-ext pack` publishes a .NET companion for `win-x64` unless
+`extension.pack.json`'s `build` names another `runtime`, and the templates
+publish it framework-dependent. On a Windows on Arm PC an x64 framework-dependent
+program runs under emulation only when the x64 .NET runtime is installed; the
+Arm64 runtime alone does not run it. The generated `PACKAGE-README.md` says so.
+
+A package carries one runtime's build. To reach every PC with one package, set
+`SelfContained` to `true` in the companion's project: the x64 build then carries
+its runtime and runs on Windows on Arm under emulation with nothing else
+installed, at the cost of a larger package. To build a native Arm64 companion
+instead, set `"runtime": "win-arm64"` in the `build` step; that package then runs
+only on Arm64 PCs.
+
 The templates are MIT-0: what they generate is yours, with no attribution
 required.

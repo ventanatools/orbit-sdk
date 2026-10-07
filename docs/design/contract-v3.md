@@ -3530,8 +3530,13 @@ Parameters (all templates):
 | `includeTests` | `--no-tests` | tests included | .NET templates only. |
 
 - C# templates target `net10.0-windows` (the .NET companion transport runs on
-  Windows), publish single-file, set `VentanaToolsImplicitUsings` to `true`, and
-  also write `using VentanaTools.Orbit.Extensions;` explicitly in source.
+  Windows), publish single-file and framework-dependent (for `pack`'s default
+  `win-x64`), set `VentanaToolsImplicitUsings` to `true`, and also write
+  `using VentanaTools.Orbit.Extensions;` explicitly in source. Their
+  `PACKAGE-README.md` says the companion needs the x64 .NET 10 Runtime, also on
+  Windows on Arm, where the Arm64 runtime alone does not run an x64
+  framework-dependent program; the templates README explains self-contained
+  publishing and `"runtime": "win-arm64"`.
 - No template writes a launch setting that depends on a pairing file in the
   project folder, and none suggests saving one there: `CompanionApp` finds the
   pairing in the per-user folder (§6.6).
