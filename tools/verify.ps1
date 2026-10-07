@@ -9,8 +9,9 @@ Runs unchanged on Windows PowerShell 5.1 and PowerShell 7. Run tools/build.ps1 f
 reads the version and run id it wrote to artifacts/build/state.json.
 
 1. Repository lints: no private or personal residue in tracked files; no host id or product name
-   in samples or templates outside the places allowed; no raw private-use glyph in the docs, samples,
-   templates or the Node SDK; the SPDX header of every source file matches its folder's licence.
+   in samples or templates outside the places allowed; no raw private-use glyph in the docs, the
+   libraries, the tool, the tests, samples, templates or the Node SDK (XML documentation shows it as an
+   empty box); the SPDX header of every source file matches its folder's licence.
 2. The library, Testing, tool and schema tests.
 3. The Node SDK's and the Photoshop sample's npm tests.
 4. Every .NET sample against the freshly packed packages: its resolved author library has the same
@@ -238,7 +239,8 @@ $privateUse = '[' + [char]0xE000 + '-' + [char]0xF8FF + ']'
 foreach ($file in $tracked) {
     $extension = [System.IO.Path]::GetExtension($file).ToLowerInvariant()
     $inDocs = $file -eq 'README.md' -or ($file.StartsWith('docs/') -and @('.md', '.mdx', '.json') -contains $extension)
-    $inCode = ($file.StartsWith('samples/') -or $file.StartsWith('node/') -or $file.StartsWith('templates/')) -and
+    $inCode = ($file.StartsWith('samples/') -or $file.StartsWith('node/') -or $file.StartsWith('templates/') -or
+        $file.StartsWith('src/') -or $file.StartsWith('tests/')) -and
         @('.json', '.cs', '.js', '.cjs', '.mjs', '.ts', '.md', '.html') -contains $extension
     # The Node SDK's byte copies follow their fixtures.
     if ($file -match '^node/[^/]+/lib/(codes/[^/]+\.json|hosts\.json)$') { $inCode = $false }

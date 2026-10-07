@@ -40,7 +40,7 @@ internal static class TestManifests
         Id = id,
         Name = "Contribution",
         Description = "A test contribution.",
-        Glyph = "",
+        Glyph = "\uE916",
         Provides = provides,
     };
 }

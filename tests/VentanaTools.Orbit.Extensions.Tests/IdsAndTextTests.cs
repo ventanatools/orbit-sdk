@@ -82,7 +82,7 @@ public sealed class IdsAndTextTests
                 Description = manifest.Description,
                 Version = manifest.Version,
                 Hosts = manifest.Hosts,
-                Contributions = [new Contribution { Id = $"{publisher}.status/run", Name = "Run", Description = "Runs.", Glyph = "", Provides = Provides.Invoke }],
+                Contributions = [new Contribution { Id = $"{publisher}.status/run", Name = "Run", Description = "Runs.", Glyph = "\uE768", Provides = Provides.Invoke }],
             }, TestHosts.Options);
             Assert.Contains(renamed.Diagnostics, diagnostic => diagnostic.Code == DiagnosticCodes.IdRootReserved && diagnostic.Path == "/id");
         }

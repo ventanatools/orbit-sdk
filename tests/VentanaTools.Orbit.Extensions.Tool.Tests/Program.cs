@@ -93,7 +93,7 @@ internal sealed class TestCompanionHandler : ContributionHandler
 
     private static void Publish(Session session, int? count) => session.SetFace(new Face
     {
-        Picture = FacePicture.Glyph(""),
+        Picture = FacePicture.Glyph("\uE710"),
         Line1 = count?.ToString(CultureInfo.InvariantCulture) ?? "ready",
         Line2 = "Test",
         State = FaceState.On,

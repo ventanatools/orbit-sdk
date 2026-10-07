@@ -28,7 +28,7 @@ internal static class Manifests
         Id = id,
         Name = "Widget",
         Description = "Shows a face.",
-        Glyph = "",
+        Glyph = "\uE916",
         Provides = Provides.Face,
         Settings =
         [
@@ -47,7 +47,7 @@ internal static class Manifests
         Id = id,
         Name = "Action",
         Description = "Runs something.",
-        Glyph = "",
+        Glyph = "\uE916",
         Provides = provides,
     };
 

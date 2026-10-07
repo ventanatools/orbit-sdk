@@ -282,7 +282,7 @@ public readonly struct InvokeResult : IEquatable<InvokeResult>
 /// <code>
 /// session.SetFace(new Face
 /// {
-///     Picture = FacePicture.Glyph(""),
+///     Picture = FacePicture.Glyph("\uE916"),
 ///     Line1 = "4:59",
 ///     Line2 = "Focus",
 ///     State = FaceState.Playing,

@@ -22,14 +22,14 @@ internal static class TestProject
               "id": "{{id}}/widget",
               "name": "Widget",
               "description": "Shows how often it was invoked.",
-              "glyph": "",
+              "glyph": "\uE710",
               "provides": ["invoke", "face"]
             },
             {
               "id": "{{id}}/action",
               "name": "Action",
               "description": "Passes or fails, as its setting says.",
-              "glyph": "",
+              "glyph": "\uE8BD",
               "provides": ["invoke"],
               "settings": [
                 {

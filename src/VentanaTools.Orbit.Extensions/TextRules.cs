@@ -170,7 +170,7 @@ public static class TextRules
     /// <param name="value">The glyph.</param>
     /// <returns>True for a valid glyph.</returns>
     public static bool IsGlyph([NotNullWhen(true)] string? value) =>
-        value is { Length: 1 } && value[0] is >= '' and <= '';
+        value is { Length: 1 } && value[0] is >= '\uE000' and <= '\uF8FF';
 
     /// <summary>Whether <paramref name="value"/> is a setting id: <c>[a-z][A-Za-z0-9]*</c>, at most 32 characters.</summary>
     /// <param name="value">The setting id.</param>

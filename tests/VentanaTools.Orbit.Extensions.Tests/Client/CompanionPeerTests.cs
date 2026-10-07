@@ -584,7 +584,7 @@ public sealed class CompanionPeerTests
             Id = SetState,
             Name = "Set state",
             Description = "Change state.",
-            Glyph = "",
+            Glyph = "\uE7B3",
             Provides = Provides.Invoke | Provides.Face,
             Settings =
             [

@@ -733,7 +733,7 @@ public sealed class SessionTests
                 Id = "example.greeter",
                 Name = "Greet",
                 Description = "Greets the world.",
-                Glyph = "",
+                Glyph = "\uE916",
                 Provides = Provides.Invoke,
                 Settings =
                 [
