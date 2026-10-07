@@ -20,7 +20,7 @@ script names no product.
    repository, which is renamed with the product).
 3. Runs tools/Set-HostCodename.ps1 for the registry entry in fixtures/hosts.json and every file
    derived from it.
-4. Replaces, in the documentation (every Markdown file, NOTICE, and package descriptions), the
+4. Replaces, in the documentation (every Markdown file, NOTICE and its Node copy, and package descriptions), the
    display name, the old host id where it stands as a whole token or a URL or path segment, and the
    old package file extension.
 5. Replaces what is left of the old name in every other tracked text file (test literals and
@@ -252,7 +252,8 @@ function Get-NameTokens([bool]$Everywhere) {
 Write-Host ''
 Write-Host '4. Documentation: display name, host id and package file extension'
 $docsTokens = Get-NameTokens $false
-Update-Files $docsTokens { param($file) $file.EndsWith('.md') -or $file -eq 'NOTICE' }
+# The Node package carries a copy of NOTICE (RepositoryRulesTests keeps the two equal).
+Update-Files $docsTokens { param($file) $file.EndsWith('.md') -or $file -eq 'NOTICE' -or $file -match '^node/[^/]+/NOTICE$' }
 # Package descriptions are display text too.
 $descriptionTokens = Get-NameTokens $false
 foreach ($file in @((Get-Tracked) | Where-Object { $_.EndsWith('.csproj') -and -not (Test-Protected $_) })) {

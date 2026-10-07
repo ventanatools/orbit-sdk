@@ -53,5 +53,11 @@ installed, at the cost of a larger package. To build a native Arm64 companion
 instead, set `"runtime": "win-arm64"` in the `build` step; that package then runs
 only on Arm64 PCs.
 
+## Licences
+
 The templates are MIT-0: what they generate is yours, with no attribution
-required.
+required. The SDK library your companion carries is Apache-2.0, and its licence
+asks that its `LICENSE` and `NOTICE` travel with every copy you distribute, so
+each generated project has them in `licenses/sdk/`, and its
+`extension.pack.json` copies that folder into every package
+(`payload/licenses/sdk/`). Keep the rule when you change the pack configuration.

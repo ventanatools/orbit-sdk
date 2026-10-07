@@ -4,5 +4,8 @@
   "readme": "PACKAGE-README.md",
   "build": {
     "project": "src/TemplateExtension/TemplateExtension.csproj"
-  }
+  },
+  "payload": [
+    { "from": "licenses", "to": "licenses" }
+  ]
 }

@@ -205,6 +205,20 @@ public sealed class PublicShapeTests
     }
 
     [Fact]
+    public void TheNodePackageCarriesTheRepositorysLicenceAndNotice()
+    {
+        // Apache-2.0 section 4: the licence and the NOTICE travel with every redistribution, the npm tarball included.
+        var node = Directory.EnumerateDirectories(Path.Combine(Fixtures.Root, "node")).Single(folder => File.Exists(Path.Combine(folder, "package.json")));
+        foreach (var name in new[] { "LICENSE", "NOTICE" })
+        {
+            Assert.Equal(Lf(File.ReadAllBytes(Path.Combine(Fixtures.Root, name))), Lf(File.ReadAllBytes(Path.Combine(node, name))));
+            Assert.Contains("\"" + name + "\"", File.ReadAllText(Path.Combine(node, "package.json")), StringComparison.Ordinal);
+        }
+
+        static byte[] Lf(byte[] bytes) => Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(bytes).Replace("\r\n", "\n", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void TheShapeRuleCatchesPositionalRecordsAndPrimaryConstructors()
     {
         Assert.NotNull(typeof(PositionalSample).GetMethod("Deconstruct"));

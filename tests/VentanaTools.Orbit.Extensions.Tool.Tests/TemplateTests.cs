@@ -203,6 +203,21 @@ public sealed class TemplateTests(TemplateFeed feed, ITestOutputHelper output) :
         output.WriteLine(packed);
         var package = Directory.EnumerateFiles(Path.Combine(folder, "artifacts")).Single();
         output.WriteLine(feed.Run(feed.Tool, ["verify", package], folder));
+        AssertCarriesTheSdkLicence(package);
+    }
+
+    /// <summary>The package redistributes the SDK library, so it carries the SDK's LICENSE and NOTICE (Apache-2.0 section 4).</summary>
+    private static void AssertCarriesTheSdkLicence(string package)
+    {
+        using var archive = System.IO.Compression.ZipFile.OpenRead(package);
+        foreach (var name in new[] { "LICENSE", "NOTICE" })
+        {
+            var entry = archive.GetEntry("payload/licenses/sdk/" + name);
+            Assert.True(entry is not null, "The package has no payload/licenses/sdk/" + name + ".");
+            using var reader = new StreamReader(entry.Open());
+            Assert.Equal(File.ReadAllText(Repository.PathOf(name)).Replace("\r\n", "\n", StringComparison.Ordinal),
+                reader.ReadToEnd().Replace("\r\n", "\n", StringComparison.Ordinal));
+        }
     }
 
     [WindowsFact]
@@ -273,6 +288,8 @@ public sealed class TemplateTests(TemplateFeed feed, ITestOutputHelper output) :
         output.WriteLine(feed.Run("npm", ["install", "--no-audit", "--no-fund"], folder));
         output.WriteLine(feed.Run("dotnet", ["tool", "restore"], folder));
         output.WriteLine(feed.Run("dotnet", ["tool", "run", ToolIdentity.CommandName, "test"], folder));
+        output.WriteLine(feed.Run(feed.Tool, ["pack"], folder));
+        AssertCarriesTheSdkLicence(Directory.EnumerateFiles(Path.Combine(folder, "artifacts")).Single());
     }
 }
 

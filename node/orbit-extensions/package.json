@@ -33,7 +33,8 @@
     "testing.d.ts",
     "lib/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=22"

@@ -52,8 +52,10 @@
 
   <!--
     Staged at pack time: each template.json with this package's version, which the templates write into the
-    projects they create (the SDK packages and the local tool), and each template's copies of the manifest and
-    pack configuration schemas (contract §11.4). The schema wildcard names no host.
+    projects they create (the SDK packages and the local tool), each template's copies of the manifest and
+    pack configuration schemas (contract §11.4), and the SDK's Apache-2.0 LICENSE and NOTICE in licenses/sdk/,
+    which each template's pack configuration copies into every package, because a package redistributes the
+    SDK library inside the companion. The schema wildcard names no host.
   -->
   <Target Name="_VentanaStageTemplates" BeforeTargets="_GetPackageFiles">
     <PropertyGroup>
@@ -67,6 +69,7 @@
     <_VentanaReplaceToken Source="%(_VentanaTemplateJson.FullPath)" Token="@VENTANA_VERSION@" Value="$(Version)"
                           Destination="$(_VentanaStage)%(_VentanaTemplateJson.RecursiveDir)template.json" />
     <Copy SourceFiles="@(_VentanaSchema)" DestinationFolder="$(_VentanaStage)%(_VentanaTemplate.Identity)\.schemas\" />
+    <Copy SourceFiles="..\LICENSE;..\NOTICE" DestinationFolder="$(_VentanaStage)%(_VentanaTemplate.Identity)\licenses\sdk\" />
     <ItemGroup>
       <None Include="$(_VentanaStage)**\*" Pack="true" PackagePath="content" />
     </ItemGroup>
