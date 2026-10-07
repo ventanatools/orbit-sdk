@@ -122,6 +122,205 @@ public sealed class LoggingTests
         Assert.Equal("Refused.", Assert.Single(logs.Companion, entry => entry.EventId.Id == 16).Values["HostMessage"]);
     }
 
+    [Fact]
+    public async Task EveryEntryIsInTheDocumentedCategory()
+    {
+        using var files = new CompanionFiles();
+        var logs = new CapturingLoggerProvider();
+        using (var host = TestHosts.Companion(logs, files, _ => { }))
+        {
+            await host.StartAsync().WaitAsync(Timeout);
+            await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 14), "watching the pairing file");
+            await host.StopAsync().WaitAsync(Timeout);
+        }
+
+        // The category is pinned as text: renaming or moving the service must not move its entries unnoticed.
+        Assert.Equal(["VentanaTools.Orbit.Extensions.Hosting.CompanionService"],
+            logs.Entries.Select(entry => entry.Category).Where(category => !category.StartsWith("Microsoft.", StringComparison.Ordinal)).Distinct());
+        foreach (var document in new[] { "src/" + typeof(CompanionServiceOptions).Assembly.GetName().Name + "/README.md", "docs/design/contract-v3.md" })
+        {
+            Assert.Contains("`" + CapturingLoggerProvider.Category + "`", File.ReadAllText(Repository.PathOf(document)), StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task AConnectionThatClosesWithoutAReasonIsLoggedAsARetry()
+    {
+        using var files = new CompanionFiles();
+        files.WritePairing();
+        var logs = new CapturingLoggerProvider();
+        var connections = Channel.CreateUnbounded<Stream>();
+        using var host = TestHosts.Companion(logs, files, options => options.TestTransport = HostPeer.Accepting(connections));
+        await host.StartAsync().WaitAsync(Timeout);
+
+        var peer = await HostPeer.AcceptAsync(connections, files.Secret);
+        await peer.HandshakeAsync();
+        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 2), "connected");
+        await peer.CloseAsync();
+        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 4), "the retry");
+        await host.StopAsync().WaitAsync(Timeout);
+
+        var retry = Assert.Single(logs.Companion, entry => entry.EventId.Id == 4);
+        Assert.Equal(LogLevel.Information, retry.Level);
+        // The first retry of the normal backoff: one second, give or take the 20 percent jitter.
+        Assert.InRange((double)retry.Values["RetrySeconds"]!, 0.8, 1.2);
+        Assert.DoesNotContain(logs.Companion, entry => entry.EventId.Id == 3);
+    }
+
+    [Fact]
+    public async Task APairingFileThatIsNotJsonIsLoggedByItsDiagnosticCodeAlone()
+    {
+        using var files = new CompanionFiles();
+        File.WriteAllText(files.PairingPath, "{ \"pairingVersion\": ");
+        var logs = new CapturingLoggerProvider();
+        using var host = TestHosts.Companion(logs, files, _ => { });
+        await host.StartAsync().WaitAsync(Timeout);
+        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 14), "watching the pairing file");
+        await host.StopAsync().WaitAsync(Timeout);
+
+        // The reader's code is not a reason code, so the wait names pairing.missing and the diagnostic follows it.
+        Assert.Equal("pairing.missing", Assert.Single(logs.Companion, entry => entry.EventId.Id == 5).Values["ReasonCode"]);
+        var diagnostic = Assert.Single(logs.Companion, entry => entry.EventId.Id == 6);
+        Assert.Equal(LogLevel.Warning, diagnostic.Level);
+        Assert.Equal(DiagnosticCodes.JsonSyntax, diagnostic.Values["DiagnosticCode"]);
+        Assert.Equal("The pairing file is invalid: " + DiagnosticCodes.JsonSyntax + ".", diagnostic.Message);
+        Assert.DoesNotContain(logs.Entries, entry => entry.Message.Contains(files.Folder, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task AManifestErrorWithoutAPositionIsLoggedAndTheManifestIsWatchedUntilItIsFixed()
+    {
+        using var files = new CompanionFiles();
+        var valid = File.ReadAllBytes(files.ManifestPath);
+        // UTF-16, which the reader refuses as a whole (json.encoding), with no line or column.
+        File.WriteAllBytes(files.ManifestPath, [0xFF, 0xFE, .. System.Text.Encoding.Unicode.GetBytes("{}")]);
+        var logs = new CapturingLoggerProvider();
+        using var host = TestHosts.Companion(logs, files, _ => { });
+        await host.StartAsync().WaitAsync(Timeout);
+        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 13), "watching the manifest");
+
+        var invalid = Assert.Single(logs.Companion, entry => entry.EventId.Id == 11);
+        Assert.Equal(LogLevel.Error, invalid.Level);
+        Assert.Equal(DiagnosticCodes.JsonEncoding, invalid.Values["DiagnosticCode"]);
+        Assert.False(invalid.Values.ContainsKey("Line"));
+        Assert.DoesNotContain(logs.Companion, entry => entry.EventId.Id == 10);
+        Assert.Equal(LogLevel.Information, Assert.Single(logs.Companion, entry => entry.EventId.Id == 13).Level);
+
+        // Once fixed, the manifest is read again and the companion goes on to wait for the pairing.
+        File.WriteAllBytes(files.ManifestPath, valid);
+        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 14), "watching the pairing file");
+        await host.StopAsync().WaitAsync(Timeout);
+        Assert.DoesNotContain(logs.Entries, entry => entry.Message.Contains(files.Folder, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task AManifestThatCannotBeReadIsLoggedByTheExceptionsTypeAloneWithoutItsPathOrMessage()
+    {
+        using var files = new CompanionFiles();
+        // A folder where the manifest should be: opening it fails with an exception whose message holds the path.
+        var folder = Path.Combine(files.Folder, "folder.json");
+        Directory.CreateDirectory(folder);
+        var logs = new CapturingLoggerProvider();
+        var codes = new ConcurrentQueue<int>();
+        using var host = TestHosts.Companion(logs, files, options =>
+        {
+            options.ManifestPath = folder;
+            options.WatchFiles = false;
+            options.TestExitCode = codes.Enqueue;
+        });
+        var stopping = TestHosts.StoppingAsync(host);
+        await host.StartAsync().WaitAsync(Timeout);
+        await stopping.WaitAsync(Timeout);
+        await host.StopAsync().WaitAsync(Timeout);
+
+        var unreadable = Assert.Single(logs.Companion, entry => entry.EventId.Id == 12);
+        Assert.Equal(LogLevel.Error, unreadable.Level);
+        var type = Assert.IsType<string>(unreadable.Values["ExceptionType"]);
+        Assert.Contains(type, new[] { nameof(UnauthorizedAccessException), nameof(IOException) });
+        Assert.Equal("The manifest could not be read (" + type + ").", unreadable.Message);
+        Assert.Null(unreadable.Exception);
+        Assert.DoesNotContain(logs.Entries, entry => entry.Exception is not null
+            || entry.Message.Contains(files.Folder, StringComparison.OrdinalIgnoreCase)
+            || entry.Values.Values.Any(value => value is string text && text.Contains(files.Folder, StringComparison.OrdinalIgnoreCase)));
+        Assert.Equal([3], codes);
+    }
+
+    [Fact]
+    public async Task ARouterThatMapsNoHandlerForAContributionIsLoggedAtStart()
+    {
+        using var files = new CompanionFiles();
+        var logs = new CapturingLoggerProvider();
+        using var host = TestHosts.Build(logs, services => services.AddCompanion(
+            _ => new ContributionRouter().MapInvoke(Manifests.Action, (_, _) => Task.FromResult(InvokeResult.Done)),
+            options =>
+            {
+                options.Arguments = [];
+                options.ManifestPath = files.ManifestPath;
+                options.PairingPath = files.PairingPath;
+            }));
+        await host.StartAsync().WaitAsync(Timeout);
+        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 14), "watching the pairing file");
+        await host.StopAsync().WaitAsync(Timeout);
+
+        var unmapped = Assert.Single(logs.Companion, entry => entry.EventId.Id == 15);
+        Assert.Equal(LogLevel.Warning, unmapped.Level);
+        Assert.Equal(Manifests.Widget, unmapped.Values["ContributionId"]);
+    }
+
+    [Fact]
+    public async Task ACallbackThatThrowsIsLoggedOnceWithItsException()
+    {
+        using var files = new CompanionFiles();
+        files.WritePairing();
+        var logs = new CapturingLoggerProvider();
+        var calls = 0;
+        using var host = TestHosts.Companion(logs, files, options =>
+        {
+            options.TestTransport = (_, _) => ValueTask.FromResult(false);
+            options.Client = TestHosts.FastRetries;
+            options.StatusChanged = _ =>
+            {
+                Interlocked.Increment(ref calls);
+                throw new InvalidOperationException("callback detail");
+            };
+        });
+        await host.StartAsync().WaitAsync(Timeout);
+        await Manifests.WaitForAsync(() => Volatile.Read(ref calls) >= 5, "five callbacks");
+        await host.StopAsync().WaitAsync(Timeout);
+
+        var faulted = Assert.Single(logs.Companion, entry => entry.EventId.Id == 18);
+        Assert.Equal(LogLevel.Warning, faulted.Level);
+        Assert.Equal("callback detail", Assert.IsType<InvalidOperationException>(faulted.Exception).Message);
+    }
+
+    [Fact]
+    public async Task AnUnexpectedFailureIsLoggedWithItsExceptionAndStopsTheApplicationWithExitCodeOne()
+    {
+        using var files = new CompanionFiles();
+        files.WritePairing();
+        var logs = new CapturingLoggerProvider();
+        var codes = new ConcurrentQueue<int>();
+        using var host = TestHosts.Companion(logs, files, options =>
+        {
+            // A failure the contract does not describe: the transport itself throws.
+            options.TestTransport = (_, _) => throw new InvalidOperationException("transport detail");
+            options.TestExitCode = codes.Enqueue;
+        });
+        var stopping = TestHosts.StoppingAsync(host);
+        await host.StartAsync().WaitAsync(Timeout);
+        await stopping.WaitAsync(Timeout);
+        await host.StopAsync().WaitAsync(Timeout);
+
+        var unexpected = Assert.Single(logs.Companion, entry => entry.EventId.Id == 20);
+        Assert.Equal(LogLevel.Error, unexpected.Level);
+        Assert.Equal("transport detail", Assert.IsType<InvalidOperationException>(unexpected.Exception).Message);
+        Assert.Equal(1, TestHosts.Service(host).ExitCode);
+        Assert.Equal([1], codes);
+        var exited = Assert.Single(logs.Companion, entry => entry.EventId.Id == 21);
+        Assert.Equal(1, exited.Values["ExitCode"]);
+        Assert.Contains("stopping the application", exited.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>The values with each run of equal neighbours collapsed into one.</summary>
     private static List<string?> Runs(IEnumerable<string?> values)
     {

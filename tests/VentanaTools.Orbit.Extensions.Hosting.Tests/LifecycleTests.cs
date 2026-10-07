@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -65,6 +66,96 @@ public sealed class LifecycleTests
         Assert.Equal(LogLevel.Error, exited.Level);
         Assert.Equal(3, exited.Values["ExitCode"]);
         Assert.Contains("stopping the application", exited.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheProcessExitsWithTheCompanionsExitCode()
+    {
+        // The real path, in a child process (Program.cs): the add-on sets Environment.ExitCode and stops the
+        // application, and the process ends with that code, not with the 0 a host that stopped normally gives.
+        using var files = new CompanionFiles();
+        var dotnet = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") is { Length: > 0 } host && File.Exists(host) ? host : "dotnet";
+        var start = new ProcessStartInfo(dotnet)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        foreach (var argument in new[] { typeof(LifecycleTests).Assembly.Location, "--companion", files.ManifestPath, files.PairingPath })
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        using var child = Process.Start(start) ?? throw new InvalidOperationException("dotnet did not start.");
+        var output = child.StandardOutput.ReadToEndAsync();
+        var error = child.StandardError.ReadToEndAsync();
+        try
+        {
+            await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(60));
+        }
+        finally
+        {
+            if (!child.HasExited)
+            {
+                child.Kill(entireProcessTree: true);
+            }
+        }
+
+        // Exit code 3: the pairing is missing and the files are not watched.
+        Assert.True(child.ExitCode == 3, "Exit code " + child.ExitCode + ".\n" + await output + await error);
+    }
+
+    [Fact]
+    public async Task StoppingTheHostNeverWaitsForAHandlerThatIgnoresCancellation()
+    {
+        using var files = new CompanionFiles();
+        files.WritePairing();
+        var logs = new CapturingLoggerProvider();
+        var connections = Channel.CreateUnbounded<Stream>();
+        var faults = new ConcurrentQueue<HandlerFaultedEventArgs>();
+        using var host = Build(logs, files, options =>
+        {
+            options.TestTransport = HostPeer.Accepting(connections);
+            options.HandlerFaulted = faults.Enqueue;
+            options.Client = new CompanionClientOptions { HandlerStopTimeout = TimeSpan.FromMilliseconds(200) };
+        });
+        // A session handler that never looks at its token.
+        var running = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        host.Services.GetRequiredService<ClockWidget>().OnSession = async _ =>
+        {
+            running.TrySetResult();
+            await release.Task;
+        };
+        await host.StartAsync().WaitAsync(Timeout);
+
+        var peer = await HostPeer.AcceptAsync(connections, files.Secret);
+        await peer.HandshakeAsync();
+        await peer.SendAsync(new StartSessionMessage { SessionId = Guid.NewGuid().ToString("N"), ContributionId = Manifests.Widget, Settings = new Dictionary<string, string>() });
+        await running.Task.WaitAsync(Timeout);
+        try
+        {
+            // The documented bound (contract §9.5): the stop never waits for a handler, and at most 5 seconds for callbacks.
+            var watch = Stopwatch.StartNew();
+            await host.StopAsync().WaitAsync(Timeout);
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), "The stop took " + watch.Elapsed + ".");
+            Assert.False(release.Task.IsCompleted);
+            Assert.Equal(0, TestHosts.Service(host).ExitCode);
+
+            // Past HandlerStopTimeout the handler, still running, is reported as ignoring its cancellation.
+            await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 17), "the fault");
+            var fault = Assert.Single(logs.Companion, entry => entry.EventId.Id == 17);
+            Assert.Equal("IgnoredCancellation", fault.Values["FaultKind"]);
+            Assert.Equal("session.handler-stalled", fault.Values["ReasonCode"]);
+            Assert.Null(fault.Exception);
+            await Manifests.WaitForAsync(() => !faults.IsEmpty, "the fault callback");
+            Assert.Equal(HandlerFault.IgnoredCancellation, Assert.Single(faults).Kind);
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
     }
 
     [Fact]

@@ -268,10 +268,10 @@ public sealed class RegistrationTests
     public void ThePackageReadmesExampleCompiles()
     {
         // The readme is the package's page; its example must work as written.
-        var readme = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", typeof(CompanionServiceOptions).Assembly.GetName().Name!, "README.md"))
+        var readme = File.ReadAllText(Repository.PathOf("src/" + typeof(CompanionServiceOptions).Assembly.GetName().Name! + "/README.md"))
             .Replace("\r\n", "\n", StringComparison.Ordinal);
         // The host version it tells applications to add is the one the add-on's abstractions come from.
-        var versions = File.ReadAllText(Path.Combine(RepositoryRoot(), "Directory.Packages.props"));
+        var versions = File.ReadAllText(Repository.PathOf("Directory.Packages.props"));
         var abstractions = Regex.Match(versions, "<PackageVersion Include=\"Microsoft\\.Extensions\\.Hosting\\.Abstractions\" Version=\"([^\"]+)\"").Groups[1].Value;
         Assert.Contains("<PackageReference Include=\"Microsoft.Extensions.Hosting\" Version=\"" + abstractions + "\" />", readme, StringComparison.Ordinal);
 
@@ -290,18 +290,5 @@ public sealed class RegistrationTests
                 .WithSpecificDiagnosticOptions([new("CA1416", ReportDiagnostic.Suppress)]));
         Assert.Empty(compilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity >= Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
             .Select(diagnostic => diagnostic.ToString()));
-    }
-
-    private static string RepositoryRoot()
-    {
-        for (var folder = new DirectoryInfo(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)
-        {
-            if (File.Exists(Path.Combine(folder.FullName, "fixtures", "hosts.json")))
-            {
-                return folder.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("The repository root was not found above the test binaries.");
     }
 }

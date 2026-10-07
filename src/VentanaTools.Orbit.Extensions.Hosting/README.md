@@ -117,11 +117,17 @@ are checked when the host starts: a `Client` option out of its range, or a
 
 When the host stops (Ctrl+C, a service stop, `StopApplication`), the companion's
 connection closes, its sessions end, their handlers' tokens are cancelled, and
-the hosted service completes. The companion stops by itself only for the reasons
-`CompanionApp.RunAsync` would return: a usage error (exit code 2), an unexpected
-failure (1), and, with `WatchFiles` off, a missing or invalid file (3) or a stop
-it cannot recover from, such as revoked access (4). It then logs the code and,
-with `StopApplicationOnExit` on, stops the application with that exit code.
+the hosted service completes. It never waits for a handler, only, at most 5
+seconds, for status and fault callbacks still running, so a handler that ignores
+its token cannot hold up the host's shutdown. Such a handler runs on until it
+returns or the process exits, and is logged as `IgnoredCancellation` once
+`HandlerStopTimeout` (5 seconds) has passed.
+
+The companion stops by itself only for the reasons `CompanionApp.RunAsync` would
+return: a usage error (exit code 2), an unexpected failure (1), and, with
+`WatchFiles` off, a missing or invalid file (3) or a stop it cannot recover from,
+such as revoked access (4). It then logs the code and, with
+`StopApplicationOnExit` on, stops the application with that exit code.
 
 ## Logging
 

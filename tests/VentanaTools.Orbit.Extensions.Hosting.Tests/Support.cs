@@ -13,6 +13,27 @@ using Xunit;
 
 namespace VentanaTools.Orbit.Extensions.Hosting.Tests;
 
+/// <summary>The repository the tests run in, for the documents they check.</summary>
+internal static class Repository
+{
+    public static string Root { get; } = FindRoot();
+
+    public static string PathOf(string relative) => Path.Combine([Root, .. relative.Split('/')]);
+
+    private static string FindRoot()
+    {
+        for (var folder = new DirectoryInfo(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)
+        {
+            if (File.Exists(Path.Combine(folder.FullName, "fixtures", "hosts.json")))
+            {
+                return folder.FullName;
+            }
+        }
+
+        throw new InvalidOperationException("The repository root was not found above the test binaries.");
+    }
+}
+
 /// <summary>The manifest the add-on's tests use. It names only the test host id.</summary>
 internal static class Manifests
 {
@@ -113,6 +134,12 @@ internal sealed class LogEntry
 /// <summary>Records every log entry of every category.</summary>
 internal sealed class CapturingLoggerProvider : ILoggerProvider
 {
+    /// <summary>
+    /// The category the add-on's entries are documented under (contract §9.5), written as text, so moving or
+    /// renaming the service cannot move them unnoticed.
+    /// </summary>
+    public const string Category = "VentanaTools.Orbit.Extensions.Hosting.CompanionService";
+
     private readonly List<LogEntry> _entries = [];
 
     public IReadOnlyList<LogEntry> Entries
@@ -127,7 +154,7 @@ internal sealed class CapturingLoggerProvider : ILoggerProvider
     }
 
     /// <summary>The entries the add-on logged.</summary>
-    public IReadOnlyList<LogEntry> Companion => Entries.Where(entry => entry.Category == typeof(CompanionService).FullName).ToList();
+    public IReadOnlyList<LogEntry> Companion => Entries.Where(entry => entry.Category == Category).ToList();
 
     public ILogger CreateLogger(string categoryName) => new Logger(this, categoryName);
 
@@ -290,6 +317,9 @@ internal sealed class HostPeer
     }
 
     public Task SendAsync(WireMessage message) => Framing.WriteFrameAsync(_stream, MessageWriter.Write(message), CancellationToken.None).AsTask();
+
+    /// <summary>Closes the connection without an <c>error</c>, as a host that goes away does.</summary>
+    public ValueTask CloseAsync() => _stream.DisposeAsync();
 
     /// <summary>The companion's next message, or null when the companion closed the connection.</summary>
     public async Task<WireMessage?> ReadAsync(ConnectionPhase phase = ConnectionPhase.Authenticated)

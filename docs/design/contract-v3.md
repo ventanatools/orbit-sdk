@@ -3260,7 +3260,13 @@ overload stays binary compatible.
   (exit code 1, 2, 3 or 4, §9.2), the service logs the code and, with
   `StopApplicationOnExit` on, sets `Environment.ExitCode` to it and calls
   `IHostApplicationLifetime.StopApplication()`; with it off, the application keeps
-  running.
+  running. The stop never waits for a handler: the hosted service completes once
+  the connection has closed and the status and fault callbacks already raised
+  have run, waiting at most 5 seconds for a callback that blocks, so a handler
+  that ignores its token cannot hold up the host's shutdown
+  (`HostOptions.ShutdownTimeout`, 30 seconds by default). Such a handler runs on
+  until it returns or the process exits, and is reported as `IgnoredCancellation`
+  (event 17) once `HandlerStopTimeout` has passed, if the process still runs.
 - **Logging.** Instead of status lines, the service logs each event `CompanionApp`
   prints through `ILogger`, under the category
   `VentanaTools.Orbit.Extensions.Hosting.CompanionService`, with a fixed event id
