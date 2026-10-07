@@ -529,6 +529,33 @@ public sealed class CompanionPeerTests
         Assert.Equal(ReasonCode.HostPipeBusy, waiting.Reason);
     }
 
+    [WindowsFact]
+    public void TheOperatingSystemCheckVerifiesThisProcessAndRefusesALowIntegrityOne()
+    {
+        Assert.Equal(ServerCheck.Verified, PipeNatives.CheckProcess((uint)Environment.ProcessId));
+        using var low = LowIntegrity.Start("\"" + LowIntegrity.WindowsPowerShell + "\" -NoProfile -NonInteractive -Command Start-Sleep 30");
+        Assert.Equal(ServerCheck.Refused, PipeNatives.CheckProcess(low.Id));
+        Assert.Equal(ServerCheck.Unchecked, PipeNatives.CheckProcess(uint.MaxValue - 3));
+    }
+
+    [WindowsFact]
+    public async Task ALowIntegrityProcessThatHoldsThePipeNameIsRefusedBeforeAnyByteIsWritten()
+    {
+        // A Low-integrity process of the same user can read a pairing file that has no mandatory label and create the
+        // pipe while the host is not listening. Its pipe is owned by the user, so only the process check refuses it.
+        await using var host = new IndependentHost(new TestHandler(), start: false, listen: false);
+        var script = "$p = New-Object System.IO.Pipes.NamedPipeServerStream('" + host.PipeName + "', 'InOut', 1, 'Byte', 'Asynchronous'); "
+            + "if (-not $p.WaitForConnectionAsync().Wait(60000)) { exit 30 }; $b = New-Object byte[] 1; $r = $p.ReadAsync($b, 0, 1); "
+            + "if (-not $r.Wait(15000)) { exit 20 }; exit (10 + $r.Result)";
+        using var squatter = LowIntegrity.Start("\"" + LowIntegrity.WindowsPowerShell + "\" -NoProfile -NonInteractive -Command \"" + script + "\"");
+        host.StartClient();
+        var refused = await host.WaitForStatusAsync(ConnectionState.Waiting, ReasonCode.AuthServerUnverified, seconds: 60);
+        Assert.False(refused.ServerVerified);
+
+        // 10: the squatter saw the client close without a byte; 11 would mean the client wrote hello to it.
+        Assert.Equal(10, await squatter.WaitForExitAsync(TimeSpan.FromSeconds(30)));
+    }
+
     [ElevatedWindowsFact]
     public async Task APipeOwnedByAnotherPrincipalIsRefusedBeforeAnyByteIsWritten()
     {
@@ -601,12 +628,15 @@ public sealed class CompanionPeerTests
         private readonly List<StatusChangedEventArgs> _statuses = [];
         private Task _run = Task.CompletedTask;
 
-        public IndependentHost(IContributionHandler handler, ExtensionManifest? manifest = null, bool start = true, PipeSecurity? security = null)
+        public IndependentHost(IContributionHandler handler, ExtensionManifest? manifest = null, bool start = true, PipeSecurity? security = null,
+            bool listen = true)
         {
             _manifest = manifest ?? Manifest(DefaultContributions());
             _manifestHash = ManifestWriter.ComputeHash(_manifest);
             PipeName = PipeNames.Create(TestHosts.Id, "test", PipeNames.UserHash(WindowsIdentity.GetCurrent().User!.Value), _registrationId);
-            Pipe = security is null
+            Pipe = !listen
+                ? null!
+                : security is null
                 ? new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly | PipeOptions.FirstPipeInstance)
                 : NamedPipeServerStreamAcl.Create(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
@@ -716,14 +746,16 @@ public sealed class CompanionPeerTests
         public async Task<JsonDocument> ReadDocumentAsync() =>
             JsonDocument.Parse(await ReadAsync() ?? throw new InvalidDataException("The test peer disconnected."));
 
-        public async Task<StatusChangedEventArgs> WaitForStatusAsync(ConnectionState state, int seconds = 10)
+        public Task<StatusChangedEventArgs> WaitForStatusAsync(ConnectionState state, int seconds = 10) => WaitForStatusAsync(state, null, seconds);
+
+        public async Task<StatusChangedEventArgs> WaitForStatusAsync(ConnectionState state, ReasonCode? reason, int seconds = 10)
         {
             StatusChangedEventArgs? found = null;
             await ClientHarness.WaitForAsync(() =>
             {
                 lock (_statuses)
                 {
-                    found = _statuses.FirstOrDefault(status => status.State == state);
+                    found = _statuses.FirstOrDefault(status => status.State == state && (reason is null || status.Reason == reason));
                 }
 
                 return found is not null;
@@ -745,7 +777,11 @@ public sealed class CompanionPeerTests
             }
             finally
             {
-                await Pipe.DisposeAsync();
+                if (Pipe is not null)
+                {
+                    await Pipe.DisposeAsync();
+                }
+
                 _pairing.Dispose();
                 _stop.Dispose();
                 _deadline.Dispose();

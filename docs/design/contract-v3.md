@@ -1157,7 +1157,14 @@ info" or "Copy connection info"). Its default location is per user (§6.6).
 
 Hosts MUST write pairing files as UTF-8 without a byte order mark, with LF line
 endings and two-space indentation. A host that saves the file SHOULD give it an
-access-control list that grants access only to the current user.
+access-control list that grants access only to the current user, and MUST give
+the file, and every folder it creates for it, a mandatory label at Medium
+integrity with no-read-up, no-write-up and no-execute-up (SDDL
+`S:(ML;;NRNWNX;;;ME)`, with `OICI` on folders), set when the file or folder is
+created. Windows treats a file without a label as Medium with no-write-up only,
+so a Low-integrity process of the same user can read it whatever its
+access-control list says, learn the secret, and pose as the host to a client
+that cannot check the server process (§7.1).
 
 ### 6.3 Members
 
@@ -1239,8 +1246,9 @@ package and synced folder:
 
 - A host's primary **Save connection info** action writes there directly,
   creating the folders with an access-control list that grants access only to
-  the current user, and shows the path. A secondary **Save as…** action may
-  write anywhere the person chooses.
+  the current user and the mandatory label of §6.2, and shows the path. A
+  secondary **Save as…** action may write anywhere the person chooses; the file
+  it writes carries the same access-control list and label.
 - The folder is under the profile root rather than under `%LOCALAPPDATA%`
   because a packaged (MSIX) host's new files under `AppData` are redirected to
   a private per-package location that other programs cannot see. It is not
@@ -1266,12 +1274,19 @@ package and synced folder:
   client MUST verify that the pipe is owned by the current user (in .NET,
   `PipeOptions.CurrentUserOnly`). It SHOULD also check the server process: get
   its id (`GetNamedPipeServerProcessId`), open it with
-  `PROCESS_QUERY_LIMITED_INFORMATION`, and confirm that its token's user is the
-  current user and its integrity level is no lower than the client's. A server
-  that passes both checks is a **verified server** before any message is
-  exchanged (§1.4). A server that fails the owner check is never written to
-  (`auth.server-unverified`); a server whose process cannot be opened or
-  checked is unverified until its challenge proof verifies.
+  `PROCESS_QUERY_LIMITED_INFORMATION`, open its token with `TOKEN_QUERY`, and
+  confirm that the token's user is the current user and its integrity level is
+  no lower than the client's. A server that passes both checks is a **verified
+  server** before any message is exchanged (§1.4). A client MUST NOT write to a
+  server that fails the owner check, nor to one whose token it read and found to
+  belong to another user or to run at a lower integrity level than the client;
+  it closes the pipe and reports `auth.server-unverified`. Such a server's
+  challenge proof proves nothing, because a lower-integrity process of the same
+  user may have read the pairing file (§6.2). A client that runs at a higher
+  integrity level than its host, for example a companion started as
+  administrator while the host is not, is refused the same way. A server whose
+  process or token cannot be opened or read is unverified until its challenge
+  proof verifies.
 - Clients SHOULD request identification-level impersonation
   (`SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION`), so a server can learn
   who the client is but cannot act as the client.
@@ -1280,9 +1295,11 @@ package and synced folder:
   treat every server as unverified until its challenge proof verifies (§9.2).
   The Node SDK is such a client (§10).
 - The .NET SDK does all of the above. With it, the pipe protects against other
-  users, web content and lower-integrity or sandboxed processes. Nothing
-  protects against a program running as the same user at the same integrity
-  level.
+  users, web content and lower-integrity or sandboxed processes. A client that
+  cannot check the server process, such as the Node SDK, is protected against a
+  lower-integrity process only while the pairing file carries the label of §6.2.
+  Nothing protects against a program running as the same user at the same
+  integrity level.
 
 ### 7.2 Framing
 
@@ -1907,7 +1924,7 @@ audiences, Pre and violation flags, the author fix below, and its help anchor
 | `auth.registration-mismatch` | close | L R E S | ✓ | ✓ | The hello names a different registration than this pipe's. | Save connection info again and use the new file. |
 | `auth.proof-invalid` | close | L R E S | — | ✓ | The companion's proof is wrong: its pairing is out of date or for another registration, or a per-launch credential was used up. | Save connection info again; restart the companion. |
 | `auth.server-proof-invalid` | local | S | — | — | The host's proof failed verification: the pairing is out of date, or the pipe is not the host. | Save connection info again. |
-| `auth.server-unverified` | local | S | — | — | The pipe is not owned by the current user, so the SDK wrote nothing to it (§7.1). Another program may hold the pipe name while the host is not running. | Start the host; if this persists, restart the PC. |
+| `auth.server-unverified` | local | S | — | — | The pipe is not owned by the current user, or the process serving it runs as another user or at a lower integrity level than the companion, so the SDK wrote nothing to it (§7.1). Another program may hold the pipe name while the host is not running. | Start the host and run the companion without administrator rights; if this persists, restart the PC. |
 | `auth.host-mismatch` | local | S | — | — | `challenge.host.id` differs from the pairing's `hostId`. | Use connection info from this host. |
 | `auth.abandoned` | local | L R | — | ✓ | The companion closed after the challenge without authenticating; most often an out-of-date pairing. | Save connection info again. |
 | `auth.timeout` | close | L R E S | ✓ | — | The handshake did not finish within 5 seconds. | Check the companion's handshake code. |
@@ -2643,10 +2660,13 @@ Behaviour the SDK guarantees:
   `PipeOptions.CurrentUserOnly | PipeOptions.Asynchronous` and
   `TokenImpersonationLevel.Identification`, so it never writes to a pipe the
   current user does not own (`auth.server-unverified`). Before writing `hello`
-  it checks the server process's user and integrity level (§7.1); when that
-  check passes the server is verified from the start, and otherwise it becomes
-  verified only when its challenge proof verifies. `StatusChangedEventArgs.ServerVerified`
-  reports which.
+  it checks the server process's user and integrity level (§7.1). When that
+  check passes, the server is verified from the start. When it reads the
+  server's token and finds another user or a lower integrity level, it closes
+  the pipe without writing anything (`auth.server-unverified`, then `Waiting`
+  with normal backoff). When it cannot open or read the server process or its
+  token, the server becomes verified only when its challenge proof verifies.
+  `StatusChangedEventArgs.ServerVerified` reports which.
 - **Status and backoff.** `StatusChanged` fires on every state change with the
   reason code. Normal backoff is 1 s, doubling, × uniform(0.8, 1.2), and never
   more than `MaxRetryDelay` (30 s): each delay is min(base × uniform(1 − j,
@@ -3163,8 +3183,11 @@ handler rules and validation order. Specifically:
   cannot prevent a squatter that holds `SeImpersonatePrivilege` (for example a
   compromised service account; such accounts are already highly privileged)
   from impersonating the person after reading `hello`, which carries no secret.
-  The package README and the security notes on the documentation site state
-  this. An optional native check (`GetNamedPipeServerProcessId` plus the owner
+  Nor can it refuse a squatter that runs as the same user at a lower integrity
+  level and has read the pairing file, whose challenge proof therefore
+  verifies: against such a process it relies on the host's pairing-file label
+  (§6.2). The package README and the security notes on the documentation site
+  state this. An optional native check (`GetNamedPipeServerProcessId` plus the owner
   and integrity tests of §7.1) is a release gate to decide before the package
   is published.
 
@@ -3329,8 +3352,9 @@ unknown token, or a malformed duration or code).
 
 `simulate` creates its pipe exactly as a host must (§7.1): access for the
 current user only, the first and only instance of its name, one connection at a
-time. Its temporary pairing file is written with an access-control list that
-grants access only to the current user, and deleted on exit.
+time. Its temporary pairing file and the folder that holds it are created with
+an access-control list that grants access only to the current user and the
+mandatory label of §6.2, and deleted on exit.
 
 ### 11.3 Pack configuration: `extension.pack.json`
 

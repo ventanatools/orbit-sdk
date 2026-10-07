@@ -16,6 +16,31 @@ public sealed class SimulateTests
     private static string TestAssembly => typeof(SimulateTests).Assembly.Location;
 
     [WindowsFact]
+    public void TheTemporaryPairingIsReadableByThisUserButNotByALowIntegrityProcess()
+    {
+        // Without a mandatory label a Low-integrity process of the same user could read the secret and pose as the host.
+        using var registration = SimulationRegistration.Create("example-host", "example.tool-test");
+        Assert.Contains("\"secret\"", File.ReadAllText(registration.PairingPath), StringComparison.Ordinal);
+        Assert.Single(Directory.GetFiles(registration.Folder));
+        Assert.Equal("refused", LowIntegrityToken.Run(() => Attempt(() => File.ReadAllBytes(registration.PairingPath).Length)));
+        Assert.Equal("refused", LowIntegrityToken.Run(() => Attempt(() => Directory.GetFiles(registration.Folder).Length)));
+        registration.Dispose();
+        Assert.False(Directory.Exists(registration.Folder));
+    }
+
+    private static string Attempt(Func<int> read)
+    {
+        try
+        {
+            return "read " + read();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return "refused";
+        }
+    }
+
+    [WindowsFact]
     public async Task AScriptDrivesTheCompanionThroughSessionsInvocationsAndAReconnect()
     {
         using var project = new TempFolder();

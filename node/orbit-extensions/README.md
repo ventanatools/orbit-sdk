@@ -127,8 +127,13 @@ pass a `ManualClock` to drive backoff, deadlines, pings and renewal without wait
   maximum retry delay, and never receives the companion's proof. It cannot prevent a squatter
   that holds `SeImpersonatePrivilege` (for example a compromised service account; such accounts
   are already highly privileged) from impersonating the person after reading `hello`, which
-  carries no secret. The .NET SDK verifies the pipe's owner and the server process before it
-  writes anything. An optional native check for the Node SDK is a release gate to decide before
+  carries no secret. Nor can it refuse a squatter that runs as the same user at a lower
+  integrity level (for example a sandboxed process outside an AppContainer) and has read the
+  pairing file: that squatter's challenge proof verifies, and the SDK would then run its
+  sessions and invocations. Against such a process the Node SDK relies on the host writing
+  pairing files with a mandatory label that lower-integrity processes cannot read. The .NET SDK
+  verifies the pipe's owner and the server process, and refuses a lower-integrity server,
+  before it writes anything. An optional native check for the Node SDK is a release gate to decide before
   the package is published.
 
 ## Developing this package

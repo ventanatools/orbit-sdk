@@ -89,8 +89,10 @@ internal sealed class InMemoryTransport : ICompanionTransport
 /// <summary>
 /// The named-pipe transport (contract §7.1): the pipe must be owned by the current user
 /// (<see cref="PipeOptions.CurrentUserOnly"/>) and is opened with identification-level
-/// impersonation; before any byte is written, the server process's user and integrity level are
-/// checked to mark the server verified.
+/// impersonation. Before any byte is written, the server process's user and integrity level are
+/// checked: a server that passes is verified, a server whose process runs as another user or at a
+/// lower integrity level is refused (<c>auth.server-unverified</c>), and a server whose process
+/// cannot be opened or read stays unverified until its challenge proof verifies.
 /// </summary>
 [SupportedOSPlatform("windows")]
 internal sealed class PipeTransport : ICompanionTransport
@@ -139,8 +141,29 @@ internal sealed class PipeTransport : ICompanionTransport
             throw;
         }
 
-        return TransportConnection.Connected(pipe, PipeNatives.ServerIsVerified(pipe.SafePipeHandle));
+        var check = PipeNatives.CheckServer(pipe.SafePipeHandle);
+        if (check == ServerCheck.Refused)
+        {
+            // Another user's or a lower-integrity process holds the pipe name: nothing was written to it.
+            await pipe.DisposeAsync().ConfigureAwait(false);
+            return TransportConnection.Failed(ReasonCode.AuthServerUnverified);
+        }
+
+        return TransportConnection.Connected(pipe, check == ServerCheck.Verified);
     }
+}
+
+/// <summary>What the operating system says about a pipe server's process (contract §7.1).</summary>
+internal enum ServerCheck
+{
+    /// <summary>It runs as the current user at an integrity level no lower than this process's.</summary>
+    Verified = 1,
+
+    /// <summary>Its process or token could not be opened or read; it is unverified until its challenge proof verifies.</summary>
+    Unchecked = 2,
+
+    /// <summary>It runs as another user or at a lower integrity level; the client writes nothing to it.</summary>
+    Refused = 3,
 }
 
 /// <summary>The Win32 calls the pipe transport needs.</summary>
@@ -164,41 +187,60 @@ internal static partial class PipeNatives
         return Marshal.GetLastPInvokeError() == ErrorFileNotFound;
     }
 
-    /// <summary>
-    /// Whether the pipe's server process runs as the current user at an integrity level no lower
-    /// than this process's (contract §7.1). Any failure to check means not verified.
-    /// </summary>
-    public static bool ServerIsVerified(SafePipeHandle pipe)
+    /// <summary>Checks the pipe's server process (contract §7.1). Any failure to check means <see cref="ServerCheck.Unchecked"/>.</summary>
+    public static ServerCheck CheckServer(SafePipeHandle pipe)
     {
         try
         {
-            if (!GetNamedPipeServerProcessId(pipe, out var processId))
-            {
-                return false;
-            }
+            return GetNamedPipeServerProcessId(pipe, out var processId) ? CheckProcess(processId) : ServerCheck.Unchecked;
+        }
+        catch (SystemException)
+        {
+            return ServerCheck.Unchecked;
+        }
+    }
 
+    /// <summary>
+    /// Whether a process runs as the current user at an integrity level no lower than this
+    /// process's: <see cref="ServerCheck.Refused"/> when its token was read and either test fails,
+    /// <see cref="ServerCheck.Unchecked"/> when the process or its token cannot be opened or read.
+    /// </summary>
+    public static ServerCheck CheckProcess(uint processId)
+    {
+        try
+        {
             using var process = OpenProcess(ProcessQueryLimitedInformation, false, processId);
             if (process.IsInvalid || !OpenProcessToken(process, TokenQuery, out var serverToken))
             {
-                return false;
+                return ServerCheck.Unchecked;
             }
 
             using var server = new SafeAccessTokenHandle(serverToken);
             using var self = WindowsIdentity.GetCurrent(TokenAccessLevels.Query);
             var serverUser = TokenSid(server.DangerousGetHandle(), TokenUserClass);
-            if (serverUser is null || self.User is null || serverUser != self.User)
+            if (serverUser is null || self.User is null)
             {
-                return false;
+                return ServerCheck.Unchecked;
+            }
+
+            if (serverUser != self.User)
+            {
+                return ServerCheck.Refused;
             }
 
             var serverLevel = IntegrityRid(server.DangerousGetHandle());
             var ownLevel = IntegrityRid(self.Token);
-            return serverLevel is not null && ownLevel is not null && serverLevel >= ownLevel;
+            if (serverLevel is null || ownLevel is null)
+            {
+                return ServerCheck.Unchecked;
+            }
+
+            return serverLevel >= ownLevel ? ServerCheck.Verified : ServerCheck.Refused;
         }
         catch (SystemException)
         {
-            // Access denied, a handle that closed meanwhile, or a token this check cannot read: not verified.
-            return false;
+            // Access denied, a handle that closed meanwhile, or a token this check cannot read: not checked.
+            return ServerCheck.Unchecked;
         }
     }
 

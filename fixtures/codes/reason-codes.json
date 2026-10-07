@@ -51,8 +51,8 @@
       ],
       "pre": false,
       "violation": false,
-      "meaning": "The pipe is not owned by the current user, so the SDK wrote nothing to it. Another program may hold the pipe name while the host is not running.",
-      "fix": "Start the host; if this persists, restart the PC.",
+      "meaning": "The pipe is not owned by the current user, or the process serving it runs as another user or at a lower integrity level than the companion, so the SDK wrote nothing to it. Another program may hold the pipe name while the host is not running.",
+      "fix": "Start the host and run the companion without administrator rights; if this persists, restart the PC.",
       "anchor": "auth-server-unverified"
     },
     {
