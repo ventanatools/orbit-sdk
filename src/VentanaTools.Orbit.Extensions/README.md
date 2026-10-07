@@ -50,7 +50,7 @@ sealed class Greeter : ContributionHandler
       "id": "contoso.greeter/greet",
       "name": "Greet",
       "description": "Writes the chosen greeting.",
-      "glyph": "",
+      "glyph": "\uE8BD",
       "provides": ["invoke"],
       "settings": [
         {
