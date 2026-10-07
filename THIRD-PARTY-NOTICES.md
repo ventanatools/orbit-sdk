@@ -9,8 +9,9 @@ cover its own code. Third-party packages keep their own licences, listed here.
   have no third-party dependencies; they use the .NET runtime the recipient
   installs.
 - **`VentanaTools.Orbit.Extensions.Hosting`** depends on
-  `Microsoft.Extensions.Hosting.Abstractions` 10.0.12 and the packages it brings,
-  © .NET Foundation and Contributors, under the MIT licence
+  `Microsoft.Extensions.Hosting.Abstractions` and `Microsoft.Extensions.Options`
+  10.0.12 and the packages they bring, © .NET Foundation and Contributors, under
+  the MIT licence
   (<https://github.com/dotnet/runtime/blob/main/LICENSE.TXT>). They are restored
   from nuget.org by the projects that use the add-on, not carried in it.
 - **`VentanaTools.Orbit.Extensions.Tool`** carries, as a .NET tool does, the

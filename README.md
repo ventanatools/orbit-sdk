@@ -46,7 +46,8 @@ compatible). The author package depends only on the base class library. The
 test kit and add-on packages also depend on their author package at the exact
 same version. An add-on's other direct dependencies are limited to
 `Microsoft.Extensions.*.Abstractions` packages and `Microsoft.Extensions.Options`;
-the Generic Host add-on's is `Microsoft.Extensions.Hosting.Abstractions` alone.
+the Generic Host add-on's are `Microsoft.Extensions.Hosting.Abstractions` and
+`Microsoft.Extensions.Options`.
 
 The packages target `net10.0` only, with no `netstandard2.0` build. A companion is
 a program that brings or names its own runtime, not a library loaded into an

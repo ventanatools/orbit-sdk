@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace VentanaTools.Orbit.Extensions.Hosting;
 
@@ -19,11 +20,19 @@ internal sealed class CompanionService : BackgroundService
     private readonly IHostApplicationLifetime? _lifetime;
     private int _exitCode = -1;
 
-    public CompanionService(IContributionHandler handler, CompanionServiceOptions options, ILoggerFactory loggerFactory,
+    /// <param name="options">
+    /// The options, read once from <see cref="IOptions{TOptions}"/> as the host creates the service and
+    /// before the handler is created, so invalid ones (<see cref="OptionsValidationException"/>) fail
+    /// the start first.
+    /// </param>
+    /// <param name="handler">The contribution handler.</param>
+    /// <param name="loggerFactory">Creates the logger of the documented category.</param>
+    /// <param name="lifetime">Stops the application when the companion stops by itself; null without a host.</param>
+    public CompanionService(CompanionServiceOptions options, IContributionHandler handler, ILoggerFactory loggerFactory,
         IHostApplicationLifetime? lifetime)
     {
-        _handler = handler;
         _options = options;
+        _handler = handler;
         _logger = loggerFactory.CreateLogger<CompanionService>();
         _lifetime = lifetime;
     }

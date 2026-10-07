@@ -2090,7 +2090,8 @@ same version. An add-on's other direct dependencies are limited to
 `Microsoft.Extensions.*.Abstractions` packages and `Microsoft.Extensions.Options`.
 A concrete implementation, such as `Microsoft.Extensions.Hosting`, is the
 application's to add: the Generic Host add-on `VentanaTools.Orbit.Extensions.Hosting`
-(§9.5) depends on `Microsoft.Extensions.Hosting.Abstractions` alone. The version
+(§9.5) depends on `Microsoft.Extensions.Hosting.Abstractions` and
+`Microsoft.Extensions.Options`. The version
 range is exact (`[x.y.z]`) because the test kit and the add-on use the author
 package's internal seams (the in-memory transport and `CompanionApp`'s output).
 
@@ -3184,11 +3185,11 @@ Windows-only (§9.2).
 
 The Generic Host add-on runs a companion as a hosted service of the .NET Generic
 Host, for companions whose handlers take services from dependency injection or
-that run other hosted services. It depends on `Microsoft.Extensions.Hosting.Abstractions`
-and on exactly the same version of the author package (§9); the application adds
-the host itself (`Microsoft.Extensions.Hosting`). The name is product-neutral,
-`AddCompanion`, because no identifier under `src/` may carry the product name
-(§2.8).
+that run other hosted services. It depends on `Microsoft.Extensions.Hosting.Abstractions`,
+on `Microsoft.Extensions.Options` and on exactly the same version of the author
+package (§9); the application adds the host itself (`Microsoft.Extensions.Hosting`).
+The name is product-neutral, `AddCompanion`, because no identifier under `src/`
+may carry the product name (§2.8).
 
 ```csharp
 namespace VentanaTools.Orbit.Extensions.Hosting;
@@ -3222,18 +3223,32 @@ public sealed class CompanionServiceOptions
 }
 ```
 
-The options have settable properties, because `AddCompanion` sets them through a
-delegate, as `Microsoft.Extensions` options types are; like every public data type
-of the SDK they have no positional constructor (§9). There are no overloads with
-optional parameters, so adding an overload stays binary compatible.
+`CompanionServiceOptions` is an options type of `Microsoft.Extensions.Options`:
+`AddCompanion` registers it with `AddOptions<CompanionServiceOptions>()` and adds
+its `configure` delegate, when given, as a configuration step. So
+`services.Configure<CompanionServiceOptions>(…)` and configuration binding (for
+example `services.Configure<CompanionServiceOptions>(configuration.GetSection("Companion"))`)
+apply as well, in the order they are registered, and binding sets every option but
+the callbacks and the client's clock. The options therefore have settable
+properties; like every public data type of the SDK they have no positional
+constructor (§9). There are no overloads with optional parameters, so adding an
+overload stays binary compatible.
 
 - **Registration.** The generic overloads register `THandler` as a singleton,
   unless the application registered it already, so its constructor's parameters
   come from the container. The factory overloads call the factory once, when the
   host creates the hosted service. A process runs one companion: a second
-  `AddCompanion` throws `InvalidOperationException`, and so does a factory that
-  returns null. An out-of-range `Client` option throws `ArgumentException` from
-  `AddCompanion`.
+  `AddCompanion` throws `InvalidOperationException`, and a factory that returns
+  null fails the host's start with it.
+- **Validation.** A validator registered with the options checks them when the
+  host starts (`ValidateOnStart`), never in `AddCompanion`, so values set later
+  are checked too: a `Client` option outside the ranges `CompanionClient` accepts
+  (§9.2), or a `ManifestPath` or `PairingPath` that is set but empty, fails the
+  start with `OptionsValidationException`, whose message names the option (for
+  example `CompanionServiceOptions.Client.InitialRetryDelay: The delay must be
+  greater than zero and at most one day.`). The hosted service reads
+  `IOptions<CompanionServiceOptions>` once, when the host creates it and before
+  the handler, so invalid options never create one.
 - **The run.** The hosted service runs exactly `CompanionApp.RunAsync`'s work
   (§9.2) on `Arguments`, with the options of the same name: the same manifest and
   pairing discovery, first-run wait, file watching, statuses, callbacks and exit

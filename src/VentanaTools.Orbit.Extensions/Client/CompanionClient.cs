@@ -51,33 +51,57 @@ public sealed class CompanionClientOptions
 
     internal void Validate()
     {
-        static void Positive(TimeSpan value, string name)
+        if (FindProblem() is not { } problem)
         {
-            if (value <= TimeSpan.Zero || value > TimeSpan.FromDays(1))
-            {
-                throw new ArgumentOutOfRangeException(name, "The delay must be greater than zero and at most one day.");
-            }
+            return;
         }
 
-        Positive(InitialRetryDelay, nameof(InitialRetryDelay));
-        Positive(MaxRetryDelay, nameof(MaxRetryDelay));
-        Positive(HostAbsentMaxRetryDelay, nameof(HostAbsentMaxRetryDelay));
-        Positive(StableConnection, nameof(StableConnection));
-        Positive(HandlerStopTimeout, nameof(HandlerStopTimeout));
+        throw problem.Option == nameof(TimeProvider)
+            ? new ArgumentException(problem.Message, problem.Option)
+            : new ArgumentOutOfRangeException(problem.Option, problem.Message);
+    }
+
+    /// <summary>The first option that is out of range and the sentence that says why; null when every option is valid.</summary>
+    internal (string Option, string Message)? FindProblem()
+    {
+        const string Delay = "The delay must be greater than zero and at most one day.";
+        static bool InRange(TimeSpan value) => value > TimeSpan.Zero && value <= TimeSpan.FromDays(1);
+        if (!InRange(InitialRetryDelay))
+        {
+            return (nameof(InitialRetryDelay), Delay);
+        }
+
+        if (!InRange(MaxRetryDelay))
+        {
+            return (nameof(MaxRetryDelay), Delay);
+        }
+
+        if (!InRange(HostAbsentMaxRetryDelay))
+        {
+            return (nameof(HostAbsentMaxRetryDelay), Delay);
+        }
+
+        if (!InRange(StableConnection))
+        {
+            return (nameof(StableConnection), Delay);
+        }
+
+        if (!InRange(HandlerStopTimeout))
+        {
+            return (nameof(HandlerStopTimeout), Delay);
+        }
+
         if (MaxRetryDelay < InitialRetryDelay)
         {
-            throw new ArgumentOutOfRangeException(nameof(MaxRetryDelay), "MaxRetryDelay must be at least InitialRetryDelay.");
+            return (nameof(MaxRetryDelay), "MaxRetryDelay must be at least InitialRetryDelay.");
         }
 
         if (!(RetryJitter >= 0 && RetryJitter < 1))
         {
-            throw new ArgumentOutOfRangeException(nameof(RetryJitter), "RetryJitter must be at least 0 and less than 1.");
+            return (nameof(RetryJitter), "RetryJitter must be at least 0 and less than 1.");
         }
 
-        if (TimeProvider is null)
-        {
-            throw new ArgumentException("TimeProvider must not be null.", nameof(TimeProvider));
-        }
+        return TimeProvider is null ? (nameof(TimeProvider), "TimeProvider must not be null.") : null;
     }
 }
 

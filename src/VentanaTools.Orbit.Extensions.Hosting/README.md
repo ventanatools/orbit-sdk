@@ -14,9 +14,10 @@ the rest of your logs go. For a companion that is only a handler,
 `CompanionApp.RunAsync` in the author package is all you need.
 
 It is a preview, versions in lockstep with `VentanaTools.Orbit.Extensions` and
-depends on exactly the same version of it. Its only other dependency is
-`Microsoft.Extensions.Hosting.Abstractions`; your application adds the host
-itself, `Microsoft.Extensions.Hosting`, from nuget.org.
+depends on exactly the same version of it. Its other dependencies are
+`Microsoft.Extensions.Hosting.Abstractions` and `Microsoft.Extensions.Options`;
+your application adds the host itself, `Microsoft.Extensions.Hosting`, from
+nuget.org.
 
 ## Get started
 
@@ -101,6 +102,16 @@ projects target `net10.0-windows`, as the templates do.
 Without a path, the companion finds `extension.json` beside the program, then in
 the current folder, and the connection info in the per-user folder Orbit's
 **Save connection info** writes to, exactly as `CompanionApp.RunAsync` does.
+
+`CompanionServiceOptions` follows the .NET options pattern. Set the options in
+`AddCompanion`'s delegate, with `services.Configure<CompanionServiceOptions>(…)`,
+or from configuration, for example
+`builder.Services.Configure<CompanionServiceOptions>(builder.Configuration.GetSection("Companion"))`;
+they apply in the order you register them. Configuration sets every option but
+the callbacks and the client's clock (a delay is written `00:00:05`). The options
+are checked when the host starts: a `Client` option out of its range, or a
+`ManifestPath` or `PairingPath` that is set but empty, stops the start with
+`OptionsValidationException`, whose message names the option.
 
 ## Stopping and exit codes
 

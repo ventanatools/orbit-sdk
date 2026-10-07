@@ -4,13 +4,17 @@
 namespace VentanaTools.Orbit.Extensions.Hosting;
 
 /// <summary>
-/// Options for a companion that runs in the .NET Generic Host, set in the delegate given to
-/// <c>AddCompanion</c> (<see cref="CompanionServiceCollectionExtensions"/>).
+/// Options for a companion that runs in the .NET Generic Host: set them in the delegate given to
+/// <c>AddCompanion</c> (<see cref="CompanionServiceCollectionExtensions"/>), with
+/// <c>services.Configure&lt;CompanionServiceOptions&gt;</c>, or by binding a configuration section.
 /// </summary>
 /// <remarks>
 /// Each option but <see cref="Arguments"/> and <see cref="StopApplicationOnExit"/> is the
 /// <see cref="CompanionAppOptions"/> option of the same name, with the same default. The options
-/// are read once, when the host starts the companion.
+/// are validated and read once, when the host starts the companion: a <see cref="Client"/> option
+/// out of its range, or an empty <see cref="ManifestPath"/> or <see cref="PairingPath"/>, fails the
+/// start with <c>OptionsValidationException</c>. Configuration binds every option but the callbacks
+/// and the client's clock.
 /// </remarks>
 public sealed class CompanionServiceOptions
 {

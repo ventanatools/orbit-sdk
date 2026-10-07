@@ -21,8 +21,9 @@
     <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The Generic Host add-on's one dependency besides the author package (contract §9.5). -->
+    <!-- The Generic Host add-on's dependencies besides the author package (contract §9.5), of one version. -->
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
     <!-- Test-only: the add-on's tests run it in a real Generic Host. -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
   </ItemGroup>

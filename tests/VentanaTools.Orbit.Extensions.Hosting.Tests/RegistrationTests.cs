@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Ventana Tools LLC
 
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using VentanaTools.Orbit.Extensions.Testing;
 using Xunit;
 
@@ -94,16 +97,131 @@ public sealed class RegistrationTests
     }
 
     [Fact]
-    public void ArgumentsAndClientOptionsAreCheckedWhenTheCompanionIsAdded()
+    public void ArgumentsAreCheckedWhenTheCompanionIsAdded()
     {
         Assert.Throws<ArgumentNullException>(() => ((IServiceCollection)null!).AddCompanion<ClockWidget>());
         Assert.Throws<ArgumentNullException>(() => new ServiceCollection().AddCompanion<ClockWidget>(null!));
         Assert.Throws<ArgumentNullException>(() => new ServiceCollection().AddCompanion((Func<IServiceProvider, IContributionHandler>)null!));
         Assert.Throws<ArgumentNullException>(() => new ServiceCollection().AddCompanion(_ => new ContributionRouter(), null!));
-        var services = new ServiceCollection();
-        Assert.Throws<ArgumentOutOfRangeException>(() => services.AddCompanion<ClockWidget>(options =>
-            options.Client = new CompanionClientOptions { InitialRetryDelay = TimeSpan.Zero }));
-        Assert.Empty(services);
+    }
+
+    [Theory]
+    [InlineData("client", "CompanionServiceOptions.Client.InitialRetryDelay: The delay must be greater than zero and at most one day.")]
+    [InlineData("jitter", "CompanionServiceOptions.Client.RetryJitter: RetryJitter must be at least 0 and less than 1.")]
+    [InlineData("manifest", "CompanionServiceOptions.ManifestPath is empty")]
+    [InlineData("pairing", "CompanionServiceOptions.PairingPath is empty")]
+    public async Task InvalidOptionsFailTheHostsStartWithAMessageThatNamesTheOption(string option, string message)
+    {
+        // Options are checked when the host starts (ValidateOnStart), not when the companion is added, so a value
+        // set later, by Configure or configuration, is checked too. Nothing of the companion runs.
+        var logs = new CapturingLoggerProvider();
+        var created = 0;
+        using var host = TestHosts.Build(logs, services =>
+        {
+            services.AddCompanion(provider =>
+            {
+                created++;
+                return new ContributionRouter();
+            });
+            services.Configure<CompanionServiceOptions>(options =>
+            {
+                switch (option)
+                {
+                    case "client":
+                        options.Client = new CompanionClientOptions { InitialRetryDelay = TimeSpan.Zero };
+                        break;
+                    case "jitter":
+                        options.Client = new CompanionClientOptions { RetryJitter = 1 };
+                        break;
+                    case "manifest":
+                        options.ManifestPath = " ";
+                        break;
+                    default:
+                        options.PairingPath = string.Empty;
+                        break;
+                }
+            });
+        });
+
+        var error = await Assert.ThrowsAsync<OptionsValidationException>(() => host.StartAsync());
+        Assert.Contains(message, error.Message, StringComparison.Ordinal);
+        Assert.Equal(typeof(CompanionServiceOptions), error.OptionsType);
+        Assert.Equal(0, created);
+        Assert.Empty(logs.Companion);
+    }
+
+    [Fact]
+    public async Task ConfigureAfterAddCompanionTakesEffect()
+    {
+        using var files = new CompanionFiles();
+        var logs = new CapturingLoggerProvider();
+        var codes = new ConcurrentQueue<int>();
+        using var host = TestHosts.Build(logs, services =>
+        {
+            services.AddSingleton(new Clock());
+            services.AddCompanion<ClockWidget>(options =>
+            {
+                options.Arguments = [];
+                options.ManifestPath = files.ManifestPath;
+                options.PairingPath = files.PairingPath;
+                options.WatchFiles = true;
+            });
+
+            // The application's own configuration, registered later, wins: without watching, the missing pairing stops it.
+            services.Configure<CompanionServiceOptions>(options =>
+            {
+                options.WatchFiles = false;
+                options.TestExitCode = codes.Enqueue;
+            });
+        });
+        Assert.False(host.Services.GetRequiredService<IOptions<CompanionServiceOptions>>().Value.WatchFiles);
+        var stopping = TestHosts.StoppingAsync(host);
+        await host.StartAsync().WaitAsync(TimeSpan.FromSeconds(15));
+
+        await stopping.WaitAsync(TimeSpan.FromSeconds(15));
+        await host.StopAsync().WaitAsync(TimeSpan.FromSeconds(15));
+        Assert.Equal([3], codes);
+        Assert.DoesNotContain(logs.Companion, entry => entry.EventId.Id == 14);
+    }
+
+    [Fact]
+    public async Task TheOptionsBindFromAConfigurationSection()
+    {
+        using var files = new CompanionFiles();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Companion:Arguments:0"] = "--verbose",
+            ["Companion:ManifestPath"] = files.ManifestPath,
+            ["Companion:PairingPath"] = files.PairingPath,
+            ["Companion:WatchFiles"] = "false",
+            ["Companion:StopApplicationOnExit"] = "false",
+            ["Companion:Client:MaxRetryDelay"] = "00:00:10",
+            ["Companion:Client:RetryJitter"] = "0.1",
+        }).Build();
+        var logs = new CapturingLoggerProvider();
+        using var host = TestHosts.Build(logs, services =>
+        {
+            services.AddSingleton(new Clock());
+            services.AddCompanion<ClockWidget>();
+            services.Configure<CompanionServiceOptions>(configuration.GetSection("Companion"));
+        });
+
+        var options = host.Services.GetRequiredService<IOptions<CompanionServiceOptions>>().Value;
+        Assert.Equal(["--verbose"], options.Arguments!);
+        Assert.Equal(files.ManifestPath, options.ManifestPath);
+        Assert.Equal(files.PairingPath, options.PairingPath);
+        Assert.False(options.WatchFiles);
+        Assert.False(options.StopApplicationOnExit);
+        Assert.Equal(TimeSpan.FromSeconds(10), options.Client!.MaxRetryDelay);
+        Assert.Equal(0.1, options.Client.RetryJitter);
+        Assert.Equal(TimeSpan.FromSeconds(1), options.Client.InitialRetryDelay);
+
+        // The service runs on them: the missing pairing ends the companion with exit code 3, and the application keeps running.
+        await host.StartAsync().WaitAsync(TimeSpan.FromSeconds(15));
+        await Manifests.WaitForAsync(() => logs.Companion.Any(entry => entry.EventId.Id == 21), "the exit code");
+        Assert.Equal(3, TestHosts.Service(host).ExitCode);
+        Assert.False(host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.IsCancellationRequested);
+        await host.StopAsync().WaitAsync(TimeSpan.FromSeconds(15));
     }
 
     [Fact]

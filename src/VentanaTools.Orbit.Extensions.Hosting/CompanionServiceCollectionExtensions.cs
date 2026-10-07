@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace VentanaTools.Orbit.Extensions.Hosting;
 
@@ -22,6 +23,12 @@ namespace VentanaTools.Orbit.Extensions.Hosting;
 /// A process runs one companion, for one manifest. The host owns Ctrl+C and shutdown: when it
 /// stops, the companion's connection closes, its sessions end and their handlers' tokens are
 /// cancelled, as when <see cref="CompanionApp.RunAsync"/> is cancelled.
+/// </para>
+/// <para>
+/// <see cref="CompanionServiceOptions"/> follows the options pattern: the delegate given to
+/// <c>AddCompanion</c>, <c>services.Configure&lt;CompanionServiceOptions&gt;</c> and configuration
+/// binding all apply, in the order they were registered. The options are validated when the host
+/// starts, which fails with <see cref="OptionsValidationException"/> for an out-of-range option.
 /// </para>
 /// <para>
 /// Log lines follow the SDK's logging rule: states, reason codes, fixes and help links, never
@@ -40,7 +47,8 @@ public static class CompanionServiceCollectionExtensions
 {
     /// <summary>
     /// Registers <typeparamref name="THandler"/> as a singleton, unless it is registered already,
-    /// and runs the companion with it as a hosted service, with the default options.
+    /// and runs the companion with it as a hosted service, with the options configured elsewhere or
+    /// their defaults.
     /// </summary>
     /// <typeparam name="THandler">The contribution handler; its constructor's parameters come from the container.</typeparam>
     /// <param name="services">The service collection.</param>
@@ -50,8 +58,11 @@ public static class CompanionServiceCollectionExtensions
     [SupportedOSPlatform("windows")]
     public static IServiceCollection AddCompanion<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>(
         this IServiceCollection services)
-        where THandler : class, IContributionHandler =>
-        AddCompanion<THandler>(services, static _ => { });
+        where THandler : class, IContributionHandler
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        return AddHandler<THandler>(services, null);
+    }
 
     /// <summary>
     /// Registers <typeparamref name="THandler"/> as a singleton, unless it is registered already,
@@ -59,10 +70,9 @@ public static class CompanionServiceCollectionExtensions
     /// </summary>
     /// <typeparam name="THandler">The contribution handler; its constructor's parameters come from the container.</typeparam>
     /// <param name="services">The service collection.</param>
-    /// <param name="configure">Sets the options.</param>
+    /// <param name="configure">Sets the options; registered as a configuration step of <see cref="CompanionServiceOptions"/>.</param>
     /// <returns><paramref name="services"/>, for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/> or <paramref name="configure"/> is null.</exception>
-    /// <exception cref="ArgumentException">A <see cref="CompanionServiceOptions.Client"/> option is out of range.</exception>
     /// <exception cref="InvalidOperationException">A companion is registered already.</exception>
     [SupportedOSPlatform("windows")]
     public static IServiceCollection AddCompanion<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>(
@@ -71,28 +81,33 @@ public static class CompanionServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
-        var options = Configure(services, configure);
-        services.TryAddSingleton<THandler>();
-        return Register(services, options, static provider => provider.GetRequiredService<THandler>());
+        return AddHandler<THandler>(services, configure);
     }
 
-    /// <summary>Runs the companion as a hosted service with the handler <paramref name="handlerFactory"/> creates, with the default options.</summary>
+    /// <summary>
+    /// Runs the companion as a hosted service with the handler <paramref name="handlerFactory"/> creates, with the options
+    /// configured elsewhere or their defaults.
+    /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="handlerFactory">Creates the handler from the application's services, once, when the host starts.</param>
     /// <returns><paramref name="services"/>, for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/> or <paramref name="handlerFactory"/> is null.</exception>
     /// <exception cref="InvalidOperationException">A companion is registered already.</exception>
     [SupportedOSPlatform("windows")]
-    public static IServiceCollection AddCompanion(this IServiceCollection services, Func<IServiceProvider, IContributionHandler> handlerFactory) =>
-        AddCompanion(services, handlerFactory, static _ => { });
+    public static IServiceCollection AddCompanion(this IServiceCollection services, Func<IServiceProvider, IContributionHandler> handlerFactory)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(handlerFactory);
+        EnsureFirst(services);
+        return Register(services, null, handlerFactory);
+    }
 
     /// <summary>Runs the companion as a hosted service with the handler <paramref name="handlerFactory"/> creates.</summary>
     /// <param name="services">The service collection.</param>
     /// <param name="handlerFactory">Creates the handler from the application's services, once, when the host starts.</param>
-    /// <param name="configure">Sets the options.</param>
+    /// <param name="configure">Sets the options; registered as a configuration step of <see cref="CompanionServiceOptions"/>.</param>
     /// <returns><paramref name="services"/>, for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/>, <paramref name="handlerFactory"/> or <paramref name="configure"/> is null.</exception>
-    /// <exception cref="ArgumentException">A <see cref="CompanionServiceOptions.Client"/> option is out of range.</exception>
     /// <exception cref="InvalidOperationException">A companion is registered already.</exception>
     [SupportedOSPlatform("windows")]
     public static IServiceCollection AddCompanion(this IServiceCollection services, Func<IServiceProvider, IContributionHandler> handlerFactory,
@@ -101,41 +116,82 @@ public static class CompanionServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(handlerFactory);
         ArgumentNullException.ThrowIfNull(configure);
-        var options = Configure(services, configure);
-        return Register(services, options, handlerFactory);
+        EnsureFirst(services);
+        return Register(services, configure, handlerFactory);
     }
 
-    private static CompanionServiceOptions Configure(IServiceCollection services, Action<CompanionServiceOptions> configure)
+    private static IServiceCollection AddHandler<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>(
+        IServiceCollection services, Action<CompanionServiceOptions>? configure)
+        where THandler : class, IContributionHandler
+    {
+        EnsureFirst(services);
+        services.TryAddSingleton<THandler>();
+        return Register(services, configure, static provider => provider.GetRequiredService<THandler>());
+    }
+
+    private static void EnsureFirst(IServiceCollection services)
     {
         if (services.Any(descriptor => descriptor.ServiceType == typeof(CompanionRegistration)))
         {
             throw new InvalidOperationException("A companion is registered already: a process runs one companion, for one manifest.");
         }
-
-        var options = new CompanionServiceOptions();
-        configure(options);
-        options.Client?.Validate();
-        return options;
     }
 
-    private static IServiceCollection Register(IServiceCollection services, CompanionServiceOptions options,
+    private static IServiceCollection Register(IServiceCollection services, Action<CompanionServiceOptions>? configure,
         Func<IServiceProvider, IContributionHandler> handlerFactory)
     {
-        var registration = new CompanionRegistration(options);
-        services.AddSingleton(registration);
+        // The options pattern: Configure<CompanionServiceOptions> and configuration binding apply too, in
+        // registration order, and the validator runs when the host starts.
+        var options = services.AddOptionsWithValidateOnStart<CompanionServiceOptions, CompanionServiceOptionsValidator>();
+        if (configure is not null)
+        {
+            options.Configure(configure);
+        }
+
+        services.AddSingleton(new CompanionRegistration());
+        // Arguments are evaluated in order: the options, validated as they are read, come before the handler.
         services.AddHostedService(provider => new CompanionService(
+            provider.GetRequiredService<IOptions<CompanionServiceOptions>>().Value,
             handlerFactory(provider) ?? throw new InvalidOperationException("The handler factory returned null."),
-            registration.Options,
             provider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance,
             provider.GetService<IHostApplicationLifetime>()));
         return services;
     }
 }
 
-/// <summary>Marks a service collection that has a companion, and keeps its options.</summary>
+/// <summary>Marks a service collection that has a companion.</summary>
 internal sealed class CompanionRegistration
 {
-    public CompanionRegistration(CompanionServiceOptions options) => Options = options;
+}
 
-    public CompanionServiceOptions Options { get; }
+/// <summary>
+/// Checks <see cref="CompanionServiceOptions"/> when the host starts (contract §9.5): the client
+/// options are within the ranges <see cref="CompanionClient"/> accepts, and a path, when set, is
+/// not empty. Each failure names the option.
+/// </summary>
+internal sealed class CompanionServiceOptionsValidator : IValidateOptions<CompanionServiceOptions>
+{
+    public ValidateOptionsResult Validate(string? name, CompanionServiceOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var failures = new List<string>();
+        if (options.ManifestPath is { } manifest && string.IsNullOrWhiteSpace(manifest))
+        {
+            failures.Add(nameof(CompanionServiceOptions) + "." + nameof(CompanionServiceOptions.ManifestPath)
+                + " is empty: set a path, or leave it null to look for extension.json beside the program.");
+        }
+
+        if (options.PairingPath is { } pairing && string.IsNullOrWhiteSpace(pairing))
+        {
+            failures.Add(nameof(CompanionServiceOptions) + "." + nameof(CompanionServiceOptions.PairingPath)
+                + " is empty: set a path, or leave it null to look for the connection info where the host saves it.");
+        }
+
+        if (options.Client?.FindProblem() is { } problem)
+        {
+            failures.Add(nameof(CompanionServiceOptions) + "." + nameof(CompanionServiceOptions.Client) + "." + problem.Option + ": " + problem.Message);
+        }
+
+        return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
+    }
 }

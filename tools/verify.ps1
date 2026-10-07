@@ -22,8 +22,8 @@ reads the version and run id it wrote to artifacts/build/state.json.
    passes the installed tool's test command.
 7. The dependency rule: the test kit and Generic Host add-on packages depend on exactly this version
    of the author package, the test kit on nothing else and the add-on otherwise on the hosting
-   abstractions alone. The feed new prepares carries the add-on, and its readme's example builds
-   against it from that feed.
+   abstractions and Microsoft.Extensions.Options alone. The feed new prepares carries the add-on, and
+   its readme's example builds against it from that feed.
 8. Every package's release notes link to its version's section of CHANGELOG.md, or to the changelog
    when the version has no section (a -dev build).
 
@@ -411,8 +411,11 @@ try {
     $packageVersions = [System.IO.File]::ReadAllText((Join-Repository 'Directory.Packages.props'))
     $abstractions = [regex]::Match($packageVersions, '<PackageVersion Include="Microsoft\.Extensions\.Hosting\.Abstractions" Version="([^"]+)"')
     if (-not $abstractions.Success) { throw 'Directory.Packages.props has no Microsoft.Extensions.Hosting.Abstractions version.' }
+    $optionsVersion = [regex]::Match($packageVersions, '<PackageVersion Include="Microsoft\.Extensions\.Options" Version="([^"]+)"')
+    if (-not $optionsVersion.Success) { throw 'Directory.Packages.props has no Microsoft.Extensions.Options version.' }
     $hostingId = $family + '.Hosting'
-    Assert-PackageDependencies $hostingId @(($family + ' [' + $version + ']'), ('Microsoft.Extensions.Hosting.Abstractions ' + $abstractions.Groups[1].Value))
+    Assert-PackageDependencies $hostingId @(($family + ' [' + $version + ']'), ('Microsoft.Extensions.Hosting.Abstractions ' + $abstractions.Groups[1].Value),
+        ('Microsoft.Extensions.Options ' + $optionsVersion.Groups[1].Value))
 
     # -----------------------------------------------------------------------------------------
     Write-Step 'Release notes'
