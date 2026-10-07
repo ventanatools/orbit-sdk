@@ -1132,9 +1132,13 @@ and every removal) does not grow access. Some of those changes still matter to
 the person's trust, so whether or not consent is kept, the update or reload
 review MUST show these as highlighted **Changed** rows next to their old values:
 `publisher.name`, `publisher.url`, `disclosures.privacyUrl`, `supportUrl`, and
-for a package the new package hash. A review that keeps consent MUST NOT say
-that nothing changed when any of these rows is present; "No new access" is
-correct, "Nothing changed" is not.
+for a package the new package hash. `publisher.name` is compared as the host
+displays it, after strings files (§3.10): each manifest with its own strings
+file for the UI language applied, so an update that renames the publisher only
+in a strings file still gets the row, which shows the names as displayed. When
+the displayed names are equal, the manifests' own names are compared. A review
+that keeps consent MUST NOT say that nothing changed when any of these rows is
+present; "No new access" is correct, "Nothing changed" is not.
 
 ---
 
@@ -1268,9 +1272,19 @@ package and synced folder:
 ### 7.1 Transport
 
 - A Windows named pipe in byte mode, created by the host with access for the
-  current user only and as the first and only instance of its name. The host
-  keeps the same server instance across reconnects, so the name never lapses
-  while the registration listens.
+  current user only, a mandatory label at Medium that denies lower-integrity
+  processes read, write and execute (`S:(ML;;NRNWNX;;;ME)`), rejecting remote
+  clients, and as the first and only instance of its name. The host keeps the
+  same server instance across reconnects, so the name never lapses while the
+  registration listens.
+- That single instance is a resource a read-only opener can hold. Under the
+  default label, which denies a lower-integrity process only writes, a
+  sandboxed process of the same user could open it for reading and hold it
+  through each handshake timeout while the companion reports `host.pipe-busy`
+  and backs off. The label refuses such a process every kind of open. A host
+  sets it in the call that creates the pipe; .NET's `PipeSecurity` cannot carry
+  a label, so a .NET host creates the pipe with `CreateNamedPipeW` and a
+  security descriptor.
 - One registration has one pipe, and the pipe accepts one connection at a time.
 - **Clients verify the server before writing.** Before writing the first byte, a
   client MUST verify that the pipe is owned by the current user (in .NET,
@@ -1927,6 +1941,12 @@ quote the offending input, and support bundles hand logs to other people.
   connection closes); `advisory` (an `error` frame, no close); `refuse` (the
   item is refused, the connection stays open); `ignore` (the frame is discarded
   and counted); `local` (never on the wire; raised where it happens).
+
+  A host that keeps listening on the same pipe instance waits, after writing
+  the `error` frame of a `close` code, for the companion to close its end (at
+  most 1 second) before it readies the instance again, because disconnecting a
+  named pipe discards unread data; a companion closes its end once it has read
+  an `error` with disposition `close`.
 - **Seen in**: L = host log; R = host registration row; D = host developer
   details only; E = `error` frame; S = SDK status.
 - **Pre** = may be sent to a peer that has not yet verified the sender's proof:
@@ -3433,10 +3453,12 @@ reason code); and `wait`. Durations are `<n>s` or `<n>ms`. A script has at most
 unknown token, or a malformed duration or code).
 
 `simulate` creates its pipe exactly as a host must (§7.1): access for the
-current user only, the first and only instance of its name, one connection at a
-time. Its temporary pairing file and the folder that holds it are created with
-an access-control list that grants access only to the current user and the
-mandatory label of §6.2, and deleted on exit.
+current user only, the Medium mandatory label that denies lower-integrity
+processes read, write and execute, rejecting remote clients, the first and only
+instance of its name, one connection at a time. Its temporary pairing file and
+the folder that holds it are created with an access-control list that grants
+access only to the current user and the mandatory label of §6.2, and deleted on
+exit.
 
 ### 11.3 Pack configuration: `extension.pack.json`
 
