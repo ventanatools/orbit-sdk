@@ -91,8 +91,8 @@ jobs:
           node-version: '22'
       - name: Build
         run: dotnet build VentanaTools.Orbit.Extensions.slnx -c Release
-      # The author package's portable tests and the Testing, tool and schema tests; the named-pipe,
-      # sample and template tests carry the Windows trait.
+      # The author package's portable tests and the Testing, Generic Host add-on, tool and schema tests;
+      # the named-pipe, sample and template tests carry the Windows trait.
       - name: Test
         run: dotnet test VentanaTools.Orbit.Extensions.slnx -c Release --no-build --filter "Platform!=Windows"
       - name: Node SDK

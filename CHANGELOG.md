@@ -5,9 +5,9 @@ format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 packages use [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Before
 1.0 any minor version may break (contract §12.2); every break is listed.
 
-The packages are `VentanaTools.Orbit.Extensions`, `.Testing`, `.Tool` and
-`.Templates`, and the unpublished Node SDK `@ventanatools/orbit-extensions`; they
-version in lockstep.
+The packages are `VentanaTools.Orbit.Extensions`, `.Testing`, `.Hosting`, `.Tool`
+and `.Templates`, and the unpublished Node SDK `@ventanatools/orbit-extensions`;
+they version in lockstep.
 
 ## [Unreleased]
 
@@ -135,6 +135,11 @@ protocol-2 source preview, `Orbit.Extensions.Protocol` and `Orbit.Extensions.Sdk
 
 - `VentanaTools.Orbit.Extensions.Testing`: `RecordingSession`,
   `CompanionTestHost`, `ContributionContractSuite` and `ExtensionConformance`.
+- `VentanaTools.Orbit.Extensions.Hosting`, the Generic Host add-on:
+  `services.AddCompanion<THandler>()` (or a handler factory) runs a companion as
+  a hosted service with `CompanionApp`'s discovery, status and exit codes, logs
+  each status through `ILogger` with a fixed event id, and stops with the host.
+  The tool carries it into the feed `orbit-ext new` prepares.
 - `VentanaTools.Orbit.Extensions.Tool`, the `orbit-ext` command: `new`,
   `validate`, `pack`, `verify`, `test`, `simulate`, `run`, `link` and `schema`,
   with MSBuild-style and JSON output.

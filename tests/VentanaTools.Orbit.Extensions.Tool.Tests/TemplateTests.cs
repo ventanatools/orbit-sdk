@@ -36,6 +36,7 @@ public sealed class TemplateFeed : IDisposable
                  {
                      "src/VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj",
                      "src/VentanaTools.Orbit.Extensions.Testing/VentanaTools.Orbit.Extensions.Testing.csproj",
+                     "src/VentanaTools.Orbit.Extensions.Hosting/VentanaTools.Orbit.Extensions.Hosting.csproj",
                      "templates/VentanaTools.Orbit.Extensions.Templates.csproj",
                  })
         {
@@ -184,6 +185,9 @@ public sealed class TemplateTests(TemplateFeed feed, ITestOutputHelper output) :
             || Directory.EnumerateFiles(feed.Feed, "*.nupkg").Any(file => Path.GetFileName(file)
                 .Equals(ToolIdentity.ToolPackageId + "." + feed.Version + ".nupkg", StringComparison.OrdinalIgnoreCase)),
             "new copies the tool's own package into the feed.");
+        Assert.True(Directory.EnumerateFiles(feed.Feed, "*.nupkg").Any(file => Path.GetFileName(file)
+                .Equals(ToolIdentity.HostingPackageId + "." + feed.Version + ".nupkg", StringComparison.OrdinalIgnoreCase)),
+            "new copies the Generic Host add-on into the feed.");
         var manifest = File.ReadAllText(Path.Combine(folder, "extension.json"));
         Assert.Contains("\"id\": \"" + extensionId + "\"", manifest, StringComparison.Ordinal);
         Assert.Contains("\"$schema\": \".schemas/manifest.v3.json\"", manifest, StringComparison.Ordinal);

@@ -26,9 +26,12 @@ code follows it, and a behavior change updates it in the same change
 
 ## Rules
 
-- Libraries are plain .NET 10, AnyCPU, AOT compatible, with no dependency beyond
-  the base class library and no WinUI, Windows App SDK or host reference. The
-  named-pipe transport is Windows-only; everything else is portable.
+- Libraries are plain .NET 10 (`net10.0` only, no `netstandard2.0`), AnyCPU, AOT
+  compatible, with no WinUI, Windows App SDK or host reference. The author
+  package and the test kit depend on nothing beyond the base class library; an
+  add-on package (`.Hosting`) may also depend on `Microsoft.Extensions.*.Abstractions`
+  packages, never on a concrete implementation. The named-pipe transport is
+  Windows-only; everything else is portable.
 - No public type is a positional record or has a primary constructor, every
   public member is documented, and `PublicAPI.Unshipped.txt` tracks the surface.
 - C# enums start at 1, except `[Flags]` enums. Wire tokens cross through

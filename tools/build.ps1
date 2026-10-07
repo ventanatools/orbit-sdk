@@ -10,8 +10,8 @@ Runs unchanged on Windows PowerShell 5.1 and PowerShell 7.
 1. Builds the solution with one package version, by default 0.1.0-dev.<UTC yyyyMMddHHmmss>
    (-p:VentanaExtensionsVersion=<version>), so a package from an earlier build can never stand in
    for the one just built.
-2. Packs, into artifacts/packages and in this order: the author and Testing libraries, the
-   templates, the Node SDK tarball (npm pack), then the tool, which carries the other three. The
+2. Packs, into artifacts/packages and in this order: the author, Testing and Generic Host add-on
+   libraries, the templates, the Node SDK tarball (npm pack), then the tool, which carries the others. The
    family's packages of every other version are removed from that folder first, so a plain
    --prerelease install gets this build.
 3. Restores and builds every .NET sample against those packages, into a fresh per-run folder,
@@ -155,7 +155,8 @@ try {
     Write-Step 'Pack the libraries'
     foreach ($project in @(
             [System.IO.Path]::Combine($root, 'src', $family, $family + '.csproj'),
-            [System.IO.Path]::Combine($root, 'src', $family + '.Testing', $family + '.Testing.csproj'))) {
+            [System.IO.Path]::Combine($root, 'src', $family + '.Testing', $family + '.Testing.csproj'),
+            [System.IO.Path]::Combine($root, 'src', $family + '.Hosting', $family + '.Hosting.csproj'))) {
         Invoke-Native dotnet @('pack', $project, '-c', $Configuration, '--no-build', '-nologo', '-o', $packages, $versionProperty)
     }
 
@@ -193,6 +194,7 @@ try {
     foreach ($expected in @(
             ($family + '.' + $version + '.nupkg'), ($family + '.' + $version + '.snupkg'),
             ($family + '.Testing.' + $version + '.nupkg'), ($family + '.Testing.' + $version + '.snupkg'),
+            ($family + '.Hosting.' + $version + '.nupkg'), ($family + '.Hosting.' + $version + '.snupkg'),
             ($family + '.Templates.' + $version + '.nupkg'), ($family + '.Tool.' + $version + '.nupkg'), $tarball)) {
         if (-not (Test-Path -LiteralPath ([System.IO.Path]::Combine($packages, $expected)))) {
             throw ('Missing package: ' + $expected)

@@ -26,6 +26,11 @@ their licence.
 - `VentanaTools.Orbit.Extensions.Testing`, the test kit: recording sessions, an
   in-memory test host that speaks real frames, the contribution contract suite
   and conformance checks.
+- `VentanaTools.Orbit.Extensions.Hosting`, the Generic Host add-on:
+  `services.AddCompanion<THandler>()` runs a companion as a hosted service, with
+  its handler from dependency injection and its status logged through `ILogger`.
+  Its one dependency besides the author package is
+  `Microsoft.Extensions.Hosting.Abstractions`.
 - `VentanaTools.Orbit.Extensions.Tool`, the `orbit-ext` tool: `new`, `validate`,
   `pack`, `verify`, `test`, `simulate`, `run`, `link` and `schema`.
 - `VentanaTools.Orbit.Extensions.Templates`: `orbit-ext-action`,

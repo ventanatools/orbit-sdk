@@ -88,6 +88,9 @@ tutorial, the guides and the API reference.
 - `Invocation` is one pick of an action; `InvokeResult` answers it.
 - `CompanionClient` is the connection itself, for programs that host the client
   in their own process.
+- `VentanaTools.Orbit.Extensions.Hosting`, a separate add-on package, runs the
+  companion in the .NET Generic Host: `services.AddCompanion<THandler>()` takes
+  the handler from dependency injection and logs through `ILogger`.
 
 Test handlers with `VentanaTools.Orbit.Extensions.Testing`: a recording session
 for unit tests, a real client against an in-process test host, and the

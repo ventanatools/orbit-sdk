@@ -23,8 +23,10 @@
     <None Include="buildTransitive\$(PackageId).props" Pack="true" PackagePath="buildTransitive\" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The Testing package uses the in-memory transport seam. Package names come from the assembly name, never a literal. -->
+    <!-- The Testing package uses the in-memory transport seam, and the Generic Host add-on the output seam of
+         CompanionApp; both depend on exactly this version. Package names come from the assembly name, never a literal. -->
     <InternalsVisibleTo Include="$(AssemblyName).Testing" />
+    <InternalsVisibleTo Include="$(AssemblyName).Hosting" />
     <InternalsVisibleTo Include="$(AssemblyName).Tests" />
   </ItemGroup>
 </Project>

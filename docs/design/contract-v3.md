@@ -166,9 +166,10 @@ templates, (c) `hosts.json`.
 |---|---|---|---|
 | NuGet package: author package | `VentanaTools.Orbit.Extensions` | Library, Apache-2.0. Declarations, faces, failures, reason codes, diagnostics, pairing, the companion client, packaging and wire (§9.1, §9.2) | (a) |
 | NuGet package: test kit | `VentanaTools.Orbit.Extensions.Testing` | Library, Apache-2.0 (§9.3) | (a) |
+| NuGet package: Generic Host add-on | `VentanaTools.Orbit.Extensions.Hosting` | Library, Apache-2.0. Runs a companion as a hosted service of the .NET Generic Host (§9.5) | (a) |
 | NuGet package: author tool | `VentanaTools.Orbit.Extensions.Tool` | .NET tool, Apache-2.0 (§11.1) | (a) |
 | NuGet package: project templates | `VentanaTools.Orbit.Extensions.Templates` | Template pack, content MIT-0 (§11.4) | (a) |
-| Namespaces | `VentanaTools.Orbit.Extensions` (author-facing), `VentanaTools.Orbit.Extensions.Packaging` and `VentanaTools.Orbit.Extensions.Wire` (hosts, tools and other-language implementations), `VentanaTools.Orbit.Extensions.Testing` | Root namespaces equal package IDs; the author package adds two (§9) | (a) |
+| Namespaces | `VentanaTools.Orbit.Extensions` (author-facing), `VentanaTools.Orbit.Extensions.Packaging` and `VentanaTools.Orbit.Extensions.Wire` (hosts, tools and other-language implementations), `VentanaTools.Orbit.Extensions.Testing`, `VentanaTools.Orbit.Extensions.Hosting` | Root namespaces equal package IDs; the author package adds two (§9) | (a) |
 | Assembly names | Equal to package IDs (the template pack has no assembly) | | (a) |
 | Solution, project folders | `VentanaTools.Orbit.Extensions.slnx`; `src/VentanaTools.Orbit.Extensions*/`, `tests/VentanaTools.Orbit.Extensions*.Tests/`, `templates/` | | (a) |
 | npm package (unpublished) | `@ventanatools/orbit-extensions`, in `node/orbit-extensions/` | Node SDK; `"private": true` until a publication decision (§10) | (a) |
@@ -292,6 +293,7 @@ to follow the same conventions.
 | The reason-code grammar (dotted lowercase codes in an open registry) | §2.4, §8 |
 | The trust and consent shape: nothing runs until the person consents, extension-supplied text is shown as unverified, access growth asks again, and developer mode never relaxes consent, authentication, limits or text cleaning | §1.4, §5.8, §5.9 |
 | Package and tool naming: `VentanaTools.<Product>.Extensions*` and a `<product>-ext` tool | §2.1, §2.2 |
+| The dependency rule: an SDK's author package and test kit depend only on the base class library; an add-on package (such as `.Hosting`) may also depend on `Microsoft.Extensions.*.Abstractions` packages and on its author package | §9, §9.5 |
 | The tooling verbs `new`, `validate`, `pack`, `verify` and `test` | §11.1 |
 | Test-kit naming (`<package>.Testing`, `RecordingSession`, `ContributionContractSuite`, `ExtensionConformance.AssertAuthoringContractAsync`, `ConformanceException`) | §9.3 |
 | The licensing pattern: Apache-2.0 libraries and tools, MIT-0 samples and templates, Ventana Tools LLC as copyright holder | §2.6 |
@@ -2072,12 +2074,24 @@ artifact and every `pairing.*` code is an author-facing reason code; their proof
 methods delegate to `Wire.Handshake`. The test kit is the separate package
 `VentanaTools.Orbit.Extensions.Testing` (§9.3).
 
-Both libraries target `net10.0`, AnyCPU, set `IsAotCompatible` (which implies
-trimming compatibility), depend only on the base class library, track their
-surface with PublicApiAnalyzers, enable package validation, and require XML
-documentation on every public member (CS1591 is an error). The Testing package
-references the author package with an exact version range (`[x.y.z]`), because
-it uses the author package's internal in-memory transport seam.
+The libraries target `net10.0`, AnyCPU, set `IsAotCompatible` (which implies
+trimming compatibility), track their surface with PublicApiAnalyzers, enable
+package validation, and require XML documentation on every public member (CS1591
+is an error). The author package and the test kit depend only on the base class
+library. An add-on package may also depend on `Microsoft.Extensions.*.Abstractions`
+packages and on the author package, never on a concrete implementation: the
+Generic Host add-on `VentanaTools.Orbit.Extensions.Hosting` (§9.5) depends on
+`Microsoft.Extensions.Hosting.Abstractions` alone. The Testing package and the
+add-on reference the author package with an exact version range (`[x.y.z]`),
+because they use its internal seams (the in-memory transport and `CompanionApp`'s
+output).
+
+The packages target `net10.0` only, with no `netstandard2.0` build. A companion
+is a program that brings or names its own runtime, not a library loaded into an
+older one, and the SDK is built on what .NET 10 provides: `TimeProvider` for every
+delay and deadline, Native AOT and trimming analysis, `LibraryImport` for the
+pipe's server checks (§7.1), and the current `System.Text.Json` and cryptography
+APIs.
 
 **Additive shapes.** No public type in these libraries is a positional record or
 has a primary constructor. Public data types are sealed classes or records with
@@ -3158,6 +3172,90 @@ analyzer knows the pipe transport is available; in a plain `net10.0` project
 these programs build with warning CA1416, because `CompanionApp.RunAsync` is
 Windows-only (§9.2).
 
+### 9.5 `VentanaTools.Orbit.Extensions.Hosting`
+
+The Generic Host add-on runs a companion as a hosted service of the .NET Generic
+Host, for companions whose handlers take services from dependency injection or
+that run other hosted services. It depends on `Microsoft.Extensions.Hosting.Abstractions`
+and on exactly the same version of the author package (§9); the application adds
+the host itself (`Microsoft.Extensions.Hosting`). The name is product-neutral,
+`AddCompanion`, because no identifier under `src/` may carry the product name
+(§2.8).
+
+```csharp
+namespace VentanaTools.Orbit.Extensions.Hosting;
+
+public static class CompanionServiceCollectionExtensions
+{
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddCompanion<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>(
+        this IServiceCollection services) where THandler : class, IContributionHandler;
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddCompanion<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>(
+        this IServiceCollection services, Action<CompanionServiceOptions> configure) where THandler : class, IContributionHandler;
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddCompanion(this IServiceCollection services,
+        Func<IServiceProvider, IContributionHandler> handlerFactory);
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddCompanion(this IServiceCollection services,
+        Func<IServiceProvider, IContributionHandler> handlerFactory, Action<CompanionServiceOptions> configure);
+}
+
+public sealed class CompanionServiceOptions
+{
+    public IReadOnlyList<string>? Arguments { get; set; }         // null: the process's command line without the program
+    public string? ManifestPath { get; set; }                     // overrides --manifest
+    public string? PairingPath { get; set; }                      // overrides --pairing
+    public bool WatchFiles { get; set; } = true;
+    public bool StopApplicationOnExit { get; set; } = true;
+    public Action<StatusChangedEventArgs>? StatusChanged { get; set; }
+    public Action<HandlerFaultedEventArgs>? HandlerFaulted { get; set; }
+    public CompanionClientOptions? Client { get; set; }
+}
+```
+
+The options have settable properties, because `AddCompanion` sets them through a
+delegate, as `Microsoft.Extensions` options types are; like every public data type
+of the SDK they have no positional constructor (§9). There are no overloads with
+optional parameters, so adding an overload stays binary compatible.
+
+- **Registration.** The generic overloads register `THandler` as a singleton,
+  unless the application registered it already, so its constructor's parameters
+  come from the container. The factory overloads call the factory once, when the
+  host creates the hosted service. A process runs one companion: a second
+  `AddCompanion` throws `InvalidOperationException`, and so does a factory that
+  returns null. An out-of-range `Client` option throws `ArgumentException` from
+  `AddCompanion`.
+- **The run.** The hosted service runs exactly `CompanionApp.RunAsync`'s work
+  (§9.2) on `Arguments`, with the options of the same name: the same manifest and
+  pairing discovery, first-run wait, file watching, statuses, callbacks and exit
+  codes. It never delays the host's start with file reads, and it does not hook
+  Ctrl+C: the host owns shutdown.
+- **Stopping.** When the host stops, the run is cancelled as `RunAsync` is: the
+  connection closes, sessions end, their handlers' tokens are cancelled, and the
+  hosted service completes with exit code 0. When the companion stops by itself
+  (exit code 1, 2, 3 or 4, §9.2), the service logs the code and, with
+  `StopApplicationOnExit` on, sets `Environment.ExitCode` to it and calls
+  `IHostApplicationLifetime.StopApplication()`; with it off, the application keeps
+  running.
+- **Logging.** Instead of status lines, the service logs each event `CompanionApp`
+  prints through `ILogger`, under the category
+  `VentanaTools.Orbit.Extensions.Hosting.CompanionService`, with a fixed event id
+  and level: 1 `Connecting` (Debug), 2 `Connected` (Information, with the host's
+  id, version and protocol), 3 `Waiting` (Warning, with the reason code, the retry
+  delay, the fix and the help link), 4 `Retrying` (Information), 5
+  `PairingUnusable` (Warning), 6 `PairingDiagnostic` (Warning), 7 `Stopped`
+  (Warning), 8 `StoppedQuietly` (Information), 10 and 11 `ManifestInvalid` (Error,
+  with each error's code, line, column and fixed message), 12 `ManifestUnreadable`
+  (Error), 13 `WatchingManifest` and 14 `WatchingPairing` (Information), 15
+  `Unmapped` (Warning), 16 `HostMessage` (Debug, only with `--verbose`), 17
+  `HandlerFaulted` (Error, with the author's exception), 18 `CallbackFaulted`
+  (Warning, once), 19 `Usage` (Error), 20 `Unexpected` (Error, with the
+  exception) and 21 `Exited` (Error, with the exit code). Fixes and help links are
+  those of the status lines (§9.2). Entries never contain pairing contents, file
+  paths (which name the person's profile), pipe names, setting values or face
+  text; a manifest diagnostic is logged without its file and pointer.
+
 ---
 
 ## 10. Node SDK
@@ -3296,9 +3394,10 @@ configuration uses package source mapping (the .NET SDK refuses `--add-source`
 there), add the folder to that configuration and map the package family to it.
 
 The tool package carries the packages a new project needs: the
-`VentanaTools.Orbit.Extensions`, `VentanaTools.Orbit.Extensions.Testing` and
-`VentanaTools.Orbit.Extensions.Templates` packages of the same version, and the
-`npm pack` tarball of `@ventanatools/orbit-extensions`. On first use, `new`
+`VentanaTools.Orbit.Extensions`, `VentanaTools.Orbit.Extensions.Testing`,
+`VentanaTools.Orbit.Extensions.Hosting` and `VentanaTools.Orbit.Extensions.Templates`
+packages of the same version, and the `npm pack` tarball of
+`@ventanatools/orbit-extensions`. On first use, `new`
 copies them, together with the tool's own package from its install store, into
 a per-user, per-version feed, `%LOCALAPPDATA%\VentanaTools\packages\<version>\`
 (or the folder given with `--feed <dir>`), so a generated project restores and
@@ -3622,8 +3721,9 @@ packages `0.1.0-dev.<UTC yyyyMMddHHmmss>` and restore samples into a fresh
 per-run package folder, so a cached package can never stand in for the one just
 built; `tools/verify.ps1` checks that each sample's resolved author library has
 the same SHA-256 as the one in the freshly packed package. `tools/build.ps1`
-packs the libraries, then the templates, then the Node SDK tarball, then the
-tool, which carries the other three (§11.1).
+packs the libraries (the author package, the test kit and the Generic Host
+add-on), then the templates, then the Node SDK tarball, then the tool, which
+carries the others (§11.1).
 
 ---
 
@@ -3636,9 +3736,9 @@ tool, which carries the other three (§11.1).
   the number. A compatible addition does not: within a protocol version, new
   optional members and messages are allowed under §7.11 and capabilities
   (§7.4).
-- **Packages** use SemVer 2.0. The four `VentanaTools.Orbit.Extensions*`
-  packages (the author package, Testing, Tool and Templates) and the Node SDK
-  version in lockstep.
+- **Packages** use SemVer 2.0. The five `VentanaTools.Orbit.Extensions*`
+  packages (the author package, Testing, Hosting, Tool and Templates) and the
+  Node SDK version in lockstep.
 
 ### 12.2 Before 1.0
 

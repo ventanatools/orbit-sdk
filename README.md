@@ -36,12 +36,23 @@ This repository contains no build or source of the Orbit app itself.
 |---|---|
 | `VentanaTools.Orbit.Extensions` | The author package for .NET: declarations, diagnostics, reason codes, pairing, the companion client (`CompanionApp`, `ContributionHandler`), and the `Packaging` and `Wire` namespaces for hosts and tools. One package, one `using`. |
 | `VentanaTools.Orbit.Extensions.Testing` | The test kit: recording sessions, an in-memory test host that speaks real frames, the contribution contract suite and conformance checks. Works with any test framework. |
+| `VentanaTools.Orbit.Extensions.Hosting` | The Generic Host add-on: `services.AddCompanion<THandler>()` runs a companion as a hosted service, its handler from dependency injection, logging through `ILogger`. |
 | `VentanaTools.Orbit.Extensions.Tool` | `orbit-ext`, the author tool: `new`, `validate`, `pack`, `verify`, `test`, `simulate`, `run`, `link` and `schema`. |
 | `VentanaTools.Orbit.Extensions.Templates` | `dotnet new` templates: `orbit-ext-action`, `orbit-ext-widget` and `orbit-ext-node`. |
 | `@ventanatools/orbit-extensions` | The Node SDK, in [`node/orbit-extensions`](node/orbit-extensions). Unpublished (`"private": true`); the tool carries its tarball for new Node projects. |
 
-All five version in lockstep. The libraries target `net10.0` (AnyCPU, AOT
-compatible) and depend only on the .NET base class library.
+All six version in lockstep. The libraries target `net10.0` (AnyCPU, AOT
+compatible). The author package and the test kit depend only on the .NET base
+class library; an add-on package may also depend on `Microsoft.Extensions.*.Abstractions`
+packages, and the Generic Host add-on depends on
+`Microsoft.Extensions.Hosting.Abstractions` alone.
+
+The packages target `net10.0` only, with no `netstandard2.0` build. A companion is
+a program that brings or names its own runtime, not a library loaded into an
+older one, so a `netstandard2.0` build would reach no one; and the SDK relies on
+what .NET 10 provides: `TimeProvider` for every delay and deadline, Native AOT and
+trimming analysis, `LibraryImport` for the pipe's server checks, and the current
+`System.Text.Json` and cryptography APIs.
 
 Orbit's SDK follows the Ventana conventions
 ([contract §2.7](docs/design/contract-v3.md#27-ventana-conventions)): the
@@ -72,8 +83,9 @@ With PowerShell 7, run `pwsh -NoProfile -File tools/build.ps1` and
 package from an earlier build can never stand in for the one just built. It first
 removes the repository's packages of any other version from that folder, so a
 `--prerelease` install without `--version` gets the newest build. It packs
-the libraries, then the templates, then the Node SDK tarball, then the tool,
-which carries the other three. It then builds the .NET samples against those
+the libraries (the author package, the test kit and the Generic Host add-on),
+then the templates, then the Node SDK tarball, then the tool, which carries the
+others. It then builds the .NET samples against those
 packages, restored into a fresh folder, `artifacts/consumer-packages/<run id>`.
 `-RepositoryVersion` stamps the version in `Directory.Build.props` instead.
 
@@ -106,6 +118,7 @@ others and refuses to pack without them:
 ```powershell
 dotnet pack src/VentanaTools.Orbit.Extensions -c Release -o artifacts/packages
 dotnet pack src/VentanaTools.Orbit.Extensions.Testing -c Release -o artifacts/packages
+dotnet pack src/VentanaTools.Orbit.Extensions.Hosting -c Release -o artifacts/packages
 dotnet pack templates/VentanaTools.Orbit.Extensions.Templates.csproj -c Release -o artifacts/packages
 npm pack ./node/orbit-extensions --pack-destination artifacts/packages
 dotnet pack src/VentanaTools.Orbit.Extensions.Tool -c Release -o artifacts/packages
@@ -171,7 +184,7 @@ the source mapping sends the package family to your folder only:
 
 The templates write this file for you, pointing at the feed `orbit-ext new`
 prepares. The pattern `VentanaTools.Orbit.Extensions*` matches the author
-package's own ID as well as `.Testing`, `.Tool` and `.Templates`.
+package's own ID as well as `.Testing`, `.Hosting`, `.Tool` and `.Templates`.
 
 ## Repository
 
@@ -179,6 +192,7 @@ package's own ID as well as `.Testing`, `.Tool` and `.Templates`.
 |---|---|
 | `src/VentanaTools.Orbit.Extensions` | The author package; the companion client is in `Client/` |
 | `src/VentanaTools.Orbit.Extensions.Testing` | The test kit |
+| `src/VentanaTools.Orbit.Extensions.Hosting` | The Generic Host add-on |
 | `src/VentanaTools.Orbit.Extensions.Tool` | `orbit-ext` |
 | `templates` | The template pack |
 | `node/orbit-extensions` | The Node SDK |
@@ -187,7 +201,7 @@ package's own ID as well as `.Testing`, `.Tool` and `.Templates`.
 | `samples/photoshop-extension` | A Node companion that bridges to an Adobe Photoshop UXP plugin |
 | `fixtures` | The golden test vectors of the contract's Appendix A, shared by the .NET SDK, the Node SDK and the host |
 | `schemas` | The JSON Schemas of the manifest, strings, package, pairing, pack and simulation files |
-| `tests` | The library, Testing, tool and schema tests |
+| `tests` | The library, Testing, Generic Host add-on, tool and schema tests |
 | `tools` | `build.ps1`, `verify.ps1` and the host codename script |
 | `eng` | Shared package metadata and the product rename script |
 | `docs` | The contract, the release status and the release notes for maintainers |

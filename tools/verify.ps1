@@ -20,6 +20,9 @@ reads the version and run id it wrote to artifacts/build/state.json.
 6. Every template, instantiated through the tool's new command (custom template hive, --feed) in a
    temporary folder outside the repository: its tool manifest pins the new tool, and it builds and
    passes the installed tool's test command.
+7. The Generic Host add-on: its package depends on exactly this version of the author package and on
+   the hosting abstractions alone, the feed new prepares carries it, and its readme's example builds
+   against it from that feed.
 
 No name of the product is written here: the product names come from fixtures/hosts.json, the package
 family from the solution file's name and the tool's command from its project file.
@@ -117,6 +120,19 @@ function Get-Sha256([System.IO.Stream]$Stream) {
         return ([System.BitConverter]::ToString($algorithm.ComputeHash($Stream))).Replace('-', '').ToLowerInvariant()
     } finally {
         $algorithm.Dispose()
+    }
+}
+
+# A package's nuspec, as XML.
+function Get-PackageNuspec([string]$Path) {
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($Path)
+    try {
+        $entries = @($archive.Entries | Where-Object { $_.FullName -notmatch '/' -and $_.FullName.EndsWith('.nuspec') })
+        if ($entries.Count -ne 1) { throw ('Expected one .nuspec in ' + $Path + '.') }
+        $reader = New-Object System.IO.StreamReader($entries[0].Open())
+        try { return [xml]$reader.ReadToEnd() } finally { $reader.Dispose() }
+    } finally {
+        $archive.Dispose()
     }
 }
 
@@ -365,6 +381,29 @@ try {
     }
 
     # -----------------------------------------------------------------------------------------
+    Write-Step 'The Generic Host add-on package'
+    # An add-on may depend on Microsoft.Extensions abstractions and on exactly this version of the
+    # author package, whose internal output seam it uses (contract section 9.5); nothing else.
+    $packageVersions = [System.IO.File]::ReadAllText((Join-Repository 'Directory.Packages.props'))
+    $abstractions = [regex]::Match($packageVersions, '<PackageVersion Include="Microsoft\.Extensions\.Hosting\.Abstractions" Version="([^"]+)"')
+    if (-not $abstractions.Success) { throw 'Directory.Packages.props has no Microsoft.Extensions.Hosting.Abstractions version.' }
+    $hostingId = $family + '.Hosting'
+    $hostingNuspec = Get-PackageNuspec ([System.IO.Path]::Combine($packages, $hostingId + '.' + $version + '.nupkg'))
+    $groups = @($hostingNuspec.package.metadata.dependencies.group)
+    if ($groups.Count -ne 1 -or [string]$groups[0].targetFramework -ne 'net10.0') {
+        throw ($hostingId + ' must have one dependency group, for net10.0.')
+    }
+    $found = New-Object System.Collections.Generic.List[string]
+    foreach ($dependency in @($groups[0].dependency)) { $found.Add([string]$dependency.id + ' ' + [string]$dependency.version) }
+    $wanted = @(($family + ' [' + $version + ']'), ('Microsoft.Extensions.Hosting.Abstractions ' + $abstractions.Groups[1].Value))
+    $foundText = @($found | Sort-Object) -join '; '
+    $wantedText = @($wanted | Sort-Object) -join '; '
+    if ($foundText -ne $wantedText) {
+        throw ($hostingId + ' depends on ' + $foundText + '; expected ' + $wantedText + '.')
+    }
+    Write-Host ($hostingId + ': depends on ' + ($found -join ' and ') + '.')
+
+    # -----------------------------------------------------------------------------------------
     Write-Step 'Install the new tool'
     # Earlier verification runs are not needed once a new one starts.
     Remove-Folder (Join-Repository 'artifacts/verify')
@@ -430,6 +469,36 @@ try {
         # older tool than the one just built.
         Invoke-Native $tool @('test') $project
     }
+
+    # -----------------------------------------------------------------------------------------
+    Write-Step 'The Generic Host add-on, from the feed'
+    $hostingPackage = ($hostingId + '.' + $version + '.nupkg').ToLowerInvariant()
+    if (@(Get-ChildItem -LiteralPath $feed -Filter '*.nupkg' -File | Where-Object { $_.Name.ToLowerInvariant() -eq $hostingPackage }).Count -ne 1) {
+        throw ('new did not copy ' + $hostingId + ' into ' + $feed + '.')
+    }
+    # A Generic Host companion made the way the add-on's readme says: its example is Program.cs, and the
+    # widget project's nuget.config maps the package family to the feed.
+    $readme = [System.IO.File]::ReadAllText((Join-Repository ('src/' + $hostingId + '/README.md'))).Replace("`r`n", "`n")
+    $example = [regex]::Match($readme, '(?s)```csharp\n(.*?)\n```')
+    if (-not $example.Success) { throw ('The ' + $hostingId + ' readme has no C# example.') }
+    $hosted = [System.IO.Path]::Combine($work, 'VerifyHosted')
+    New-Item -ItemType Directory -Force -Path $hosted | Out-Null
+    Copy-Item -LiteralPath ([System.IO.Path]::Combine($work, 'VerifyWidget', 'nuget.config')) -Destination $hosted
+    $hostedProject = '<Project Sdk="Microsoft.NET.Sdk">' + "`n" +
+        '  <PropertyGroup>' + "`n" +
+        '    <OutputType>Exe</OutputType>' + "`n" +
+        '    <TargetFramework>net10.0-windows</TargetFramework>' + "`n" +
+        '    <Nullable>enable</Nullable>' + "`n" +
+        '    <ImplicitUsings>enable</ImplicitUsings>' + "`n" +
+        '  </PropertyGroup>' + "`n" +
+        '  <ItemGroup>' + "`n" +
+        '    <PackageReference Include="' + $hostingId + '" Version="' + $version + '" />' + "`n" +
+        '    <PackageReference Include="Microsoft.Extensions.Hosting" Version="' + $abstractions.Groups[1].Value + '" />' + "`n" +
+        '  </ItemGroup>' + "`n" +
+        '</Project>' + "`n"
+    [System.IO.File]::WriteAllText([System.IO.Path]::Combine($hosted, 'VerifyHosted.csproj'), $hostedProject, (New-Object System.Text.UTF8Encoding($false)))
+    [System.IO.File]::WriteAllText([System.IO.Path]::Combine($hosted, 'Program.cs'), $example.Groups[1].Value + "`n", (New-Object System.Text.UTF8Encoding($false)))
+    Invoke-Native dotnet @('build', '-nologo', '-warnaserror') $hosted
 } finally {
     $env:NUGET_PACKAGES = $savedNuGetPackages
     $env:VentanaExtensionsVersion = $savedVersion

@@ -34,6 +34,9 @@ internal static class ToolIdentity
     /// <summary>The test kit's package ID.</summary>
     public static string TestingPackageId => PackageFamily + ".Testing";
 
+    /// <summary>The Generic Host add-on's package ID.</summary>
+    public static string HostingPackageId => PackageFamily + ".Hosting";
+
     /// <summary>The template pack's package ID.</summary>
     public static string TemplatesPackageId => PackageFamily + ".Templates";
 

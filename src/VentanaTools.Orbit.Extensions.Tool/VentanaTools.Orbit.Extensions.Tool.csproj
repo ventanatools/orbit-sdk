@@ -36,10 +36,10 @@
   </ItemGroup>
 
   <!--
-    The packages a new project needs (contract §11.1): the same-version author, Testing and Templates
-    packages and the Node SDK tarball, carried in the tool package under packages/ so `new` can copy them
-    into a per-user feed. Their names derive from this assembly's name. tools/build.ps1 packs them into
-    artifacts/packages before it packs the tool; pass -p:VentanaBundleDirectory=<folder> to use another folder.
+    The packages a new project needs (contract §11.1): the same-version author, Testing, Generic Host add-on
+    and Templates packages and the Node SDK tarball, carried in the tool package under packages/ so `new` can
+    copy them into a per-user feed. Their names derive from this assembly's name. tools/build.ps1 packs them
+    into artifacts/packages before it packs the tool; pass -p:VentanaBundleDirectory=<folder> to use another folder.
   -->
   <PropertyGroup>
     <!-- NuGet leaves .nupkg files out of a package unless default excludes are off. -->
@@ -52,6 +52,7 @@
   <ItemGroup>
     <_VentanaRequiredBundle Include="$(_VentanaBundleDirectory)$(_VentanaPackageFamily).$(Version).nupkg" />
     <_VentanaRequiredBundle Include="$(_VentanaBundleDirectory)$(_VentanaPackageFamily).Testing.$(Version).nupkg" />
+    <_VentanaRequiredBundle Include="$(_VentanaBundleDirectory)$(_VentanaPackageFamily).Hosting.$(Version).nupkg" />
     <_VentanaRequiredBundle Include="$(_VentanaBundleDirectory)$(_VentanaPackageFamily).Templates.$(Version).nupkg" />
     <_VentanaOptionalBundle Include="$(_VentanaBundleDirectory)$(_VentanaNodeTarball)" />
   </ItemGroup>

@@ -162,17 +162,26 @@ public static class CompanionApp
     }
 
     /// <summary>Runs a companion; <paramref name="transport"/> replaces the named pipe (the in-memory seam).</summary>
+    internal static Task<int> RunCoreAsync(string[] args, IContributionHandler handler, CompanionAppOptions? options,
+        Func<Pairing, ICompanionTransport>? transport, CancellationToken cancellationToken) =>
+        RunCoreAsync(args, handler, options, transport, output: null, hookConsole: true, cancellationToken);
+
+    /// <summary>
+    /// Runs a companion. <paramref name="output"/> replaces the status lines written to
+    /// <see cref="CompanionAppOptions.Output"/> (the Generic Host add-on logs them instead), and
+    /// <paramref name="hookConsole"/> false leaves Ctrl+C to the caller, which stops the run with
+    /// <paramref name="cancellationToken"/>.
+    /// </summary>
     internal static async Task<int> RunCoreAsync(string[] args, IContributionHandler handler, CompanionAppOptions? options,
-        Func<Pairing, ICompanionTransport>? transport, CancellationToken cancellationToken)
+        Func<Pairing, ICompanionTransport>? transport, ICompanionAppOutput? output, bool hookConsole, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(args);
         ArgumentNullException.ThrowIfNull(handler);
         options ??= new CompanionAppOptions();
-        var output = options.Output ?? Console.Error;
+        output ??= new TextWriterAppOutput(options.Output ?? Console.Error);
         if (TryParseArguments(args, out var usage) is not { } parsed)
         {
-            // The usage sentence alone, as the Node SDK prints it.
-            output.WriteLine("ventana: " + usage);
+            output.Usage(usage!);
             return 2;
         }
 
@@ -182,7 +191,7 @@ public static class CompanionApp
             e.Cancel = true;
             stop.Cancel();
         };
-        var hooked = Hook(onCancel);
+        var hooked = hookConsole && Hook(onCancel);
         try
         {
             return await new AppRunner(parsed, handler, options, output, transport).RunAsync(stop.Token).ConfigureAwait(false);
@@ -193,8 +202,7 @@ public static class CompanionApp
         }
         catch (Exception error)
         {
-            output.WriteLine("ventana: unexpected " + error.GetType().FullName + ": " + error.Message);
-            output.WriteLine(error.StackTrace);
+            output.Unexpected(error);
             return 1;
         }
         finally
@@ -239,13 +247,13 @@ internal sealed class AppRunner
     private readonly CompanionArguments _arguments;
     private readonly IContributionHandler _handler;
     private readonly CompanionAppOptions _options;
-    private readonly TextWriter _output;
+    private readonly ICompanionAppOutput _output;
     private readonly Func<Pairing, ICompanionTransport>? _transport;
     private readonly TimeProvider _time;
     private int _subscriberReported;
     private bool _unmappedPrinted;
 
-    public AppRunner(CompanionArguments arguments, IContributionHandler handler, CompanionAppOptions options, TextWriter output,
+    public AppRunner(CompanionArguments arguments, IContributionHandler handler, CompanionAppOptions options, ICompanionAppOutput output,
         Func<Pairing, ICompanionTransport>? transport)
     {
         _arguments = arguments;
@@ -331,7 +339,7 @@ internal sealed class AppRunner
                 return null;
             }
 
-            _output.WriteLine("ventana: watching " + path);
+            _output.Watching(path, AppFile.Manifest);
             await WaitForChangeAsync([path], [stamp], cancellationToken).ConfigureAwait(false);
         }
     }
@@ -347,7 +355,7 @@ internal sealed class AppRunner
         {
             if (report)
             {
-                _output.WriteLine("ventana: cannot read the manifest " + path + " (" + error.GetType().Name + ")");
+                _output.ManifestUnreadable(path, error);
             }
 
             return null;
@@ -362,7 +370,7 @@ internal sealed class AppRunner
         {
             foreach (var diagnostic in read.Diagnostics.Where(item => item.Severity == DiagnosticSeverity.Error))
             {
-                _output.WriteLine("ventana: " + path + ": " + diagnostic);
+                _output.ManifestInvalid(path, diagnostic);
             }
         }
 
@@ -379,7 +387,7 @@ internal sealed class AppRunner
         _unmappedPrinted = true;
         foreach (var id in router.FindUnmapped(manifest))
         {
-            _output.WriteLine("ventana: no handler is mapped for " + id);
+            _output.Unmapped(id);
         }
     }
 
@@ -391,7 +399,7 @@ internal sealed class AppRunner
         var candidates = explicitPath is not null ? [explicitPath] : PairingCandidates(manifest);
         string[] watchedPaths = [.. candidates, manifestPath];
         var watched = candidates[0];
-        var hostId = HostIdFor(manifest, null);
+        var host = HostFor(manifest, null);
         while (true)
         {
             // Stamped before looking, so a pairing saved while it is being read is still a change.
@@ -399,7 +407,7 @@ internal sealed class AppRunner
             var index = Array.FindIndex(candidates, File.Exists);
             var path = index >= 0 ? candidates[index] : null;
             ReasonCode code = ReasonCode.PairingMissing;
-            string? detail = null;
+            Diagnostic? detail = null;
             if (path is not null)
             {
                 try
@@ -419,7 +427,7 @@ internal sealed class AppRunner
                     }
                     else
                     {
-                        detail = first.ToString();
+                        detail = first;
                     }
 
                     watched = path;
@@ -431,13 +439,13 @@ internal sealed class AppRunner
             }
 
             var state = _options.WatchFiles ? ConnectionState.Waiting : ConnectionState.Stopped;
-            _output.WriteLine(StatusLine(state, code, hostId, HostName(manifest, null)) + (detail is null ? string.Empty : " " + detail));
+            _output.PairingStatus(state, code, detail, host);
             if (!_options.WatchFiles)
             {
                 return null;
             }
 
-            _output.WriteLine("ventana: watching " + watched);
+            _output.Watching(watched, AppFile.Pairing);
             await WaitForChangeAsync(watchedPaths, stamps, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -463,8 +471,7 @@ internal sealed class AppRunner
     {
         using var run = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var current = manifest;
-        var hostId = HostIdFor(manifest, pairing);
-        var hostName = HostName(manifest, pairing);
+        var host = HostFor(manifest, pairing);
         var waitingOnPerson = 0;
         var restart = 0;
 
@@ -489,29 +496,24 @@ internal sealed class AppRunner
         {
             Volatile.Write(ref waitingOnPerson,
                 e.State == ConnectionState.Waiting && (e.Reason == ReasonCode.ManifestMismatch || e.Reason == ReasonCode.AuthIdentityChanged) ? 1 : 0);
-            _output.WriteLine(StatusLine(e.State, e.Reason, hostId, hostName));
+            _output.Status(e, host);
             if (_arguments.Verbose && e.PeerMessage is { } message)
             {
-                _output.WriteLine("ventana: host message: " + PrintableAscii(message));
+                _output.HostMessage(PrintableAscii(message));
             }
 
             _options.StatusChanged?.Invoke(e);
         };
         client.HandlerFaulted += (_, e) =>
         {
-            _output.WriteLine(FaultLine(e, hostId, hostName));
-            if (e.Exception is { } exception)
-            {
-                _output.WriteLine(exception.ToString());
-            }
-
+            _output.Fault(e, host);
             _options.HandlerFaulted?.Invoke(e);
         };
         client.SubscriberFaulted += error =>
         {
             if (Interlocked.Exchange(ref _subscriberReported, 1) == 0)
             {
-                _output.WriteLine("ventana: a status or fault callback threw " + error.GetType().FullName + ": " + error.Message);
+                _output.CallbackFaulted(error);
             }
         };
 
@@ -602,10 +604,6 @@ internal sealed class AppRunner
     private static HostInfo? HostFor(ExtensionManifest manifest, Pairing? pairing) =>
         pairing is not null ? HostRegistry.Find(pairing.HostId) : HostRegistry.FirstActive(manifest.Hosts);
 
-    private static string? HostIdFor(ExtensionManifest manifest, Pairing? pairing) => HostFor(manifest, pairing)?.Id;
-
-    private static string? HostName(ExtensionManifest manifest, Pairing? pairing) => HostFor(manifest, pairing)?.DisplayName;
-
     internal static string StatusLine(ConnectionState state, ReasonCode? reason, string? hostId, string? hostName)
     {
         var line = new StringBuilder("ventana: ").Append(StateWord(state));
@@ -620,38 +618,54 @@ internal sealed class AppRunner
 
     internal static string FaultLine(HandlerFaultedEventArgs fault, string? hostId, string? hostName)
     {
-        var code = fault.Kind switch
-        {
-            HandlerFault.IgnoredCancellation => ReasonCode.SessionHandlerStalled,
-            HandlerFault.SessionCapacity => ReasonCode.SessionCapacity,
-            _ => ReasonCode.SessionHandlerFaulted,
-        };
-        var line = new StringBuilder("ventana: fault ").Append(fault.Kind switch
-        {
-            HandlerFault.Exception => "Exception",
-            HandlerFault.IgnoredCancellation => "IgnoredCancellation",
-            HandlerFault.SessionCapacity => "SessionCapacity",
-            HandlerFault.InvalidResult => "InvalidResult",
-            _ => "Unknown",
-        }).Append(" in ").Append(fault.ContributionId).Append(" (").Append(code.Value).Append(')');
+        var code = FaultCode(fault.Kind);
+        var line = new StringBuilder("ventana: fault ").Append(FaultName(fault.Kind))
+            .Append(" in ").Append(fault.ContributionId).Append(" (").Append(code.Value).Append(')');
         AppendFix(line, code, hostId, hostName);
         return line.ToString();
     }
 
+    /// <summary>The reason code a fault is reported with.</summary>
+    internal static ReasonCode FaultCode(HandlerFault kind) => kind switch
+    {
+        HandlerFault.IgnoredCancellation => ReasonCode.SessionHandlerStalled,
+        HandlerFault.SessionCapacity => ReasonCode.SessionCapacity,
+        _ => ReasonCode.SessionHandlerFaulted,
+    };
+
+    /// <summary>A fault's kind as the status lines name it.</summary>
+    internal static string FaultName(HandlerFault kind) => kind switch
+    {
+        HandlerFault.Exception => "Exception",
+        HandlerFault.IgnoredCancellation => "IgnoredCancellation",
+        HandlerFault.SessionCapacity => "SessionCapacity",
+        HandlerFault.InvalidResult => "InvalidResult",
+        _ => "Unknown",
+    };
+
+    /// <summary>The catalog's fix for a code, with "the host" replaced by the host's display name when the registry knows it.</summary>
+    internal static string? FixFor(ReasonCode code, string? hostName) =>
+        code.Info.Fix is { } fix ? (hostName is null ? fix : fix.Replace("the host", hostName, StringComparison.Ordinal)) : null;
+
+    /// <summary>The code's help link for a host the registry knows; null for an unknown host, where it would lead nowhere.</summary>
+    internal static string? HelpLinkFor(ReasonCode code, string? hostId) =>
+        hostId is not null && TextRules.IsHostId(hostId) && code.Info.HelpUri(hostId) is { } help ? help.AbsoluteUri : null;
+
     private static void AppendFix(StringBuilder line, ReasonCode code, string? hostId, string? hostName)
     {
-        if (code.Info.Fix is { } fix)
+        if (FixFor(code, hostName) is { } fix)
         {
-            line.Append(' ').Append(hostName is null ? fix : fix.Replace("the host", hostName, StringComparison.Ordinal));
+            line.Append(' ').Append(fix);
         }
 
-        if (hostId is not null && TextRules.IsHostId(hostId) && code.Info.HelpUri(hostId) is { } help)
+        if (HelpLinkFor(code, hostId) is { } help)
         {
-            line.Append(' ').Append(help.AbsoluteUri);
+            line.Append(' ').Append(help);
         }
     }
 
-    private static string StateWord(ConnectionState state) => state switch
+    /// <summary>A state as the status lines name it.</summary>
+    internal static string StateWord(ConnectionState state) => state switch
     {
         ConnectionState.Connecting => "connecting",
         ConnectionState.Connected => "connected",

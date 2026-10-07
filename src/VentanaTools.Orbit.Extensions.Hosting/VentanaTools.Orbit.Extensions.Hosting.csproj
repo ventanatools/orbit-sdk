@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\eng\Ventana.Package.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <AssemblyName>VentanaTools.Orbit.Extensions.Hosting</AssemblyName>
+    <RootNamespace>VentanaTools.Orbit.Extensions.Hosting</RootNamespace>
+    <PackageId>VentanaTools.Orbit.Extensions.Hosting</PackageId>
+    <Description>Runs an Orbit extension companion in the .NET Generic Host: AddCompanion registers its handler with dependency injection and runs the companion as a hosted service, with CompanionApp's file discovery, status and exit codes, logging through ILogger and stopping with the host.</Description>
+    <PackageTags>$(PackageTags);hosting;dependency-injection</PackageTags>
+    <IsPackable>true</IsPackable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- An add-on package may depend on Microsoft.Extensions abstractions packages; this one needs only the hosting
+         abstractions, which bring dependency injection and logging (contract §9.5). -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <!-- The add-on runs CompanionApp through its internal output seam, so the package depends on exactly the same
+         version of the author package (Directory.Build.targets writes the range as [version]). -->
+    <ProjectReference Include="..\VentanaTools.Orbit.Extensions\VentanaTools.Orbit.Extensions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+</Project>
