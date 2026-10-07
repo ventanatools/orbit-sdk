@@ -69,7 +69,9 @@ With PowerShell 7, run `pwsh -NoProfile -File tools/build.ps1` and
 
 `tools/build.ps1` builds the solution and packs every package into
 `artifacts/packages` with a local version, `0.1.0-dev.<UTC yyyyMMddHHmmss>`, so a
-package from an earlier build can never stand in for the one just built. It packs
+package from an earlier build can never stand in for the one just built. It first
+removes the repository's packages of any other version from that folder, so a
+`--prerelease` install without `--version` gets the newest build. It packs
 the libraries, then the templates, then the Node SDK tarball, then the tool,
 which carries the other three. It then builds the .NET samples against those
 packages, restored into a fresh folder, `artifacts/consumer-packages/<run id>`.

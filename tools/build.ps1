@@ -11,7 +11,9 @@ Runs unchanged on Windows PowerShell 5.1 and PowerShell 7.
    (-p:VentanaExtensionsVersion=<version>), so a package from an earlier build can never stand in
    for the one just built.
 2. Packs, into artifacts/packages and in this order: the author and Testing libraries, the
-   templates, the Node SDK tarball (npm pack), then the tool, which carries the other three.
+   templates, the Node SDK tarball (npm pack), then the tool, which carries the other three. The
+   family's packages of every other version are removed from that folder first, so a plain
+   --prerelease install gets this build.
 3. Restores and builds every .NET sample against those packages, into a fresh per-run folder,
    artifacts/consumer-packages/<run id>.
 4. Writes artifacts/build/state.json, which tools/verify.ps1 reads.
@@ -120,11 +122,24 @@ Write-Host ('Package family: ' + $family)
 Write-Host ('Version:        ' + $version)
 Write-Host ('Configuration:  ' + $Configuration)
 
-# Earlier dev builds and their consumer folders are not needed once a new build starts.
+# The family's packages of every other version, and earlier consumer folders, are not needed once a
+# new build starts. Removing the packages leaves this build the only one in the folder, so a plain
+# --prerelease install cannot pick an earlier one whose version sorts higher (a -preview or a
+# verification build above a -dev stamp). Other files in the folder are left alone.
 New-Item -ItemType Directory -Force -Path $packages, $stateFolder | Out-Null
-Get-ChildItem -LiteralPath $packages -File |
-    Where-Object { $_.Name -match '-dev\.\d{14}\.(nupkg|snupkg|tgz)$' } |
-    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
+$versionGroup = '(?<version>\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?)'
+$familyPackage = '^' + [regex]::Escape($family) + '(\.[A-Za-z][0-9A-Za-z]*)*\.' + $versionGroup + '\.s?nupkg$'
+$familyTarball = '^' + [regex]::Escape($family.ToLowerInvariant().Replace('.', '-')) + '-' + $versionGroup + '\.tgz$'
+$removed = 0
+foreach ($file in @(Get-ChildItem -LiteralPath $packages -File)) {
+    $packageMatch = [regex]::Match($file.Name, $familyPackage)
+    if (-not $packageMatch.Success) { $packageMatch = [regex]::Match($file.Name, $familyTarball) }
+    if ($packageMatch.Success -and $packageMatch.Groups['version'].Value -ne $version) {
+        Remove-Item -LiteralPath $file.FullName -Force
+        $removed++
+    }
+}
+if ($removed -gt 0) { Write-Host ('Removed ' + $removed + ' package(s) of other versions from ' + $packages + '.') }
 if (Test-Path -LiteralPath $consumerRoot) {
     Get-ChildItem -LiteralPath $consumerRoot -Directory | ForEach-Object { Remove-Folder $_.FullName }
 }
