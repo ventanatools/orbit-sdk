@@ -45,6 +45,59 @@
                       IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
   </ItemGroup>
 
+  <!--
+    The release notes: a link to the package version's section of CHANGELOG.md on GitHub. The anchor is taken
+    from the changelog's own heading for the version (GitHub's anchor: lowercased, punctuation other than hyphens
+    and underscores removed, spaces as hyphens), so the version is written once, in Directory.Build.props, and
+    the link follows the heading when its date is set for a release. A version without a section of its own,
+    such as a local -dev build, links to the changelog itself.
+  -->
+  <UsingTask TaskName="_VentanaReleaseNotes" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Changelog ParameterType="System.String" Required="true" />
+      <Version ParameterType="System.String" Required="true" />
+      <BaseUrl ParameterType="System.String" Required="true" />
+      <Url ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        Url = BaseUrl;
+        if (System.IO.File.Exists(Changelog))
+        {
+            foreach (var line in System.IO.File.ReadAllLines(Changelog))
+            {
+                if (!line.StartsWith("## [" + Version + "]", System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var anchor = new System.Text.StringBuilder();
+                foreach (var c in line.Substring(3).Trim().ToLowerInvariant())
+                {
+                    if (c == ' ')
+                    {
+                        anchor.Append('-');
+                    }
+                    else if (char.IsLetterOrDigit(c) || c == '-' || c == '_')
+                    {
+                        anchor.Append(c);
+                    }
+                }
+
+                Url = BaseUrl + "#" + anchor;
+                break;
+            }
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="_VentanaSetPackageReleaseNotes" BeforeTargets="GenerateNuspec" Condition="'$(PackageReleaseNotes)' == ''">
+    <_VentanaReleaseNotes Changelog="$(MSBuildThisFileDirectory)..\CHANGELOG.md" Version="$(PackageVersion)"
+                          BaseUrl="$(VentanaRepositoryUrl)/blob/main/CHANGELOG.md">
+      <Output TaskParameter="Url" PropertyName="PackageReleaseNotes" />
+    </_VentanaReleaseNotes>
+  </Target>
+
   <!-- SourceLink maps the repository root to VentanaRepositoryUrl, not to the clone's remote. -->
   <Target Name="_VentanaSetSourceLinkRepositoryUrl" BeforeTargets="SourceControlManagerPublishTranslatedUrls">
     <ItemGroup>

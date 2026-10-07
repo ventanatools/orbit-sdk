@@ -151,7 +151,8 @@ protocol-2 source preview, `Orbit.Extensions.Protocol` and `Orbit.Extensions.Sdk
 - The golden test vectors of the contract's Appendix A in `fixtures/`, shared by
   the .NET SDK, the Node SDK and the host, and the host-id registry
   `fixtures/hosts.json` (`HostRegistry`).
-- Public API tracking, package validation, SourceLink and symbol packages.
+- Public API tracking, package validation, SourceLink, symbol packages, and
+  release notes that link to the version's section of this changelog.
 - CI: CodeQL, Dependabot, a Native AOT publish of the Countdown sample, and a
   release workflow that builds, tests, packs and validates without publishing.
 - `eng/rename-product.ps1` and `tools/Set-HostCodename.ps1`, the scripted

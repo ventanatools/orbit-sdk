@@ -16,7 +16,10 @@ before the first push.
   packages, with package validation already applied by `dotnet pack`, as a
   workflow artifact kept for 30 days. It has no publishing step.
 - Every package carries SourceLink, deterministic builds in CI, a `.snupkg`
-  symbol package, `LICENSE`, `NOTICE` and `THIRD-PARTY-NOTICES.md`.
+  symbol package, `LICENSE`, `NOTICE` and `THIRD-PARTY-NOTICES.md`, and release
+  notes that link to its version's section of `CHANGELOG.md` on GitHub
+  (`eng/Ventana.Package.props` takes the anchor from the version's heading when
+  it packs; a version without a section links to the changelog itself).
 
 ## Before the first push
 
@@ -34,7 +37,8 @@ before the first push.
 5. **The version.** Set `VentanaExtensionsVersion` in `Directory.Build.props` and
    `version` in `node/orbit-extensions/package.json` to the release version, and
    give its changelog entry the release date (moving anything under Unreleased
-   into it).
+   into it) before you pack: the packages' release notes link to the heading as
+   it reads then.
 
 ## Adding publishing
 

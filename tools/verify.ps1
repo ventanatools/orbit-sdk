@@ -23,6 +23,8 @@ reads the version and run id it wrote to artifacts/build/state.json.
 7. The Generic Host add-on: its package depends on exactly this version of the author package and on
    the hosting abstractions alone, the feed new prepares carries it, and its readme's example builds
    against it from that feed.
+8. Every package's release notes link to its version's section of CHANGELOG.md, or to the changelog
+   when the version has no section (a -dev build).
 
 No name of the product is written here: the product names come from fixtures/hosts.json, the package
 family from the solution file's name and the tool's command from its project file.
@@ -402,6 +404,33 @@ try {
         throw ($hostingId + ' depends on ' + $foundText + '; expected ' + $wantedText + '.')
     }
     Write-Host ($hostingId + ': depends on ' + ($found -join ' and ') + '.')
+
+    # -----------------------------------------------------------------------------------------
+    Write-Step 'Release notes'
+    # The link eng/Ventana.Package.props computes: the version's heading in CHANGELOG.md as GitHub
+    # anchors it, or the changelog itself.
+    $packageProps = [System.IO.File]::ReadAllText((Join-Repository 'eng/Ventana.Package.props'))
+    $repositoryUrl = [regex]::Match($packageProps, '<VentanaRepositoryUrl>([^<]+)</VentanaRepositoryUrl>')
+    if (-not $repositoryUrl.Success) { throw 'eng/Ventana.Package.props has no VentanaRepositoryUrl.' }
+    $changelogUrl = $repositoryUrl.Groups[1].Value.Trim() + '/blob/main/CHANGELOG.md'
+    $expectedNotes = $changelogUrl
+    foreach ($line in [System.IO.File]::ReadAllLines((Join-Repository 'CHANGELOG.md'))) {
+        if (-not $line.StartsWith('## [' + $version + ']', [System.StringComparison]::Ordinal)) { continue }
+        $anchor = New-Object System.Text.StringBuilder
+        foreach ($c in $line.Substring(3).Trim().ToLowerInvariant().ToCharArray()) {
+            if ($c -eq ' ') { [void]$anchor.Append('-') }
+            elseif ([char]::IsLetterOrDigit($c) -or $c -eq '-' -or $c -eq '_') { [void]$anchor.Append($c) }
+        }
+        $expectedNotes = $changelogUrl + '#' + $anchor.ToString()
+        break
+    }
+    $familyPackages = @(Get-ChildItem -LiteralPath $packages -Filter ($family + '*.' + $version + '.nupkg') -File)
+    if ($familyPackages.Count -lt 5) { throw ('Expected the five packages of ' + $version + ' in ' + $packages + '.') }
+    foreach ($file in $familyPackages) {
+        $notes = [string](Get-PackageNuspec $file.FullName).package.metadata.releaseNotes
+        if ($notes -ne $expectedNotes) { throw ($file.Name + ' has the release notes "' + $notes + '"; expected "' + $expectedNotes + '".') }
+    }
+    Write-Host ('Every package links its release notes to ' + $expectedNotes)
 
     # -----------------------------------------------------------------------------------------
     Write-Step 'Install the new tool'
