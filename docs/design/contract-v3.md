@@ -2835,9 +2835,13 @@ Behaviour the SDK guarantees:
   a status without a reason, where the fix and help link come from
   `ReasonCodeInfo`. The catalog's "the host" is rendered with the display name
   (from `HostRegistry`) of the pairing's host id, or, before a pairing is read,
-  of the manifest's first active host (else its first listed id), for example
+  of the manifest's first active host, for example
   `ventana: waiting (auth.identity-changed) In Orbit, allow the new
   program or revoke access. https://dev.ventana.tools/go/orbit/codes#auth-identity-changed`.
+  When the registry knows neither (a mistyped id, or the test host), the line
+  keeps "the host" and carries no help link, which would lead nowhere:
+  `ventana: waiting (pairing.missing) In the host, choose Save connection info.`
+  The Node SDK prints the same lines.
   For each `HandlerFaulted` it prints
   `ventana: fault <Kind> in <contribution-id> (<code>) <fix> <help link>`, with
   the code `session.handler-faulted`, `session.handler-stalled` or
@@ -3250,7 +3254,7 @@ Ventana tooling verbs `new`, `validate`, `pack`, `verify` and `test` (§2.7).
 
 | Command | Purpose |
 |---|---|
-| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same arguments plus `--package-source <feed>`; it also passes `--display-name` and `--no-tests` to the template. It refuses an `--extension-id` outside the third-party grammar with the id code and exit 2 before anything is created. If the template pack is not installed, prints the install command, which installs it from the package file in the feed, and exits 3. After creating a Node project it copies the Node SDK tarball from the feed into `vendor/`, then prints the next commands. |
+| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same arguments plus `--package-source <feed>`; it also passes `--display-name` and `--no-tests` to the template. It refuses an `--extension-id` outside the third-party grammar with the id code, and a `--host` that is not an active registry host (`<id> is not an active host id; use one of: <active ids>. [--host]`), with exit 2 before anything is created. If the template pack is not installed, prints the install command, which installs it from the package file in the feed, and exits 3. After creating a Node project it copies the Node SDK tarball from the feed into `vendor/`, then prints the next commands. |
 | `orbit-ext validate [<path>] [--host <id>] [--json] [--warnings-as-errors]` | Validates an `extension.json`, a folder containing one (with its `strings/` folder), or a package file. Default path: the current directory. |
 | `orbit-ext pack [<project-dir>] [-o <output-dir>] [--host <id>] [--force] [--json]` | Builds a package from `extension.pack.json` (§11.3), running its `build` step first when it has one. |
 | `orbit-ext verify <package> [--host <id>] [--json]` | Verifies a package (§5.7) and prints its id, version, hosts, contributions, file count, size and package hash. |

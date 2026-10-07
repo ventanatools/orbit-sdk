@@ -336,19 +336,23 @@ class AppRunner {
     }
 }
 
+/**
+ * The host whose help links and wording a status line uses: the pairing's, else the manifest's
+ * first active host, and only when the registry knows it. For an unknown id (a typo, or a test
+ * host) the line keeps "the host" and has no help link, which would lead nowhere.
+ */
+function hostFor(manifest, pairing) {
+    return pairing ? findHost(pairing.hostId) : firstActiveHost(manifest.hosts);
+}
+
 function hostIdFor(manifest, pairing) {
-    if (pairing) return pairing.hostId;
-    const active = firstActiveHost(manifest.hosts);
-    return active ? active.id : manifest.hosts[0];
+    const host = hostFor(manifest, pairing);
+    return host ? host.id : undefined;
 }
 
 function hostNameFor(manifest, pairing) {
-    if (pairing) {
-        const host = findHost(pairing.hostId);
-        return host ? host.displayName : pairing.hostId;
-    }
-    const active = firstActiveHost(manifest.hosts);
-    return active ? active.displayName : manifest.hosts[0];
+    const host = hostFor(manifest, pairing);
+    return host ? host.displayName : undefined;
 }
 
 /** The directory of the entry module (require.main), else of the script, else the current directory. */

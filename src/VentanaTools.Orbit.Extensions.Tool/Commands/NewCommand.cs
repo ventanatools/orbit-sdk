@@ -131,6 +131,14 @@ internal static class NewCommand
             return ExitCodes.Usage;
         }
 
+        // A project for a host that is not active can never pair; refuse it before anything is created.
+        if (options.Host is { } host && HostRegistry.Find(host) is not { Status: HostStatus.Active })
+        {
+            var active = HostRegistry.Known.Where(entry => entry.Status == HostStatus.Active).Select(entry => entry.Id);
+            console.Fail(host + " is not an active host id; use one of: " + string.Join(", ", active) + ". [--host]");
+            return ExitCodes.Usage;
+        }
+
         if (kind == "node" && options.NoTests)
         {
             console.Fail("--no-tests applies to the .NET templates only.");

@@ -55,8 +55,30 @@ public sealed class CompanionAppTests : IDisposable
         var code = await CompanionApp.RunCoreAsync(Args(), new TestHandler(), new CompanionAppOptions { Output = output, WatchFiles = false }, null,
             CancellationToken.None);
         Assert.Equal(3, code);
-        Assert.StartsWith("ventana: stopped (pairing.missing) In example-host, choose Save connection info. https://dev.ventana.tools/go/example-host/codes#pairing-missing",
+        // The test host is not in the registry, so the line keeps "the host" and links nowhere.
+        Assert.StartsWith("ventana: stopped (pairing.missing) In the host, choose Save connection info." + Environment.NewLine,
             output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ARegistryHostNamesTheActionAndLinksToItsHelp()
+    {
+        var host = HostRegistry.Known.First(entry => entry.Status == HostStatus.Active);
+        var manifest = TestManifests.Countdown;
+        WriteManifest(new ExtensionManifest
+        {
+            Id = manifest.Id,
+            Name = manifest.Name,
+            Description = manifest.Description,
+            Version = manifest.Version,
+            Hosts = [host.Id],
+            Contributions = manifest.Contributions,
+        });
+        var output = new StringWriter();
+        Assert.Equal(3, await CompanionApp.RunCoreAsync(Args(), new TestHandler(), new CompanionAppOptions { Output = output, WatchFiles = false }, null,
+            CancellationToken.None));
+        Assert.StartsWith("ventana: stopped (pairing.missing) In " + host.DisplayName + ", choose Save connection info. https://dev.ventana.tools/go/"
+            + host.Id + "/codes#pairing-missing" + Environment.NewLine, output.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -80,7 +102,7 @@ public sealed class CompanionAppTests : IDisposable
         using var stop = new CancellationTokenSource();
         var run = CompanionApp.RunCoreAsync(Args(), new TestHandler(), Options(output, clock), Transport(hosts), stop.Token);
         await ClientHarness.WaitForAsync(() => output.Text.Contains("watching " + PairingPath, StringComparison.Ordinal), "watching");
-        Assert.Contains("ventana: waiting (pairing.missing) In example-host, choose Save connection info.", output.Text, StringComparison.Ordinal);
+        Assert.Contains("ventana: waiting (pairing.missing) In the host, choose Save connection info.", output.Text, StringComparison.Ordinal);
         clock.Advance(TimeSpan.FromSeconds(5));
         Assert.True(hosts.Reader.Count == 0);
 
@@ -112,8 +134,9 @@ public sealed class CompanionAppTests : IDisposable
         Assert.IsType<AuthenticateMessage>(await first.ReadAsync(ConnectionPhase.Handshake));
         await first.SendAsync(new ErrorMessage { Code = ReasonCode.ManifestMismatch, Message = "Manifest hash differs." });
         await ClientHarness.WaitForAsync(() => output.Text.Contains("ventana: waiting (manifest.mismatch)", StringComparison.Ordinal), "waiting");
-        Assert.Contains("Reload the manifest in example-host, or update the companion's extension.json. https://dev.ventana.tools/go/example-host/codes#manifest-mismatch",
-            output.Text, StringComparison.Ordinal);
+        Assert.Contains("ventana: waiting (manifest.mismatch) Reload the manifest in the host, or update the companion's extension.json.",
+            output.Text.Split('\n').Select(line => line.TrimEnd('\r')));
+        Assert.DoesNotContain("https://", output.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Manifest hash differs.", output.Text, StringComparison.Ordinal);
 
         var changed = WithExtraContribution(TestManifests.Countdown);

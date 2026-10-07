@@ -30,7 +30,7 @@ from there.
 
 | Command | What it does |
 |---|---|
-| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same options and `--package-source <feed>`. When the template pack is not installed, prints the command that installs it from the feed and exits 3. |
+| `orbit-ext new <action\|widget\|node> [-n <name>] [-o <dir>] [--extension-id <id>] [--host <id>] [--display-name <name>] [--no-tests] [--feed <dir>]` | Prepares the feed, then runs `dotnet new orbit-ext-<kind>` with the same options and `--package-source <feed>`. Refuses an invalid `--extension-id`, or a `--host` that is not an active host, with exit 2 before anything is created. When the template pack is not installed, prints the command that installs it from the feed and exits 3. |
 | `orbit-ext validate [<path>] [--host <id>] [--json] [--warnings-as-errors]` | Validates an `extension.json`, a folder that contains one (with its `strings/` folder), or a package. |
 | `orbit-ext pack [<project-dir>] [-o <output-dir>] [--host <id>] [--force] [--json]` | Builds `<id>-<version>.orbitextension` from `extension.pack.json`, running its `build` step first. The default output folder is `artifacts/` in the project. |
 | `orbit-ext verify <package> [--host <id>] [--json]` | Verifies a package and prints its id, version, hosts, contributions, file count, size and package hash. |

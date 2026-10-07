@@ -14,6 +14,7 @@ const { runCompanion, parseArguments, ContributionRouter, Outcome } = require(".
 const { ManualClock } = require("../testing.js");
 const { kAppInternals } = require("../lib/companion.js");
 const { duplexPair } = require("../lib/client/transport.js");
+const { hosts } = require("../lib/hosts.js");
 
 function output() {
     const lines = [];
@@ -82,7 +83,8 @@ test("runCompanion reports a missing pairing with the code, fix and help link, a
         const out = output();
         const code = await runCompanion([], {}, { output: out, watchFiles: false, [kAppInternals]: { entryDirectory: folder, hookSigint: false } });
         assert.equal(code, 3);
-        assert.deepEqual(out.lines, ["ventana: stopped (pairing.missing) In example-host, choose Save connection info. https://dev.ventana.tools/go/example-host/codes#pairing-missing"]);
+        // The test host is not in the registry, so the line keeps "the host" and links nowhere.
+        assert.deepEqual(out.lines, ["ventana: stopped (pairing.missing) In the host, choose Save connection info."]);
     } finally {
         fs.rmSync(folder, { recursive: true, force: true });
     }
@@ -103,7 +105,7 @@ test("first run: runCompanion waits for the pairing file, connects, prints statu
             [kAppInternals]: { entryDirectory: folder, clock, transportFor: scriptedTransport(clock, peers), hookSigint: false },
         });
         await until(() => out.lines.length >= 2, "the first-run lines");
-        assert.equal(out.lines[0], "ventana: waiting (pairing.missing) In example-host, choose Save connection info. https://dev.ventana.tools/go/example-host/codes#pairing-missing");
+        assert.equal(out.lines[0], "ventana: waiting (pairing.missing) In the host, choose Save connection info.");
         assert.equal(out.lines[1], "ventana: watching " + path.join(folder, "example.countdown.pairing.json"));
         fs.copyFileSync(fixturePath("pairing/valid-lf.json"), path.join(folder, "example.countdown.pairing.json"));
         clock.advance(1000);
@@ -147,11 +149,11 @@ test("runCompanion exits 4 when the client stops with watchFiles off, and prints
         assert.equal((await peer.read("Authenticated", "result")).outcome, "Failed");
         await until(() => faults.length === 1, "the fault");
         await settle(5);
-        assert.ok(out.lines.includes("ventana: fault Exception in example.countdown/timer (session.handler-faulted) Fix the exception (the SDK passes it to the author). https://dev.ventana.tools/go/example-host/codes#session-handler-faulted"));
+        assert.ok(out.lines.includes("ventana: fault Exception in example.countdown/timer (session.handler-faulted) Fix the exception (the SDK passes it to the author)."));
         assert.ok(out.lines.some((line) => line.startsWith("Error: author bug")));
         peer.send({ type: "error", code: "host.access-revoked", message: "Revoked by the person." });
         assert.equal(await running, 4);
-        assert.ok(out.lines.includes("ventana: stopped (host.access-revoked) Get new connection info after access is allowed again. https://dev.ventana.tools/go/example-host/codes#host-access-revoked"));
+        assert.ok(out.lines.includes("ventana: stopped (host.access-revoked) Get new connection info after access is allowed again."));
         assert.ok(out.lines.includes("ventana: host message: Revoked by the person."));
         assert.equal(out.lines.some((line) => line.includes("AAECAw")), false);
     } finally {
@@ -165,7 +167,27 @@ test("an invalid pairing file prints its code and the watched path", async () =>
         fs.copyFileSync(fixturePath("pairing/invalid-secret-short.json"), path.join(folder, "example.countdown.pairing.json"));
         const out = output();
         assert.equal(await runCompanion([], {}, { output: out, watchFiles: false, [kAppInternals]: { entryDirectory: folder, hookSigint: false } }), 3);
-        assert.equal(out.lines[0], "ventana: stopped (pairing.secret-invalid) Save connection info again. https://dev.ventana.tools/go/example-host/codes#pairing-secret-invalid");
+        assert.equal(out.lines[0], "ventana: stopped (pairing.secret-invalid) Save connection info again.");
+    } finally {
+        fs.rmSync(folder, { recursive: true, force: true });
+    }
+});
+
+test("a registry host names the action and links to its help", async () => {
+    const folder = workspace();
+    try {
+        const host = hosts.find((entry) => entry.status === "Active");
+        const manifest = JSON.parse(fs.readFileSync(fixturePath("manifests/valid/countdown.json"), "utf8"));
+        manifest.hosts = [host.id];
+        const manifestPath = path.join(folder, "extension.json");
+        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+        const out = output();
+        const code = await runCompanion(["--manifest", manifestPath, "--pairing", path.join(folder, "missing.pairing.json")], {}, {
+            output: out, watchFiles: false, [kAppInternals]: { entryDirectory: folder, hookSigint: false },
+        });
+        assert.equal(code, 3);
+        assert.deepEqual(out.lines, ["ventana: stopped (pairing.missing) In " + host.displayName + ", choose Save connection info. https://dev.ventana.tools/go/"
+            + host.id + "/codes#pairing-missing"]);
     } finally {
         fs.rmSync(folder, { recursive: true, force: true });
     }

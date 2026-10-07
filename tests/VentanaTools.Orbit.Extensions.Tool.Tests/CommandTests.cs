@@ -149,6 +149,24 @@ public sealed class ExitCodeTests
     }
 
     [Fact]
+    public async Task NewRefusesAHostThatIsNotActiveBeforeCreatingAnything()
+    {
+        // A typo, the test host and a reserved id that is not active all make projects that can never pair.
+        using var folder = new TempFolder();
+        var reserved = HostRegistry.ReservedIds.First(id => HostRegistry.Find(id) is not { Status: HostStatus.Active });
+        foreach (var host in new[] { "nonsense", "example-host", reserved })
+        {
+            var output = Path.Combine(folder.Path, "Y-" + host);
+            var run = await ToolHarness.RunAsync(folder.Path, "new", "action", "-n", "Y", "-o", output, "--host", host, "--feed", folder.Combine("feed"));
+            Assert.Equal(2, run.ExitCode);
+            var active = string.Join(", ", HostRegistry.Known.Where(entry => entry.Status == HostStatus.Active).Select(entry => entry.Id));
+            Assert.Contains(host + " is not an active host id; use one of: " + active + ". [--host]", run.Error, StringComparison.Ordinal);
+            Assert.False(Directory.Exists(output));
+            Assert.False(Directory.Exists(folder.Combine("feed")));
+        }
+    }
+
+    [Fact]
     public async Task HelpAndVersionSucceed()
     {
         var help = await ToolHarness.RunAsync(Repository.Root, "--help");

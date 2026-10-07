@@ -594,21 +594,17 @@ internal sealed class AppRunner
         }
     }
 
-    /// <summary>The host whose help links and wording a status line uses: the pairing's, else the manifest's first active host.</summary>
-    private static string? HostIdFor(ExtensionManifest manifest, Pairing? pairing) =>
-        pairing?.HostId ?? HostRegistry.FirstActive(manifest.Hosts)?.Id ?? FirstHost(manifest);
+    /// <summary>
+    /// The host whose help links and wording a status line uses: the pairing's, else the manifest's
+    /// first active host, and only when the registry knows it. For an unknown id (a typo, or a test
+    /// host) the line keeps "the host" and has no help link, which would lead nowhere.
+    /// </summary>
+    private static HostInfo? HostFor(ExtensionManifest manifest, Pairing? pairing) =>
+        pairing is not null ? HostRegistry.Find(pairing.HostId) : HostRegistry.FirstActive(manifest.Hosts);
 
-    private static string? HostName(ExtensionManifest manifest, Pairing? pairing)
-    {
-        if (pairing is not null)
-        {
-            return HostRegistry.Find(pairing.HostId)?.DisplayName ?? pairing.HostId;
-        }
+    private static string? HostIdFor(ExtensionManifest manifest, Pairing? pairing) => HostFor(manifest, pairing)?.Id;
 
-        return HostRegistry.FirstActive(manifest.Hosts)?.DisplayName ?? FirstHost(manifest);
-    }
-
-    private static string? FirstHost(ExtensionManifest manifest) => manifest.Hosts.Count > 0 ? manifest.Hosts[0] : null;
+    private static string? HostName(ExtensionManifest manifest, Pairing? pairing) => HostFor(manifest, pairing)?.DisplayName;
 
     internal static string StatusLine(ConnectionState state, ReasonCode? reason, string? hostId, string? hostName)
     {
