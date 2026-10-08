@@ -1,0 +1,9 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.too-large",
+      "path": "",
+      "severity": "Error"
+    }
+  ]
+}

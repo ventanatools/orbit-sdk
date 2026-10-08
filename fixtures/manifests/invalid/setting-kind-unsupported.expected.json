@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "setting.kind-unsupported",
+      "path": "/contributions/0/settings/0/kind",
+      "severity": "Error",
+      "line": 31,
+      "column": 19
+    }
+  ]
+}

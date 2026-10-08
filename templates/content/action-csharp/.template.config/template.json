@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Ventana Tools",
+  "classifications": [
+    "Extension",
+    "Companion",
+    "Windows"
+  ],
+  "identity": "VentanaTools.Orbit.Extensions.Templates.Action.CSharp",
+  "groupIdentity": "VentanaTools.Orbit.Extensions.Templates.Action",
+  "name": "Extension action companion",
+  "description": "A .NET companion with one action that has one Choice setting, an xUnit test project with the extension test kit, the manifest, the pack configuration and a local tool manifest.",
+  "shortName": "orbit-ext-action",
+  "sourceName": "TemplateSourceName",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "extensionId": {
+      "type": "parameter",
+      "datatype": "text",
+      "description": "The extension id, publisher.name in lowercase letters, digits and hyphens. Default: example. and the project name.",
+      "defaultValue": ""
+    },
+    "hostId": {
+      "type": "parameter",
+      "datatype": "text",
+      "description": "The id of the host the extension is for, written into hosts.",
+      "defaultValue": "orbit",
+      "replaces": "template-host"
+    },
+    "displayName": {
+      "type": "parameter",
+      "datatype": "text",
+      "description": "The extension's name, shown to people. Default: the project name.",
+      "defaultValue": ""
+    },
+    "packageSource": {
+      "type": "parameter",
+      "datatype": "text",
+      "description": "A folder of packages to restore the extension packages from (the tool's new command passes its feed).",
+      "defaultValue": "",
+      "replaces": "TEMPLATE_PACKAGE_SOURCE"
+    },
+    "noTests": {
+      "type": "parameter",
+      "datatype": "bool",
+      "description": "Create no test project.",
+      "defaultValue": "false"
+    },
+    "includeTests": {
+      "type": "computed",
+      "value": "(!noTests)"
+    },
+    "hasPackageSource": {
+      "type": "computed",
+      "value": "(packageSource != \"\")"
+    },
+    "derivedExtensionId": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "extensionIdFromName"
+    },
+    "extensionIdValue": {
+      "type": "generated",
+      "generator": "coalesce",
+      "parameters": {
+        "sourceVariableName": "extensionId",
+        "fallbackVariableName": "derivedExtensionId"
+      },
+      "replaces": "example.template-extension"
+    },
+    "extensionIdValid": {
+      "type": "generated",
+      "generator": "regexMatch",
+      "datatype": "bool",
+      "parameters": {
+        "source": "extensionIdValue",
+        "pattern": "^(?!(con|prn|aux|nul|com[1-9]|lpt[1-9])\\.)[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+      }
+    },
+    "displayNameValue": {
+      "type": "generated",
+      "generator": "coalesce",
+      "parameters": {
+        "sourceVariableName": "displayName",
+        "fallbackVariableName": "name"
+      },
+      "replaces": "Template Extension Name"
+    },
+    "sdkVersion": {
+      "type": "generated",
+      "generator": "constant",
+      "parameters": {
+        "value": "@VENTANA_VERSION@"
+      },
+      "replaces": "0.0.0-template-version"
+    },
+    "projectName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "safeName",
+      "replaces": "TemplateExtension",
+      "fileRename": "TemplateExtension"
+    }
+  },
+  "forms": {
+    "lowerInvariant": {
+      "identifier": "lowerCaseInvariant"
+    },
+    "nonSegmentToHyphen": {
+      "identifier": "replace",
+      "pattern": "[^a-z0-9]+",
+      "replacement": "-"
+    },
+    "trimHyphens": {
+      "identifier": "replace",
+      "pattern": "^-+|-+$",
+      "replacement": ""
+    },
+    "examplePublisher": {
+      "identifier": "replace",
+      "pattern": "^",
+      "replacement": "example."
+    },
+    "extensionIdFromName": {
+      "identifier": "chain",
+      "steps": [
+        "lowerInvariant",
+        "nonSegmentToHyphen",
+        "trimHyphens",
+        "examplePublisher"
+      ]
+    },
+    "safeName": {
+      "identifier": "safe_name"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(!includeTests)",
+          "exclude": [
+            "tests/**",
+            "TemplateExtension.slnx"
+          ],
+          "rename": {
+            "TemplateExtension.NoTests.slnx": "TemplateExtension.slnx"
+          }
+        },
+        {
+          "condition": "(includeTests)",
+          "exclude": [
+            "TemplateExtension.NoTests.slnx"
+          ]
+        }
+      ]
+    }
+  ]
+}

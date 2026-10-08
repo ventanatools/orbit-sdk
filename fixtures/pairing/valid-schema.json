@@ -1,0 +1,10 @@
+{
+  "$schema": "https://dev.ventana.tools/schemas/extensions/pairing.v3.json",
+  "pairingVersion": 3,
+  "mode": "Persistent",
+  "hostId": "example-host",
+  "pipeName": "Ventana.Extensions.v3.example-host.store.a8c06b3027d3fc4a.00112233445566778899aabbccddeeff",
+  "registrationId": "00112233445566778899aabbccddeeff",
+  "extensionId": "example.countdown",
+  "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+}

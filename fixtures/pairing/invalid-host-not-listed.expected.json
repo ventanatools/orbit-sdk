@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.host-not-listed",
+      "path": "/hostId",
+      "severity": "Error",
+      "line": 4,
+      "column": 13
+    }
+  ]
+}

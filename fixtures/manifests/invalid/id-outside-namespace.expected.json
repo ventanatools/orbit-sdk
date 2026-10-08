@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "id.outside-namespace",
+      "path": "/contributions/1/id",
+      "severity": "Error",
+      "line": 73,
+      "column": 13
+    }
+  ]
+}

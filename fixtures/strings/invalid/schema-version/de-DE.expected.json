@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "schema.version-unsupported",
+      "path": "/schemaVersion",
+      "severity": "Error",
+      "line": 2,
+      "column": 20
+    }
+  ]
+}

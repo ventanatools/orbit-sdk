@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.version-unsupported",
+      "path": "/pairingVersion",
+      "severity": "Error",
+      "line": 2,
+      "column": 21
+    }
+  ]
+}

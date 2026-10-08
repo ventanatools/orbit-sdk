@@ -1,0 +1,31 @@
+{
+  "$schema": ".schemas/manifest.v3.json",
+  "schemaVersion": 3,
+  "id": "example.template-extension",
+  "name": "Template Extension Name",
+  "description": "Writes a greeting to the companion's console when picked.",
+  "version": "0.1.0",
+  "hosts": ["template-host"],
+  "disclosures": { "network": "None" },
+  "contributions": [
+    {
+      "id": "example.template-extension/greet",
+      "name": "Greet",
+      "description": "Writes the chosen greeting to the companion's console.",
+      "glyph": "\uE8BD",
+      "provides": ["invoke"],
+      "settings": [
+        {
+          "id": "greeting",
+          "kind": "Choice",
+          "name": "Greeting",
+          "default": "hello",
+          "choices": [
+            { "value": "hello", "name": "Hello" },
+            { "value": "good-morning", "name": "Good morning" }
+          ]
+        }
+      ]
+    }
+  ]
+}

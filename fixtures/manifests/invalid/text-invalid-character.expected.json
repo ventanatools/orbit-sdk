@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "text.invalid-character",
+      "path": "/description",
+      "severity": "Error",
+      "line": 5,
+      "column": 18
+    }
+  ]
+}

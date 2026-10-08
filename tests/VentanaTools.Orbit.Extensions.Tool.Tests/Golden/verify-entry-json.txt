@@ -1,0 +1,24 @@
+exit 1
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "verify",
+  "ok": false,
+  "diagnostics": [
+    {
+      "code": "json.unknown-member",
+      "path": "/entrypoint",
+      "message": "This member is not part of the schema: a typo, or a member of a newer schema.",
+      "severity": "Error",
+      "file": "fixtures/packages/manifest-invalid.zip!/extension.json",
+      "line": 82,
+      "column": 17
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 0
+  }
+}
+--- error

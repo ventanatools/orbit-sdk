@@ -1,0 +1,9 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.too-large",
+      "path": "",
+      "severity": "Error"
+    }
+  ]
+}

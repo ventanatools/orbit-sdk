@@ -1,0 +1,24 @@
+exit 0
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "validate",
+  "ok": true,
+  "diagnostics": [
+    {
+      "code": "manifest.host-unknown",
+      "path": "/hosts/0",
+      "message": "This host id is not an active host in the registry.",
+      "severity": "Warning",
+      "file": "fixtures/manifests/valid/countdown.json",
+      "line": 7,
+      "column": 13
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 1
+  }
+}
+--- error

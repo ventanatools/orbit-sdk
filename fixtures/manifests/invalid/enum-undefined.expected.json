@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "enum.undefined",
+      "path": "/disclosures/network",
+      "severity": "Error",
+      "line": 16,
+      "column": 16
+    }
+  ]
+}

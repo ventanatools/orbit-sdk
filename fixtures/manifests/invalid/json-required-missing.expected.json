@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.required-missing",
+      "path": "/description",
+      "severity": "Error",
+      "line": 1,
+      "column": 1
+    }
+  ]
+}

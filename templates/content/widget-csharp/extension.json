@@ -1,0 +1,19 @@
+{
+  "$schema": ".schemas/manifest.v3.json",
+  "schemaVersion": 3,
+  "id": "example.template-extension",
+  "name": "Template Extension Name",
+  "description": "Counts how often its widget is picked and shows the count on its face.",
+  "version": "0.1.0",
+  "hosts": ["template-host"],
+  "disclosures": { "network": "None" },
+  "contributions": [
+    {
+      "id": "example.template-extension/tally",
+      "name": "Tally",
+      "description": "Shows how often it was picked. Picking it adds one.",
+      "glyph": "\uE710",
+      "provides": ["invoke", "face"]
+    }
+  ]
+}

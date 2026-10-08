@@ -1,0 +1,96 @@
+{
+  "about": "Frames a receiver must accept or ignore (contract section 7.11 rules 2 and 3, and the open error-code registry of section 7.5). expect message: the frame reads as a message of type; expect ignored: the frame is discarded with code. unknownCode: the error's code parses but no catalog has it.",
+  "cases": [
+    {
+      "name": "an unknown member in a known message",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"reason\":\"x\"}",
+      "expect": "message",
+      "type": "stopSession"
+    },
+    {
+      "name": "an unknown member holding an object and an array",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1,\"future\":{\"a\":[1,2,{\"b\":true}]},\"more\":[false]}",
+      "expect": "message",
+      "type": "ping"
+    },
+    {
+      "name": "an unknown member in a nested face",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"goodForSeconds\":5,\"color\":\"red\",\"picture\":{\"$type\":\"none\",\"size\":2}}}",
+      "expect": "message",
+      "type": "setFace"
+    },
+    {
+      "name": "the reserved hello member credential is ignored",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\",\"credential\":{\"$type\":\"perLaunch\",\"id\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\"}}",
+      "expect": "message",
+      "type": "hello"
+    },
+    {
+      "name": "an unknown member in ready.limits",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000,\"maxImageBytes\":1}}",
+      "expect": "message",
+      "type": "ready"
+    },
+    {
+      "name": "an unknown message type after authentication",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"futureThing\",\"x\":1}",
+      "expect": "ignored",
+      "code": "protocol.type-unknown"
+    },
+    {
+      "name": "a case variant of a known type is an unknown type",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setface\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\"}",
+      "expect": "ignored",
+      "code": "protocol.type-unknown"
+    },
+    {
+      "name": "an error with a code no catalog has",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"future.reason\"}",
+      "expect": "message",
+      "type": "error",
+      "unknownCode": "future.reason"
+    },
+    {
+      "name": "an unknown code with retryAfterMs",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"future.reason\",\"retryAfterMs\":1000}",
+      "expect": "message",
+      "type": "error",
+      "unknownCode": "future.reason"
+    },
+    {
+      "name": "an unknown code before verification",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"future.reason\",\"retryAfterMs\":300000}",
+      "expect": "message",
+      "type": "error",
+      "unknownCode": "future.reason"
+    },
+    {
+      "name": "an unknown capability id",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[\"future.feature\"],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"a3DMdCZoy1AqM40/pLoOWASJ+rt+0BX+nGJA9WTdV4I=\"}",
+      "expect": "message",
+      "type": "challenge"
+    }
+  ]
+}

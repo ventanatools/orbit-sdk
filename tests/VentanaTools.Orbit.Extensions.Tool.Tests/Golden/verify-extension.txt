@@ -1,0 +1,6 @@
+exit 1
+--- out
+renamed.zip: error package.extension: The package file name does not end with this host's package file extension. []
+  fix: Use the package file extension of the host-id registry.
+{tool}: 1 error, 0 warnings
+--- error

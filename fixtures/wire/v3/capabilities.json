@@ -1,0 +1,61 @@
+{
+  "about": "The capability registry of contract section 7.4, generated from the C# registry. Every baseline feature of protocol 3 is implied by the negotiated version; these ids name optional features. Receivers ignore ids they do not know, and an id is never reused. Ids that start with x. are experimental and work only in a host's developer mode.",
+  "experimentalPrefix": "x.",
+  "capabilities": [
+    {
+      "id": "pairing.per-launch",
+      "status": "Reserved",
+      "meaning": "Per-launch pairing for host-managed activation."
+    },
+    {
+      "id": "identity.package",
+      "status": "Reserved",
+      "meaning": "The host verifies the client's package family name."
+    },
+    {
+      "id": "face.image",
+      "status": "Reserved",
+      "meaning": "Image pictures in faces."
+    },
+    {
+      "id": "face.time",
+      "status": "Reserved",
+      "meaning": "Time lines the host formats."
+    },
+    {
+      "id": "invoke.progress",
+      "status": "Reserved",
+      "meaning": "A companion may extend an invocation's deadline while it works."
+    },
+    {
+      "id": "settings.toggle",
+      "status": "Reserved",
+      "meaning": "The Toggle setting kind, with a later manifest schema."
+    },
+    {
+      "id": "settings.text",
+      "status": "Reserved",
+      "meaning": "The Text setting kind, with a later manifest schema."
+    },
+    {
+      "id": "settings.number",
+      "status": "Reserved",
+      "meaning": "The Number setting kind, with a later manifest schema."
+    },
+    {
+      "id": "strings.localized",
+      "status": "Reserved",
+      "meaning": "The host applies strings files and says which language it chose."
+    },
+    {
+      "id": "failure.llm-unavailable",
+      "status": "Reserved",
+      "meaning": "The failure token LlmUnavailable."
+    },
+    {
+      "id": "x.test-echo",
+      "status": "Experimental",
+      "meaning": "Used by conformance tests; does nothing."
+    }
+  ]
+}

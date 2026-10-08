@@ -1,0 +1,13 @@
+{
+  "$schema": ".schemas/pack.v1.json",
+  "packVersion": 1,
+  "readme": "PACKAGE-README.md",
+  "payload": [
+    {
+      "from": ".",
+      "to": "companion",
+      "include": ["index.js", "package.json", "package-lock.json", "extension.json", "vendor/*.tgz"]
+    },
+    { "from": "licenses", "to": "licenses" }
+  ]
+}

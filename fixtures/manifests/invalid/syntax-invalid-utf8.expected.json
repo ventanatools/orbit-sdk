@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.syntax",
+      "path": "",
+      "severity": "Error",
+      "line": 4,
+      "column": 22
+    }
+  ]
+}

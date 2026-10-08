@@ -1,41 +1,85 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 namespace CountdownExtensionSample;
 
-internal enum CountdownPhase { Ready, Running, Paused, Finished }
-internal enum CountdownMode { Start, Pause, Reset }
+internal enum CountdownPhase
+{
+    Ready = 1,
+    Running = 2,
+    Paused = 3,
+    Finished = 4,
+}
+
+internal enum CountdownMode
+{
+    Start = 1,
+    Pause = 2,
+    Reset = 3,
+}
+
 internal readonly record struct CountdownSnapshot(TimeSpan Remaining, CountdownPhase Phase);
+
 internal readonly record struct CountdownChoice(CountdownMode Mode, TimeSpan Duration);
 
-// Elapsed time is derived from a monotonic clock, never from publication count.
-// No background work is needed while Orbit has no sessions for this sample.
-internal sealed class Countdown(TimeProvider timeProvider)
+/// <summary>
+/// One countdown shared by every placement. Elapsed time comes from a monotonic clock, never from
+/// how often a face was published, and nothing runs in the background: a reader computes the time
+/// left when it asks.
+/// </summary>
+internal sealed class Countdown(TimeProvider time)
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private TimeSpan _remaining = TimeSpan.FromMinutes(5);
     private CountdownPhase _phase = CountdownPhase.Ready;
     private long _startedAt;
+    private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>Completes at the next change a pick makes (start, pause or reset).</summary>
+    public Task Changed
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _changed.Task;
+            }
+        }
+    }
 
     public CountdownSnapshot Read()
     {
-        lock (_gate) return ReadCore();
-    }
-
-    public bool Apply(CountdownChoice choice, Func<bool> isActive, CancellationToken cancellationToken)
-    {
         lock (_gate)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!isActive()) return false;
+            return ReadCore();
+        }
+    }
+
+    /// <summary>Applies a pick. Start while running and pause while not running change nothing.</summary>
+    public void Apply(CountdownChoice choice)
+    {
+        TaskCompletionSource changed;
+        lock (_gate)
+        {
             var current = ReadCore();
             switch (choice.Mode)
             {
                 case CountdownMode.Start:
-                    if (current.Phase == CountdownPhase.Running) return true;
+                    if (current.Phase == CountdownPhase.Running)
+                    {
+                        return;
+                    }
+
                     _remaining = current.Phase == CountdownPhase.Paused ? current.Remaining : choice.Duration;
-                    _startedAt = timeProvider.GetTimestamp();
+                    _startedAt = time.GetTimestamp();
                     _phase = CountdownPhase.Running;
                     break;
                 case CountdownMode.Pause:
-                    if (current.Phase != CountdownPhase.Running) return true;
+                    if (current.Phase != CountdownPhase.Running)
+                    {
+                        return;
+                    }
+
                     _remaining = current.Remaining;
                     _phase = CountdownPhase.Paused;
                     break;
@@ -46,48 +90,67 @@ internal sealed class Countdown(TimeProvider timeProvider)
                 default:
                     throw new ArgumentOutOfRangeException(nameof(choice));
             }
-            return true;
+
+            changed = _changed;
+            _changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
+
+        changed.TrySetResult();
     }
 
     private CountdownSnapshot ReadCore()
     {
-        if (_phase != CountdownPhase.Running) return new(_remaining, _phase);
-        var remaining = _remaining - timeProvider.GetElapsedTime(_startedAt);
-        if (remaining > TimeSpan.Zero) return new(remaining, _phase);
+        if (_phase != CountdownPhase.Running)
+        {
+            return new CountdownSnapshot(_remaining, _phase);
+        }
+
+        var remaining = _remaining - time.GetElapsedTime(_startedAt);
+        if (remaining > TimeSpan.Zero)
+        {
+            return new CountdownSnapshot(remaining, _phase);
+        }
+
         _remaining = TimeSpan.Zero;
         _phase = CountdownPhase.Finished;
-        return new(_remaining, _phase);
+        return new CountdownSnapshot(_remaining, _phase);
     }
 }
 
+/// <summary>The contribution ids and the choices of extension.json.</summary>
 internal static class CountdownChoices
 {
-    public const string ExtensionId = "example.countdown";
-    public const string TimerAction = ExtensionId + "/timer";
-    public const string StatusAction = ExtensionId + "/status";
+    public const string TimerId = "example.countdown/timer";
+    public const string StatusId = "example.countdown/status";
 
     public static bool TryRead(IReadOnlyDictionary<string, string> settings, out CountdownChoice choice)
     {
         choice = default;
-        if (settings.Count != 2 || !settings.TryGetValue("mode", out var modeText)
-            || !settings.TryGetValue("duration", out var durationText)) return false;
-        CountdownMode? mode = modeText switch
+        if (settings.Count != 2 || !settings.TryGetValue("mode", out var mode) || !settings.TryGetValue("duration", out var duration))
+        {
+            return false;
+        }
+
+        CountdownMode? parsedMode = mode switch
         {
             "start" => CountdownMode.Start,
             "pause" => CountdownMode.Pause,
             "reset" => CountdownMode.Reset,
             _ => null,
         };
-        TimeSpan? duration = durationText switch
+        TimeSpan? parsedDuration = duration switch
         {
             "one-minute" => TimeSpan.FromMinutes(1),
             "five-minutes" => TimeSpan.FromMinutes(5),
             "twenty-five-minutes" => TimeSpan.FromMinutes(25),
             _ => null,
         };
-        if (mode is null || duration is null) return false;
-        choice = new(mode.Value, duration.Value);
+        if (parsedMode is null || parsedDuration is null)
+        {
+            return false;
+        }
+
+        choice = new CountdownChoice(parsedMode.Value, parsedDuration.Value);
         return true;
     }
 }

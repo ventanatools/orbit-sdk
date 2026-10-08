@@ -1,0 +1,30 @@
+<Project>
+  <!-- Central package management: every package version used by the repository's projects is
+       pinned here. The samples are standalone package consumers and opt out
+       (ImportDirectoryPackagesProps false in their Directory.Build.props). -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Test-only: ProductNameConfinementTests parses src/**/*.cs with Roslyn. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The tool: argument parsing, and the include and exclude globs of extension.pack.json. -->
+    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.12" />
+    <!-- Test-only: the schema tests validate the fixtures with JSON Schema 2020-12. -->
+    <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The Generic Host add-on's dependencies besides the author package (contract §9.5), of one version. -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
+    <!-- Test-only: the add-on's tests run it in a real Generic Host. -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+  </ItemGroup>
+</Project>

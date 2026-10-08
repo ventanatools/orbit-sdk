@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.member-renamed",
+      "path": "/contributions/1/capabilities",
+      "severity": "Error",
+      "line": 77,
+      "column": 23
+    }
+  ]
+}

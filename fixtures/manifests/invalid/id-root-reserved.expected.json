@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "id.root-reserved",
+      "path": "/id",
+      "severity": "Error",
+      "line": 3,
+      "column": 9
+    }
+  ]
+}

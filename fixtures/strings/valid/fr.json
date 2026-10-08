@@ -1,0 +1,6 @@
+{
+  "$schema": "https://dev.ventana.tools/schemas/extensions/example-host/strings.v3.json",
+  "schemaVersion": 3,
+  "language": "fr",
+  "name": "Exemple de compte \u00e0 rebours"
+}

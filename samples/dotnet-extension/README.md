@@ -1,103 +1,92 @@
-# .NET companion sample
+# .NET state sample
 
-This console application consumes `Orbit.Extensions.Sdk` **0.1.0-preview.2** as
-a NuGet package. It has no source-project or `Orbit.Core` reference. Its own
-`Directory.Build.props` keeps it independent of Orbit's Windows SDK/MSIX build
-settings. The application targets .NET 10; its companion transport runs on Windows.
+> **Status: developer sample.** The smallest companion: one handler, no startup code. The
+> automated tests run it against the SDK's test kit; the installed host app's flows need checking
+> in that app.
 
-The sample owns one boolean in memory, initially Off. **Set sample state** has
-an On/Off choice and an action with a live face. **Sample status** is passive,
-with a Words/Number display choice. Each placement keeps independent choices,
-while all placements observe this one simulated state. No other app, document,
-device, registry setting or user file is changed. Restarting the process resets
-the state to Off; no command is replayed after a connection loss.
+## What it does
 
-This SDK and sample are public developer previews under [Apache-2.0](../../LICENSE).
-The SDK packages are built locally; they have not been published to NuGet.
-The SDK's preview version is separate from this bundle's manifest version
-`0.1.0`; the current manifest grammar accepts three numeric components.
-Orbit remains proprietary and is not included in this repository. Store-signed
-extension support is not yet verified; use an Orbit version with
-**Settings > Extensions** enabled.
+One on/off value, kept only in the companion's memory and starting Off, shared by every
+placement:
 
-## Build from the local packages
+| Contribution | When picked | Face |
+|---|---|---|
+| **Set sample state** (`example.dotnet-state/set-state`) | Sets the value to the placement's **When picked** choice (on or off). | The value, and what picking sets |
+| **Sample status** (`example.dotnet-state/status`) | Nothing | The value as On/Off or 1/0 (the placement's **Show** choice) |
 
-Run from the repository root with the .NET 10 SDK installed:
+No other app, document, device, setting or file is changed, and nothing is replayed after a lost
+connection. Restarting the companion resets the value to Off.
 
-```powershell
-pwsh -File tools/build.ps1
-dotnet restore samples/dotnet-extension/DotnetExtensionSample.csproj --source artifacts/extension-sdk --packages artifacts/sdk-consumer-packages
-dotnet build samples/dotnet-extension/DotnetExtensionSample.csproj -c Release --no-restore
-```
+## Run it
 
-The SDK package brings the Protocol package transitively. No package is pushed
-to a registry. To prove the consumer boundary independently, copy this sample
-folder to a separate directory and restore it from the absolute path of that
-local package feed; retain the sample's `Directory.Build.props`. A clean build
-there must work without the Orbit source tree or its build properties.
+You need Windows, the .NET 10 SDK, the SDK's NuGet packages (`VentanaTools.Orbit.Extensions` and
+`VentanaTools.Orbit.Extensions.Testing`), and a build of the host app with extension support.
 
-## Connect and try two configurations
-
-1. Start an Orbit version with extension support enabled. In **Settings > Extensions**,
-   turn on **Extension developer mode**, import this folder's `extension.json`, then
-   explicitly enable **.NET state sample**.
-   Importing the manifest does not start this program.
-2. Choose **Copy connection info** and save it to a private local file outside
-   the repository. Its contents are credentials; do not paste them into command
-   arguments, screenshots, bug reports or logs.
-3. Start the built sample, passing paths only. From the repository root:
+1. Build and test. The folder imports none of the repository's build settings and references the
+   SDK only as packages. `Directory.Build.props` asks for the repository's version unless the
+   `VentanaExtensionsVersion` property or environment variable names another. `tools/build.ps1`
+   (see the repository README) instead packs packages with a local `-dev.<stamp>` version into
+   `artifacts/packages`, the folder the repository's `NuGet.config` maps the SDK packages to. So,
+   from the repository root, first tell this PowerShell session which version you built:
 
    ```powershell
-   dotnet run --project samples/dotnet-extension/DotnetExtensionSample.csproj -c Release --no-build -- --manifest "samples/dotnet-extension/extension.json" --pairing "C:\private-folder\DotnetSample.pairing.json"
+   cd samples/dotnet-extension
+   $env:VentanaExtensionsVersion = (Get-Content ..\..\artifacts\build\state.json | ConvertFrom-Json).version
+   dotnet test tests/DotnetExtensionSample.Tests.csproj
    ```
 
-   Replace the example pairing path. The console prints fixed lifecycle and
-   sample-state messages, never credentials or exception details. It waits for
-   the matching allowed Orbit registration and retries lost connections.
-4. In the ring editor, add **Extensions > .NET state sample: Set sample state**
-   twice. Set one card's **When picked** to **Turn sample on**, and the other to
-   **Turn sample off**. Rename them if useful. Add **Sample status**, keeping
-   **On or Off**; an optional second status placement can use **1 or 0**.
-5. Summon the ring and pick the On action, then the Off action. Each action
-   closes the ring before invoking. All faces should reflect the shared state
-   by their next two-second renewal. The passive status is selectable but has
-   no action digit and changes nothing when picked.
-6. Change one placement's choice and undo it. Its sibling's choice must not
-   change. Move a face-capable item to the middle with the card switch; its
-   settings remain attached. Picking the middle still closes the ring or goes
-   back; the middle does not invoke the action. Turning the switch off restores
-   the item to a slot.
-7. Press **Ctrl+C** in the companion. Sessions stop and Orbit stops treating
-   their faces as fresh. Restarting the companion resets the sample state to
-   Off. Disable/re-enable the registration to check revocation: the old pairing
-   file no longer works, so copy fresh connection info explicitly.
+   The variable reaches every build this session starts: `dotnet test`, `dotnet run` in step 3,
+   and the build that the tool's `pack` starts, which takes no `-p:` option. If you built with the
+   plain `dotnet pack` commands, which write no `state.json`, skip that line: your packages
+   already have the repository's version. For a single `dotnet` command,
+   `-p:VentanaExtensionsVersion=<version>` does the same.
 
-Faces expire five seconds after their last accepted update. The sample renews
-them every two seconds only while their sessions exist. It makes an initial
-publication on each new session; picks change the state immediately in memory
-and appear at the next renewal. Changing settings, undoing, removing a placement
-or reconnecting retires the old session. The SDK rejects publication from retired
-sessions and cancels their handlers. V2 items/settings remain local to `ring.json`
-and are omitted from shared ring exports.
+2. In the host app, open the extension settings, turn on developer mode, import this folder's
+   `extension.json`, and turn the extension on after reviewing it. Then save the connection info:
+   the host app writes the pairing file to
+   `%USERPROFILE%\.ventana\pairings\<host-id>\example.dotnet-state.pairing.json`, where the
+   companion finds it. The pairing file is a credential: never commit, package or share it.
+3. In the same session, start the companion with
+   `dotnet run --project DotnetExtensionSample.csproj`. It prints one
+   status line per change; Ctrl+C stops it. `--pairing <path>` uses a pairing file elsewhere.
+4. In the host app, add **Set sample state** twice (one turns the sample on, one off) and
+   **Sample status**. Pick each action: every face changes at once.
 
-## Read the implementation
+## How it works
 
-- `Program.cs` bounds manifest reads to 64 KiB and pairing reads to 4 KiB, checks
-  actual bytes as well as file length, and clears temporary pairing buffers.
-  Pairing parsing binds the credential to this extension ID and protocol 2.
-- `RunSessionAsync` owns one session's lifetime. It checks cancellation,
-  publishes a finite text face and awaits the next renewal. A rejected publish
-  ends that handler instead of creating an unbounded retry loop.
-- `InvokeAsync` accepts only the declared action and choices. It checks the
-  invocation token and active session immediately before the in-memory change.
-  A real adapter must do the same immediately before its external side effect.
-- The SDK owns framing, mutual authentication, bounded queues, connection loss
-  and reconnect. The sample supplies behavior; it does not construct wire JSON,
-  inspect ring contents or request foreground/summon information.
+- **`Program.cs`** is one line: `CompanionApp.RunAsync(args, new StateHandler())`. The SDK reads
+  `extension.json` and the pairing file, connects, authenticates, reconnects with backoff, and
+  cleans and paces faces.
+- **`StateHandler.cs`** holds the value (`SampleState`) and the handler. `RunSessionAsync`
+  publishes a face, then waits for the value to change; it never republishes on a timer. The face
+  sets `Renew`, so the SDK keeps it alive while the session runs. `InvokeAsync` checks the
+  contribution, the setting, the cancellation token and `Session.IsActive` just before the change;
+  a real adapter makes the same checks just before its own side effect.
+- **`tests/`** is an xUnit project on `VentanaTools.Orbit.Extensions.Testing`: a `RecordingSession`
+  checks publish-on-change, a `CompanionTestHost` drives the handler through a real client, and a
+  `ContributionContractSuite` subclass checks every contribution and setting combination.
 
-The [SDK author guide](../../docs/extension-sdk.md)
-describes the package contract. The public [developer site](https://dev.ventana.tools/orbit/get-started/)
-walks through setup. The [wire protocol](../../docs/extension-protocol.md)
-remains the authority for interoperability. The separate
-[Photoshop sample](../photoshop-extension/README.md) demonstrates an application
-adapter; its installed-host checks are distinct from this memory-only example.
+## Extend it
+
+- Replace `SampleState` with the thing you control, and keep the change-signal pattern: publish
+  when what the face shows changes, and let `Renew` keep a still face alive.
+- Validate and package with the SDK's command-line tool (the `VentanaTools.Orbit.Extensions.Tool`
+  package; see the repository README): `validate` checks this folder, and `pack` follows
+  `extension.pack.json`, publishing the companion as one executable to `payload/companion/`. Run
+  `pack` in a session where `VentanaExtensionsVersion` names your build (step 1), so its publish
+  step restores those packages.
+- `dotnet publish -r win-x64 -p:PublishAot=true` builds a native executable instead (it needs the
+  C++ build tools).
+
+## Troubleshooting
+
+- **The companion waits for a pairing file.** Save the connection info in the host app again, or
+  pass `--pairing <path>`.
+- **The host refused the connection.** The status line names the reason. After the manifest
+  changes, import it again, turn the extension on, and save fresh connection info.
+- **Restore cannot find the SDK packages.** Point NuGet at a folder or feed with the
+  `VentanaTools.Orbit.Extensions` packages (inside the repository, its `NuGet.config` already
+  points at `artifacts/packages`) and name the version you have: set `VentanaExtensionsVersion`
+  as in step 1, or pass `-p:VentanaExtensionsVersion=<version>`.
+
+The sample is [MIT-0](LICENSE); the SDK is Apache-2.0.

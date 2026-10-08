@@ -1,0 +1,8 @@
+node_modules/
+artifacts/
+bin/
+obj/
+
+# Connection info is a credential: never commit or pack it.
+*.pairing.json
+pairing.json

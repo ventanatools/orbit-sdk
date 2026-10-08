@@ -1,0 +1,45 @@
+{
+  "name": "@ventanatools/orbit-extensions",
+  "version": "0.1.0-preview.1",
+  "private": true,
+  "description": "Node SDK for extension companions: manifests, pairing, the wire protocol, the companion client and a test kit.",
+  "license": "Apache-2.0",
+  "author": "Ventana Tools LLC",
+  "homepage": "https://dev.ventana.tools/",
+  "type": "commonjs",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./wire": {
+      "types": "./wire.d.ts",
+      "default": "./wire.js"
+    },
+    "./testing": {
+      "types": "./testing.d.ts",
+      "default": "./testing.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "wire.js",
+    "wire.d.ts",
+    "testing.js",
+    "testing.d.ts",
+    "lib/",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

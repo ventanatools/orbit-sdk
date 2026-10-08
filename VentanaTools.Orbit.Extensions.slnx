@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VentanaTools.Orbit.Extensions/VentanaTools.Orbit.Extensions.csproj" />
+    <Project Path="src/VentanaTools.Orbit.Extensions.Hosting/VentanaTools.Orbit.Extensions.Hosting.csproj" />
+    <Project Path="src/VentanaTools.Orbit.Extensions.Testing/VentanaTools.Orbit.Extensions.Testing.csproj" />
+    <Project Path="src/VentanaTools.Orbit.Extensions.Tool/VentanaTools.Orbit.Extensions.Tool.csproj" />
+  </Folder>
+  <Folder Name="/templates/">
+    <Project Path="templates/VentanaTools.Orbit.Extensions.Templates.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VentanaTools.Orbit.Extensions.Tests/VentanaTools.Orbit.Extensions.Tests.csproj" />
+    <Project Path="tests/VentanaTools.Orbit.Extensions.Hosting.Tests/VentanaTools.Orbit.Extensions.Hosting.Tests.csproj" />
+    <Project Path="tests/VentanaTools.Orbit.Extensions.Testing.Tests/VentanaTools.Orbit.Extensions.Testing.Tests.csproj" />
+    <Project Path="tests/VentanaTools.Orbit.Extensions.Tool.Tests/VentanaTools.Orbit.Extensions.Tool.Tests.csproj" />
+    <Project Path="tests/VentanaTools.Orbit.Extensions.Schemas.Tests/VentanaTools.Orbit.Extensions.Schemas.Tests.csproj" />
+  </Folder>
+</Solution>

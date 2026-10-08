@@ -1,39 +1,27 @@
-# Photoshop developer reference package
+# Photoshop bridge sample
 
-This local preview contains source under `payload/source/`. It requires Windows,
-Node 22+, Photoshop 25+ and Adobe UXP Developer Tool. Only Photoshop 27.9 was
-checked in the installed-host pass. Orbit stores these files and runs nothing.
-Read `payload/source/README.md` for setup, architecture, tests and open gates.
+A developer sample: layer visibility actions and live layer status in the host app, through a
+Node companion and an Adobe Photoshop UXP panel. Installing this package runs nothing.
 
-From `payload/source/`, deliberately prepare the companion and UXP bundle:
+The package holds source only, in the repository's layout: the sample in
+`payload/samples/photoshop-extension/` and the Node SDK it uses in `payload/node/orbit-extensions/`.
+You need Windows, Node.js 22 or later, Photoshop 25 or later and Adobe's UXP Developer Tool.
+
+From `payload/samples/photoshop-extension/`:
 
 ```powershell
 npm ci --ignore-scripts
 npm run build:uxp
-npm run check
 npm test
+npm start
 ```
 
-Enable Photoshop sample in Orbit, copy connection info to a private file outside
-the package, and explicitly start Node from `payload/source/`:
+Before `npm start`, turn the extension on in the host app and choose **Save connection info**;
+the companion finds the pairing file in your user profile. Then load
+`payload/samples/photoshop-extension/uxp/manifest.json` with Adobe's UXP Developer Tool, open the
+**Photoshop bridge sample** panel and choose the bridge file the companion names when it starts.
+`README.md` in that folder explains setup, the design, tests and troubleshooting.
 
-```powershell
-npm start -- --pairing "C:\private-folder\Orbit.pairing.json" --bridge-file "C:\private-folder\Photoshop.bridge.json"
-```
-
-Choose a new bridge filename; existing files are not overwritten. Configure
-Adobe developer mode as described in the source README and load
-`payload/source/uxp/manifest.json`. In its panel choose the new bridge file and
-wait for Connected in both Photoshop and Orbit. The Adobe `.ccx` installation
-path is separate; clean `.ccx` installation remains unverified. Store-signed
-Orbit extension compatibility also remains unverified. This is a source
-developer example, not a ready-to-install consumer integration.
-
-Start with a disposable Photoshop document/layer. Add Selected layer visibility
-items with Toggle, Show and Hide choices, plus a passive Layer status display.
-Never package/share pairing or bridge files. After an Orbit package update,
-re-enable and copy fresh connection info; restart Node, reload changed UXP code
-and select its fresh bridge file. License terms are in `payload/LICENSE` and `payload/NOTICE`.
-Third-party licenses are documented in the source README and copied next to
-the generated UXP bundle. Public setup instructions are at
-https://dev.ventana.tools/orbit/examples/photoshop/.
+Never package or share pairing or bridge files. The sample source is MIT-0
+(`payload/samples/photoshop-extension/LICENSE`); the Node SDK is Apache-2.0
+(`payload/node/orbit-extensions/LICENSE`).

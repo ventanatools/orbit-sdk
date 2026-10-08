@@ -1,0 +1,124 @@
+#nullable enable
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.CancelAsync(VentanaTools.Orbit.Extensions.Testing.TestInvocation! invocation) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.DisconnectAsync(VentanaTools.Orbit.Extensions.ReasonCode? code = null) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.DisposeAsync() -> System.Threading.Tasks.ValueTask
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.Faults.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs!>!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.InvokeAsync(VentanaTools.Orbit.Extensions.Testing.TestHostSession! session, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome!>!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.StartInvoke(VentanaTools.Orbit.Extensions.Testing.TestHostSession! session) -> VentanaTools.Orbit.Extensions.Testing.TestInvocation!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.StartSessionAsync(string! contributionId, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? settings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.Testing.TestHostSession!>!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.Statuses.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.StatusChangedEventArgs!>!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.StopSessionAsync(VentanaTools.Orbit.Extensions.Testing.TestHostSession! session) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.Transcript.get -> VentanaTools.Orbit.Extensions.Testing.CompanionTranscript!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.WaitForFaceAsync(VentanaTools.Orbit.Extensions.Testing.TestHostSession! session, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.Testing.ReceivedFace!>!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.Capabilities.init -> void
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.CompanionTestHostOptions() -> void
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.HostId.get -> string?
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.HostId.init -> void
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.Limits.get -> VentanaTools.Orbit.Extensions.Wire.HostLimits!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.Limits.init -> void
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.TimeProvider.get -> System.TimeProvider!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.TimeProvider.init -> void
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.UiLanguage.get -> string!
+VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions.UiLanguage.init -> void
+VentanaTools.Orbit.Extensions.Testing.CompanionTranscript
+VentanaTools.Orbit.Extensions.Testing.CompanionTranscript.Entries.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.Testing.TranscriptEntry!>!
+VentanaTools.Orbit.Extensions.Testing.CompanionTranscript.ToJsonLines() -> string!
+VentanaTools.Orbit.Extensions.Testing.ConformanceException
+VentanaTools.Orbit.Extensions.Testing.ConformanceException.ConformanceException() -> void
+VentanaTools.Orbit.Extensions.Testing.ConformanceException.ConformanceException(System.Collections.Generic.IEnumerable<string!>! failures) -> void
+VentanaTools.Orbit.Extensions.Testing.ConformanceException.ConformanceException(string! message) -> void
+VentanaTools.Orbit.Extensions.Testing.ConformanceException.ConformanceException(string! message, System.Exception! innerException) -> void
+VentanaTools.Orbit.Extensions.Testing.ConformanceException.Failures.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite
+VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.AssertAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.CollectFailuresAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.ContributionContractSuite() -> void
+VentanaTools.Orbit.Extensions.Testing.ExtensionConformance
+VentanaTools.Orbit.Extensions.Testing.PublicationKind
+VentanaTools.Orbit.Extensions.Testing.PublicationKind.AfterStop = 4 -> VentanaTools.Orbit.Extensions.Testing.PublicationKind
+VentanaTools.Orbit.Extensions.Testing.PublicationKind.ClearFace = 2 -> VentanaTools.Orbit.Extensions.Testing.PublicationKind
+VentanaTools.Orbit.Extensions.Testing.PublicationKind.Fail = 3 -> VentanaTools.Orbit.Extensions.Testing.PublicationKind
+VentanaTools.Orbit.Extensions.Testing.PublicationKind.SetFace = 1 -> VentanaTools.Orbit.Extensions.Testing.PublicationKind
+VentanaTools.Orbit.Extensions.Testing.ReceivedFace
+VentanaTools.Orbit.Extensions.Testing.ReceivedFace.ArrivedAt.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.Testing.ReceivedFace.ArrivedAt.init -> void
+VentanaTools.Orbit.Extensions.Testing.ReceivedFace.Face.get -> VentanaTools.Orbit.Extensions.Face!
+VentanaTools.Orbit.Extensions.Testing.ReceivedFace.Face.init -> void
+VentanaTools.Orbit.Extensions.Testing.ReceivedFace.ReceivedFace() -> void
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.At.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.At.init -> void
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.Face.get -> VentanaTools.Orbit.Extensions.Face?
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.Face.init -> void
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.Failure.get -> VentanaTools.Orbit.Extensions.Failure?
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.Failure.init -> void
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.Kind.get -> VentanaTools.Orbit.Extensions.Testing.PublicationKind
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.Kind.init -> void
+VentanaTools.Orbit.Extensions.Testing.RecordedPublication.RecordedPublication() -> void
+VentanaTools.Orbit.Extensions.Testing.RecordingSession
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.Cancellation.get -> System.Threading.CancellationToken
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.Dispose() -> void
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.LastFace.get -> VentanaTools.Orbit.Extensions.Face?
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.Publications.get -> System.Collections.Generic.IReadOnlyList<VentanaTools.Orbit.Extensions.Testing.RecordedPublication!>!
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.RunAsync(VentanaTools.Orbit.Extensions.IContributionHandler! handler, System.TimeSpan? timeout = null) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.Session.get -> VentanaTools.Orbit.Extensions.Session!
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.Stop() -> void
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.WaitForFaceAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.Face!>!
+VentanaTools.Orbit.Extensions.Testing.RecordingSession.WaitForPublicationsAsync(int count, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+VentanaTools.Orbit.Extensions.Testing.TestHostSession
+VentanaTools.Orbit.Extensions.Testing.TestHostSession.ContributionId.get -> string!
+VentanaTools.Orbit.Extensions.Testing.TestHostSession.RefusedCode.get -> VentanaTools.Orbit.Extensions.ReasonCode?
+VentanaTools.Orbit.Extensions.Testing.TestHostSession.SessionId.get -> string!
+VentanaTools.Orbit.Extensions.Testing.TestInvocation
+VentanaTools.Orbit.Extensions.Testing.TestInvocation.RequestId.get -> string!
+VentanaTools.Orbit.Extensions.Testing.TestInvocation.Result.get -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome!>!
+VentanaTools.Orbit.Extensions.Testing.TestInvocations
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome.Failure.get -> VentanaTools.Orbit.Extensions.Failure?
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome.Failure.init -> void
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome.Kind.get -> VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome.Kind.init -> void
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcome.TestInvokeOutcome() -> void
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind.Cancelled = 5 -> VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind.Done = 1 -> VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind.Failed = 3 -> VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind.Refused = 2 -> VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind.TimedOut = 6 -> VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind.Unsupported = 4 -> VentanaTools.Orbit.Extensions.Testing.TestInvokeOutcomeKind
+VentanaTools.Orbit.Extensions.Testing.TestSessions
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.At.get -> System.TimeSpan
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.At.init -> void
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.From.get -> VentanaTools.Orbit.Extensions.Wire.Sender
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.From.init -> void
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.RequestId.get -> string?
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.RequestId.init -> void
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.SessionId.get -> string?
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.SessionId.init -> void
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.TranscriptEntry() -> void
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.Type.get -> string!
+VentanaTools.Orbit.Extensions.Testing.TranscriptEntry.Type.init -> void
+abstract VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.CreateHandler() -> VentanaTools.Orbit.Extensions.IContributionHandler!
+abstract VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.Manifest.get -> VentanaTools.Orbit.Extensions.ExtensionManifest!
+static VentanaTools.Orbit.Extensions.Testing.CompanionTestHost.StartAsync(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.IContributionHandler! handler, VentanaTools.Orbit.Extensions.Testing.CompanionTestHostOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VentanaTools.Orbit.Extensions.Testing.CompanionTestHost!>!
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.AssertAuthoringContractAsync(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.IContributionHandler! handler, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.AssertAuthoringContractFileAsync(string! manifestPath, VentanaTools.Orbit.Extensions.IContributionHandler! handler, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.AssertManifestFileValid(string! manifestPath, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null) -> void
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.AssertManifestValid(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null) -> void
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.CollectContractFailuresAsync(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.IContributionHandler! handler, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.CollectContractFileFailuresAsync(string! manifestPath, VentanaTools.Orbit.Extensions.IContributionHandler! handler, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.CollectManifestFailures(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null) -> System.Collections.Generic.IReadOnlyList<string!>!
+static VentanaTools.Orbit.Extensions.Testing.ExtensionConformance.CollectManifestFileFailures(string! manifestPath, VentanaTools.Orbit.Extensions.ManifestReadOptions? options = null) -> System.Collections.Generic.IReadOnlyList<string!>!
+static VentanaTools.Orbit.Extensions.Testing.TestInvocations.Create(VentanaTools.Orbit.Extensions.Testing.RecordingSession! session, string? requestId = null) -> VentanaTools.Orbit.Extensions.Invocation!
+static VentanaTools.Orbit.Extensions.Testing.TestSessions.Create(string! contributionId, VentanaTools.Orbit.Extensions.Provides provides, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? settings = null, string! uiLanguage = "en-US", System.TimeProvider? time = null) -> VentanaTools.Orbit.Extensions.Testing.RecordingSession!
+static VentanaTools.Orbit.Extensions.Testing.TestSessions.FromManifest(VentanaTools.Orbit.Extensions.ExtensionManifest! manifest, string! contributionId, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? settings = null, System.TimeProvider? time = null, string! uiLanguage = "en-US") -> VentanaTools.Orbit.Extensions.Testing.RecordingSession!
+virtual VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.CancellationBound.get -> System.TimeSpan
+virtual VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.InitialFaceTimeout.get -> System.TimeSpan
+virtual VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.InvokeContributions.get -> System.Collections.Generic.IEnumerable<string!>!
+virtual VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.InvokeSettings(string! contributionId) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+virtual VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.ManifestValidation.get -> VentanaTools.Orbit.Extensions.ManifestReadOptions!
+virtual VentanaTools.Orbit.Extensions.Testing.ContributionContractSuite.MaxSettingCombinations.get -> int

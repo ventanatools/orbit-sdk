@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.null-not-allowed",
+      "path": "/hosts/1",
+      "severity": "Error",
+      "line": 9,
+      "column": 5
+    }
+  ]
+}

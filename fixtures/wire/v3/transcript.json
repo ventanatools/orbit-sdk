@@ -1,0 +1,103 @@
+{
+  "about": "Transcript and proof vectors (contract section 7.3.4 and Appendix A). proof = canonical Base64 of HMAC-SHA256(key = the 32 decoded secret bytes, message = UTF-8 of the transcript). serverTranscript is the exact transcript for the server role, with LF separators and no final LF; the client transcript differs only in its second line. clientProof is null where only the server proof matters.",
+  "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "cases": [
+    {
+      "name": "no capabilities",
+      "transcript": {
+        "hostId": "example-host",
+        "hostVersion": "2026.10.1",
+        "registrationId": "00112233445566778899aabbccddeeff",
+        "clientNonce": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=",
+        "serverNonce": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=",
+        "version": 3,
+        "minVersion": 3,
+        "maxVersion": 3,
+        "clientCapabilities": [],
+        "hostCapabilities": [],
+        "manifestHash": "1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f"
+      },
+      "serverTranscript": "Ventana.Extensions.v3\nserver\nexample-host\n2026.10.1\n00112233445566778899aabbccddeeff\nQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\nQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\n3\n3\n3\n\n\n1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f",
+      "serverProof": "eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=",
+      "clientProof": "/UEufRCAUwJZWK0QCrk6/tMoSGLasVQxQEMWxnLWE4w="
+    },
+    {
+      "name": "both sides list x.test-echo",
+      "transcript": {
+        "hostId": "example-host",
+        "hostVersion": "2026.10.1",
+        "registrationId": "00112233445566778899aabbccddeeff",
+        "clientNonce": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=",
+        "serverNonce": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=",
+        "version": 3,
+        "minVersion": 3,
+        "maxVersion": 3,
+        "clientCapabilities": [
+          "x.test-echo"
+        ],
+        "hostCapabilities": [
+          "x.test-echo"
+        ],
+        "manifestHash": "1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f"
+      },
+      "serverTranscript": "Ventana.Extensions.v3\nserver\nexample-host\n2026.10.1\n00112233445566778899aabbccddeeff\nQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\nQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\n3\n3\n3\nx.test-echo\nx.test-echo\n1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f",
+      "serverProof": "BCmR8OP6wx2emYIPUh7AxfXBZQpW8DLrexmsJI6BMWk=",
+      "clientProof": "oqgAzzTIYecUU29y9FrmbyUXpQ7iqESyQxE3b4OPvRc="
+    },
+    {
+      "name": "capability lists are sorted ordinally before joining",
+      "transcript": {
+        "hostId": "example-host",
+        "hostVersion": "2026.10.1",
+        "registrationId": "00112233445566778899aabbccddeeff",
+        "clientNonce": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=",
+        "serverNonce": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=",
+        "version": 3,
+        "minVersion": 3,
+        "maxVersion": 3,
+        "clientCapabilities": [
+          "x.zeta",
+          "face.image",
+          "x.alpha"
+        ],
+        "hostCapabilities": [
+          "strings.localized",
+          "face.image"
+        ],
+        "manifestHash": "1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f"
+      },
+      "serverTranscript": "Ventana.Extensions.v3\nserver\nexample-host\n2026.10.1\n00112233445566778899aabbccddeeff\nQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\nQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\n3\n3\n3\nface.image,x.alpha,x.zeta\nface.image,strings.localized\n1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f",
+      "serverProof": "fNCBTSHBsu6A0REYNvDXP311SvlHfiF2/i3qUqKy94M=",
+      "clientProof": "XhpJQYfCLbrn0cxKVzNYIgkMFo2s/cxe8x0D1dhg/tE="
+    },
+    {
+      "name": "offer tampered to 3-4: the server proof differs, so the client refuses",
+      "transcript": {
+        "hostId": "example-host",
+        "hostVersion": "2026.10.1",
+        "registrationId": "00112233445566778899aabbccddeeff",
+        "clientNonce": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=",
+        "serverNonce": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=",
+        "version": 3,
+        "minVersion": 3,
+        "maxVersion": 4,
+        "clientCapabilities": [],
+        "hostCapabilities": [],
+        "manifestHash": "1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f"
+      },
+      "serverTranscript": "Ventana.Extensions.v3\nserver\nexample-host\n2026.10.1\n00112233445566778899aabbccddeeff\nQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\nQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\n3\n3\n4\n\n\n1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f",
+      "serverProof": "yewRo8g86EGY3ltzMQV7gUKZ2pRG+YqzviCgMXOSiPw=",
+      "clientProof": null
+    }
+  ],
+  "userHash": {
+    "sid": "S-1-5-21-1111111111-2222222222-3333333333-1001",
+    "hash": "a8c06b3027d3fc4a"
+  },
+  "pipeName": {
+    "hostId": "example-host",
+    "edition": "store",
+    "registrationId": "00112233445566778899aabbccddeeff",
+    "name": "Ventana.Extensions.v3.example-host.store.a8c06b3027d3fc4a.00112233445566778899aabbccddeeff"
+  }
+}

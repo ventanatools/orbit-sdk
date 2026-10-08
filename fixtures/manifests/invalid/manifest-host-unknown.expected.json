@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "manifest.host-unknown",
+      "path": "/hosts/1",
+      "severity": "Warning",
+      "line": 9,
+      "column": 5
+    }
+  ]
+}

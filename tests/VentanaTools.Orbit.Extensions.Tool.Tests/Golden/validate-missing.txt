@@ -1,0 +1,23 @@
+exit 3
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "validate",
+  "ok": false,
+  "diagnostics": [
+    {
+      "code": "tool.path-missing",
+      "path": "",
+      "message": "The file or folder does not exist.",
+      "severity": "Error",
+      "file": "extension.json"
+    }
+  ],
+  "summary": {
+    "errors": 1,
+    "warnings": 0
+  }
+}
+--- error
+{tool}: error: The current folder contains no extension.json.

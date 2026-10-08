@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "string.too-long",
+      "path": "/description",
+      "severity": "Error",
+      "line": 4,
+      "column": 18
+    }
+  ]
+}

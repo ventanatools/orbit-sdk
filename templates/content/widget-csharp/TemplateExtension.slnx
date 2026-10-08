@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/TemplateExtension/TemplateExtension.csproj" />
+  <Project Path="tests/TemplateExtension.Tests/TemplateExtension.Tests.csproj" />
+</Solution>

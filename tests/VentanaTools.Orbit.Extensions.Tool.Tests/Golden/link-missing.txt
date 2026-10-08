@@ -1,0 +1,10 @@
+exit 1
+--- out
+{profile}/.ventana/pairings/example-host/{id}.pairing.json: error pairing.missing: No pairing file was found in any searched location. []
+  fix: In example-host, choose Save connection info.
+The SDK looks for the pairing of {id} here, in order:
+  1. {profile}/.ventana/pairings/example-host/{id}.pairing.json (per-user folder for host example-host): not found
+  2. {id}.pairing.json (fallback: the companion's folder or current directory): not found
+No valid pairing was found. In example-host, choose Save connection info: it writes the first file above.
+{tool}: 1 error, 0 warnings
+--- error

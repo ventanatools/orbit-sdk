@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "chrome.label-required",
+      "path": "/name",
+      "severity": "Error",
+      "line": 4,
+      "column": 11
+    }
+  ]
+}

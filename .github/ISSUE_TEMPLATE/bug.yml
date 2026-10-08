@@ -1,0 +1,83 @@
+name: Bug report
+description: Something in the SDK, the tool, the templates, the Node SDK, a sample or the contract does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Never attach a pairing file**, connection info, a bridge credential,
+        a log with personal data or a private document: they are credentials or private data, and
+        this issue is public. Report vulnerabilities privately instead (see SECURITY.md).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Author package (.NET)
+        - Test kit
+        - Generic Host add-on
+        - Tool
+        - Templates
+        - Node SDK
+        - Samples
+        - Contract, schemas or fixtures
+        - Build, CI or repository
+    validations:
+      required: true
+  - type: input
+    id: sdk-version
+    attributes:
+      label: SDK version
+      description: The package version, for example 0.1.0-preview.1, or the commit you built.
+    validations:
+      required: true
+  - type: input
+    id: manifest-version
+    attributes:
+      label: Manifest schema version
+      description: The schemaVersion in your extension.json.
+      placeholder: "3"
+  - type: input
+    id: protocol-version
+    attributes:
+      label: Protocol version
+      description: The protocol version the companion and the host negotiated, if it got that far.
+      placeholder: "3"
+  - type: input
+    id: host-version
+    attributes:
+      label: Host app and version
+      description: The app the extension runs in, its version, and how you installed it (Microsoft Store, sideloaded, built from source).
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 24H2 (x64)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest manifest, code or commands that show the problem. Use synthetic data.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: "Diagnostics, status lines (ventana: ...) or reason codes. Remove paths and anything personal."
+      render: text
+  - type: checkboxes
+    id: no-secrets
+    attributes:
+      label: Credentials and personal data
+      options:
+        - label: I have not attached a pairing file, connection info, a secret, or personal data.
+          required: true

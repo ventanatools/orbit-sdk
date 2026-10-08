@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\eng\Ventana.Package.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <AssemblyName>VentanaTools.Orbit.Extensions</AssemblyName>
+    <RootNamespace>VentanaTools.Orbit.Extensions</RootNamespace>
+    <PackageId>VentanaTools.Orbit.Extensions</PackageId>
+    <Description>Orbit extension declarations, diagnostics, pairing, packaging, the protocol 3 wire and the companion client.</Description>
+    <IsPackable>true</IsPackable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- The pipe transport checks the server process's token with LibraryImport, whose generated code is unsafe. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The one product definition and the reserved publishers, embedded from fixtures/ (contract §2.1). -->
+    <EmbeddedResource Include="..\..\fixtures\hosts.json" LogicalName="hosts.json" Link="Data\hosts.json" />
+    <EmbeddedResource Include="..\..\fixtures\reserved-publishers.json" LogicalName="reserved-publishers.json" Link="Data\reserved-publishers.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The opt-in global using (VentanaToolsImplicitUsings), for this package and every project that depends on it. -->
+    <None Include="buildTransitive\$(PackageId).props" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The Testing package uses the in-memory transport seam, and the Generic Host add-on the output seam of
+         CompanionApp; both depend on exactly this version. Package names come from the assembly name, never a literal. -->
+    <InternalsVisibleTo Include="$(AssemblyName).Testing" />
+    <InternalsVisibleTo Include="$(AssemblyName).Hosting" />
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+</Project>

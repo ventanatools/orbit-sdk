@@ -1,0 +1,6 @@
+exit 1
+--- out
+fixtures/manifests/invalid/json-member-renamed-capabilities.json(77,23): error json.member-renamed: This member was renamed in schema 3 (capabilities is now provides; manifestVersion is now schemaVersion). [/contributions/1/capabilities]
+  fix: Use the new name.
+{tool}: 1 error, 0 warnings
+--- error

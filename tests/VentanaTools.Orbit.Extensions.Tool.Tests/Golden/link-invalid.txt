@@ -1,0 +1,10 @@
+exit 1
+--- out
+{id}.pairing.json(7,18): error pairing.extension-mismatch: extensionId differs from the manifest's id. [/extensionId]
+  fix: Use this extension's connection info.
+The SDK looks for the pairing of {id} here, in order:
+  1. {profile}/.ventana/pairings/example-host/{id}.pairing.json (per-user folder for host example-host): not found
+  2. {id}.pairing.json (fallback: the companion's folder or current directory): invalid
+No valid pairing was found. In example-host, choose Save connection info: it writes the first file above.
+{tool}: 1 error, 0 warnings
+--- error

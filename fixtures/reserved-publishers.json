@@ -1,0 +1,4 @@
+{
+  "about": "The reserved publisher segments (contract section 3.5): no third-party extension id may start with one of them. Matching is exact on the first segment. A product's former id stays on the list after a rename.",
+  "reservedPublishers": ["orbit", "pinwheel", "lollipop", "ventana", "ventanatools", "ext"]
+}

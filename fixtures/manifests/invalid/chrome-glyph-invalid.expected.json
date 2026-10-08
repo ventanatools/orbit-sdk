@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "chrome.glyph-invalid",
+      "path": "/contributions/1/glyph",
+      "severity": "Error",
+      "line": 76,
+      "column": 16
+    }
+  ]
+}

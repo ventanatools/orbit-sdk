@@ -1,0 +1,12 @@
+{
+  "pairingVersion": 3,
+  "mode": "PerLaunch",
+  "hostId": "example-host",
+  "pipeName": "Ventana.Extensions.v3.example-host.store.a8c06b3027d3fc4a.00112233445566778899aabbccddeeff",
+  "registrationId": "00112233445566778899aabbccddeeff",
+  "extensionId": "example.countdown",
+  "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "credentialId": "0f0e0d0c0b0a09080706050403020100",
+  "expires": "2026-10-01T00:00:30Z",
+  "packageFamilyName": "Example.Countdown_8wekyb3d8bbwe"
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 3,
+  "id": "example.greeter",
+  "name": "Greeter",
+  "description": "One action whose contribution id is the extension id itself.",
+  "version": "1.0.0",
+  "hosts": ["example-host"],
+  "contributions": [
+    {
+      "id": "example.greeter",
+      "name": "Greet",
+      "description": "Prints a greeting.",
+      "glyph": "\uE8BD",
+      "provides": ["invoke"],
+      "settings": [
+        {
+          "id": "greeting",
+          "kind": "Choice",
+          "name": "Greeting",
+          "default": "hello",
+          "choices": [
+            { "value": "hello", "name": "Hello" },
+            { "value": "hi", "name": "Hi" }
+          ]
+        }
+      ]
+    }
+  ]
+}

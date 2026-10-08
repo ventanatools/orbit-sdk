@@ -1,0 +1,277 @@
+{
+  "about": "Valid frames (contract section 7.5). sender and phase are as the receiver sees them. A canonical frame is exactly what a writer produces: compact JSON, type first and the other members in the order of the message table, optional members left out (picture and state are always written), settings keys sorted ordinally, and every character outside printable ASCII escaped as \\uXXXX with uppercase hexadecimal.",
+  "cases": [
+    {
+      "name": "hello",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":3,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "canonical": true,
+      "type": "hello"
+    },
+    {
+      "name": "hello with a version range and capabilities",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"hello\",\"minVersion\":3,\"maxVersion\":5,\"registrationId\":\"00112233445566778899aabbccddeeff\",\"clientNonce\":\"QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\",\"capabilities\":[\"x.test-echo\",\"face.image\"],\"client\":{\"name\":\"example-client\",\"version\":\"1.0.0\"},\"manifestHash\":\"1f7c38cf0bc0408b9b62e5d90fdc796c479fe791e7b54fdb701c82cedccb2e8f\"}",
+      "canonical": true,
+      "type": "hello"
+    },
+    {
+      "name": "challenge",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"challenge\",\"serverNonce\":\"QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"proof\":\"eKdrI1jrc3Bicq7QMMaNRq3Ag1bURFuIqMPBb6r/Pfo=\"}",
+      "canonical": true,
+      "type": "challenge"
+    },
+    {
+      "name": "authenticate",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"authenticate\",\"proof\":\"/UEufRCAUwJZWK0QCrk6/tMoSGLasVQxQEMWxnLWE4w=\"}",
+      "canonical": true,
+      "type": "authenticate"
+    },
+    {
+      "name": "ready",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":65536,\"maxSessions\":64,\"maxPendingInvokes\":32,\"invokeTimeoutMs\":15000,\"faceChangesPerSecond\":2,\"faceBurst\":4,\"messageRate\":128,\"messageBurst\":256,\"hardMessageRate\":512,\"hardMessageBurst\":1024,\"pingIntervalMs\":30000,\"pongTimeoutMs\":10000}}",
+      "canonical": true,
+      "type": "ready"
+    },
+    {
+      "name": "ready with the smallest allowed limits",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"ready\",\"version\":3,\"capabilities\":[],\"host\":{\"id\":\"example-host\",\"version\":\"2026.10.1\"},\"uiLanguage\":\"en-US\",\"limits\":{\"maxFrameBytes\":8192,\"maxSessions\":1,\"maxPendingInvokes\":1,\"invokeTimeoutMs\":4000,\"faceChangesPerSecond\":1,\"faceBurst\":1,\"messageRate\":1,\"messageBurst\":8,\"hardMessageRate\":1,\"hardMessageBurst\":8,\"pingIntervalMs\":5000,\"pongTimeoutMs\":4999}}",
+      "canonical": true,
+      "type": "ready"
+    },
+    {
+      "name": "startSession",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/timer\",\"settings\":{\"duration\":\"five-minutes\",\"mode\":\"start\"}}",
+      "canonical": true,
+      "type": "startSession"
+    },
+    {
+      "name": "startSession without settings",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"startSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"contributionId\":\"example.countdown/status\",\"settings\":{}}",
+      "canonical": true,
+      "type": "startSession"
+    },
+    {
+      "name": "stopSession",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"stopSession\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\"}",
+      "canonical": true,
+      "type": "stopSession"
+    },
+    {
+      "name": "invoke",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"invoke\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\"}",
+      "canonical": true,
+      "type": "invoke"
+    },
+    {
+      "name": "cancel",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"cancel\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\"}",
+      "canonical": true,
+      "type": "cancel"
+    },
+    {
+      "name": "setFace",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\\uE916\"},\"line1\":{\"$type\":\"text\",\"text\":\"4:59\"},\"line2\":{\"$type\":\"text\",\"text\":\"Focus\"},\"state\":\"Playing\",\"detail\":\"Four minutes and fifty-nine seconds left.\",\"goodForSeconds\":5}}",
+      "canonical": true,
+      "type": "setFace"
+    },
+    {
+      "name": "setFace with no picture and text that needs escapes",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"none\"},\"line1\":{\"$type\":\"text\",\"text\":\"Caf\\u00E9 \\\"quoted\\\" \\uD83C\\uDDE9\\uD83C\\uDDEA\"},\"state\":\"None\",\"goodForSeconds\":86400}}",
+      "canonical": true,
+      "type": "setFace"
+    },
+    {
+      "name": "clearFace",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"clearFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\"}",
+      "canonical": true,
+      "type": "clearFace"
+    },
+    {
+      "name": "fail",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"fail\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"failure\":\"NeedsSetup\"}",
+      "canonical": true,
+      "type": "fail"
+    },
+    {
+      "name": "fail with AppUnavailable",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"fail\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"failure\":\"AppUnavailable\"}",
+      "canonical": true,
+      "type": "fail"
+    },
+    {
+      "name": "result Done",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"result\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"outcome\":\"Done\"}",
+      "canonical": true,
+      "type": "result"
+    },
+    {
+      "name": "result Failed with a failure",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"result\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"outcome\":\"Failed\",\"failure\":\"Network\"}",
+      "canonical": true,
+      "type": "result"
+    },
+    {
+      "name": "result Failed without a failure",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"result\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"outcome\":\"Failed\"}",
+      "canonical": true,
+      "type": "result"
+    },
+    {
+      "name": "result Unsupported",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"result\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"outcome\":\"Unsupported\"}",
+      "canonical": true,
+      "type": "result"
+    },
+    {
+      "name": "sessionRefused",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"sessionRefused\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"code\":\"session.settings-invalid\"}",
+      "canonical": true,
+      "type": "sessionRefused"
+    },
+    {
+      "name": "ping",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":1}",
+      "canonical": true,
+      "type": "ping"
+    },
+    {
+      "name": "ping from the companion",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"ping\",\"id\":7}",
+      "canonical": true,
+      "type": "ping"
+    },
+    {
+      "name": "pong with the largest id",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"pong\",\"id\":2147483647}",
+      "canonical": true,
+      "type": "pong"
+    },
+    {
+      "name": "error",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"host.turned-off\"}",
+      "canonical": true,
+      "type": "error"
+    },
+    {
+      "name": "error with every optional member but supported",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"error\",\"code\":\"rate.throttled\",\"message\":\"Faces are being coalesced.\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"requestId\":\"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\",\"retryAfterMs\":300000}",
+      "canonical": true,
+      "type": "error"
+    },
+    {
+      "name": "error with supported before the challenge",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"protocol.version-unsupported\",\"supported\":{\"minVersion\":3,\"maxVersion\":3}}",
+      "canonical": true,
+      "type": "error"
+    },
+    {
+      "name": "error from the companion in place of authenticate",
+      "sender": "Companion",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"protocol.version-unsupported\"}",
+      "canonical": true,
+      "type": "error"
+    },
+    {
+      "name": "error without the Pre flag after the challenge verified",
+      "sender": "Host",
+      "phase": "PeerVerified",
+      "frame": "{\"type\":\"error\",\"code\":\"auth.identity-changed\"}",
+      "canonical": true,
+      "type": "error"
+    },
+    {
+      "name": "error host.paused with retryAfterMs before the challenge",
+      "sender": "Host",
+      "phase": "Handshake",
+      "frame": "{\"type\":\"error\",\"code\":\"host.paused\",\"retryAfterMs\":300000}",
+      "canonical": true,
+      "type": "error"
+    },
+    {
+      "name": "member names compare after unescaping",
+      "sender": "Host",
+      "phase": "Authenticated",
+      "frame": "{\"\\u0074ype\":\"stopSession\",\"s\\u0065ssionId\":\"0f0e0d0c0b0a09080706050403020100\"}",
+      "canonical": false,
+      "type": "stopSession"
+    },
+    {
+      "name": "setFace with only the required members",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"goodForSeconds\":1}}",
+      "canonical": false,
+      "type": "setFace"
+    },
+    {
+      "name": "white space between tokens",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{ \"type\" : \"result\" ,\n  \"requestId\" : \"a0a1a2a3a4a5a6a7a8a9aaabacadaeaf\" , \"outcome\" : \"Done\" }",
+      "canonical": false,
+      "type": "result"
+    },
+    {
+      "name": "a raw private-use glyph",
+      "sender": "Companion",
+      "phase": "Authenticated",
+      "frame": "{\"type\":\"setFace\",\"sessionId\":\"0f0e0d0c0b0a09080706050403020100\",\"face\":{\"picture\":{\"$type\":\"glyph\",\"glyph\":\"\ue916\"},\"goodForSeconds\":5}}",
+      "canonical": false,
+      "type": "setFace"
+    }
+  ]
+}

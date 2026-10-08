@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.ventana.tools/schemas/extensions/pairing.v3.json",
+  "title": "Extension pairing file, version 3",
+  "description": "<extension-id>.pairing.json: the credential a host writes when the person chooses Save connection info (contract §6). Never commit, share or pack it. Readers also check that hostId is listed in the manifest, that extensionId is the manifest's id and that pipeName carries this file's host id and registration id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pairingVersion", "mode", "hostId", "pipeName", "registrationId", "extensionId", "secret"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "pairingVersion": {
+      "const": 3
+    },
+    "mode": {
+      "description": "Persistent. PerLaunch is reserved.",
+      "const": "Persistent"
+    },
+    "hostId": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "pipeName": {
+      "description": "Ventana.Extensions.v3.<host-id>.<edition>.<user-hash>.<registration-id>",
+      "type": "string",
+      "pattern": "^Ventana\\.Extensions\\.v3\\.[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z0-9-]{1,32}\\.[0-9a-f]{16}\\.[0-9a-f]{32}$"
+    },
+    "registrationId": {
+      "description": "32 lowercase hexadecimal digits, not all zero.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$",
+      "not": { "const": "00000000000000000000000000000000" }
+    },
+    "extensionId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+    },
+    "secret": {
+      "description": "Canonical Base64 of 32 random bytes.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$"
+    }
+  }
+}

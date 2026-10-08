@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "manifest.host-invalid",
+      "path": "/hosts/0",
+      "severity": "Error",
+      "line": 8,
+      "column": 5
+    }
+  ]
+}

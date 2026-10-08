@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "list.too-short",
+      "path": "/contributions/0/settings/1/choices",
+      "severity": "Error",
+      "line": 55,
+      "column": 22
+    }
+  ]
+}

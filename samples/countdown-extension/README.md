@@ -1,97 +1,107 @@
 # Countdown companion sample
 
-A small .NET 10 companion consuming the local `Orbit.Extensions.Sdk`
-**0.1.0-preview.2** NuGet package. It owns one countdown in memory, supplies
-live text faces, and needs no account or external network service. The SDK
-owns authenticated Windows named pipes, pairing and reconnect.
+> **Status: developer sample.** The automated tests run the handler against the SDK's test kit and
+> a real client over an in-memory host. Rendering, accessibility and the installed host app's
+> placement flows need checking in that app.
 
-| Card choice | Behavior |
-|---|---|
-| Start or resume | Start the chosen duration when Ready/Finished; resume remaining time when Paused; leave an already Running timer alone |
-| Pause | Freeze remaining time; leave Ready/Paused/Finished alone |
-| Reset | Prepare the chosen duration in Ready without starting |
-| Fresh start or reset duration | 1, 5 or 25 minutes; editing a choice does not change the timer |
+## What it does
 
-All placements share one timer and keep independent card choices. Start on a
-Ready timer uses that Start card's duration, even if Reset prepared a different
-duration. **Countdown status** is passive and can move into the middle. Picking
-the middle still closes the ring or goes back.
+One countdown, kept in the companion's memory, shared by every placement:
 
-The process starts Ready at 5:00. Completion shows 0:00/Finished. There is no
-alarm, notification, automatic restart or timer file. It continues elapsing
-with no visible ring or sessions; restarting the companion loses timer state.
+| Contribution | When picked | Face |
+|---|---|---|
+| **Countdown** (`example.countdown/timer`) | **Start or resume**: starts the chosen duration when Ready or Finished, resumes the time left when Paused, and leaves a running countdown alone. **Pause**: freezes the time left while running. **Reset**: prepares the chosen duration without starting. | The time left (m:ss) and the placement's choice with the phase |
+| **Countdown status** (`example.countdown/status`) | Nothing | The time left and the phase |
 
-## Build and test
+Each placement keeps its own **When picked** and **Duration** (1, 5 or 25 minutes); changing a
+setting performs no action. The companion starts Ready at 5:00. A finished countdown shows 0:00
+and Finished. There is no alarm, no notification and no saved state: restarting the companion
+starts over. The sample needs no account and no network.
 
-From the repository root with .NET 10:
+## Run it
 
-```powershell
-pwsh -File tools/build.ps1
-dotnet restore samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj --source artifacts/extension-sdk --packages artifacts/countdown-consumer-packages
-dotnet build samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj -c Release --no-restore
-dotnet run --project samples/countdown-extension/tests/CountdownExtensionSample.Tests.csproj -c Release --no-build
-```
+You need Windows, the .NET 10 SDK, the SDK's NuGet packages (`VentanaTools.Orbit.Extensions` and
+`VentanaTools.Orbit.Extensions.Testing`), and a build of the host app with extension support.
 
-The independent test executable adds no test-framework packages. Its 13 checks
-cover choices/defaults, monotonic timing, idempotence, pause/resume, reset,
-completion, refusal, finite faces, cancellation, session retirement, rejected
-publication and renewal rate headroom. Fake time and explicit gates determine
-results. They do not establish native rendering or accessibility.
-
-Copy this entire folder outside the repository, keeping `Directory.Build.props`,
-and restore/build using an absolute local-feed path to verify the consumer
-boundary. There is no Orbit/SDK source-project reference.
-
-Run `pwsh -File tools/verify.ps1` from the repository root for the public SDK
-and sample verification suite. The native Orbit host lives in a separate
-proprietary repository; these public tests do not establish Store readiness,
-native rendering, or accessibility. Verify the installed host separately using
-the walkthrough below.
-
-## Try it in Orbit
-
-1. In an Orbit version with extension support enabled, import `extension.json` under
-   **Settings > Extensions** with **Extension developer mode** on, or install the sample
-   package without that toggle. Enable Countdown sample.
-2. Copy connection info into a private local file outside source or packages.
-3. Start the built companion, passing only the credential file's path:
+1. Build and test. The folder imports none of the repository's build settings and references the
+   SDK only as packages, so it builds the same when copied elsewhere. `Directory.Build.props` asks
+   for the repository's version unless the `VentanaExtensionsVersion` property or environment
+   variable names another. `tools/build.ps1` (see the repository README) instead packs packages
+   with a local `-dev.<stamp>` version into `artifacts/packages`, the folder the repository's
+   `NuGet.config` maps the SDK packages to. So, from the repository root, first tell this
+   PowerShell session which version you built:
 
    ```powershell
-   dotnet run --project samples/countdown-extension/CountdownExtensionSample.csproj -c Release --no-build -- --manifest "samples/countdown-extension/extension.json" --pairing "C:\private-folder\Countdown.pairing.json"
+   cd samples/countdown-extension
+   $env:VentanaExtensionsVersion = (Get-Content ..\..\artifacts\build\state.json | ConvertFrom-Json).version
+   dotnet test tests/CountdownExtensionSample.Tests.csproj
    ```
 
-4. Add three Countdown action placements. Configure Start, Pause and Reset;
-   choose one minute for Start and Reset. Add Countdown status, optionally in
-   the middle.
-5. Start, pause, resume, and reset. Start while running must not restart it.
-   Let one run finish. Change and undo one card choice; siblings keep theirs,
-   and editing settings alone performs no timer action.
-6. Ctrl+C stops the companion. Revoking access requires fresh connection info
-   and an explicitly restarted companion. An Orbit reconnect within the same
-   companion process retains time and never replays commands.
+   The variable reaches every build this session starts: `dotnet test`, `dotnet run` in step 3,
+   and the build that the tool's `pack` starts, which takes no `-p:` option. If you built with the
+   plain `dotnet pack` commands, which write no `state.json`, skip that line: your packages
+   already have the repository's version. For a single `dotnet` command,
+   `-p:VentanaExtensionsVersion=<version>` does the same.
 
-## Implementation and distribution
+2. In the host app, open the extension settings, turn on developer mode, import this folder's
+   `extension.json`, and turn the extension on after reviewing it. Then save the connection info:
+   the host app writes the pairing file to
+   `%USERPROFILE%\.ventana\pairings\<host-id>\example.countdown.pairing.json`, where the companion
+   finds it. The pairing file is a credential: never commit, package or share it.
+3. Start the companion, in the same session:
 
-`Countdown.cs` derives elapsed time from monotonic `TimeProvider` timestamps.
-Delayed publications and wall-clock changes do not alter timing. It clamps at
-zero and rounds up only for m:ss display. Mutation is serialized and rechecks
-cancellation and captured session activity immediately before applying a choice.
+   ```powershell
+   dotnet run --project CountdownExtensionSample.csproj
+   ```
 
-`CountdownHandler.cs` publishes initial state and normally renews once a second.
-At the active-session cap, renewals slow to two seconds to leave transport
-headroom. Faces expire after five seconds. Retired/canceled sessions and rejected
-publication end the loop; no publication loops run without demand. Orbit undo
-changes settings, not completed timer invocations.
+   It prints one status line per change. Ctrl+C stops it. `--pairing <path>` uses a pairing file
+   elsewhere, `--manifest <path>` another manifest, and `--verbose` adds the host's error text.
+4. In the host app, add **Countdown** three times (Start or resume, Pause and Reset, with one
+   minute) and **Countdown status**. Start, pause, resume, reset, and let one run finish.
 
-See [local distribution](../../docs/extension-distribution.md)
-to package the built runtime-dependent companion and source. `orbit-package.json`
-is the descriptor staged as root `package.json`; `PACKAGE-README.md` is staged
-as root `README.md`. Prerequisite .NET installation remains the user's step.
+## How it works
 
-See the [SDK guide](../../docs/extension-sdk.md),
-[example walkthroughs](../../docs/extension-examples.md), and
-[developer site](https://dev.ventana.tools/orbit/examples/countdown/).
-The SDK and sample use [Apache-2.0](../../LICENSE); Orbit remains proprietary.
-SDK NuGet publication and real Store-signed extension verification remain open.
-Use an Orbit version with **Settings > Extensions** enabled; this repository
-does not include an application build.
+- **`Program.cs`** is one line: `CompanionApp.RunAsync(args, new CountdownHandler())`. The SDK
+  reads `extension.json` and the pairing file, connects, authenticates, reconnects with backoff,
+  cleans and paces faces, and stops sessions; there is no startup code to copy.
+- **`Countdown.cs`** keeps the countdown. Elapsed time comes from `TimeProvider` timestamps, never
+  from how often a face was published; nothing runs in the background. A pick that changes
+  something completes `Changed`, which wakes every session.
+- **`CountdownHandler.cs`** is a `ContributionHandler`. `RunSessionAsync` publishes a face, then
+  waits: while the countdown runs, until the displayed second changes; otherwise, until a pick
+  changes it. A still face sets `Renew`, so the SDK keeps it alive while the session runs instead
+  of the handler republishing on a timer. `InvokeAsync` checks the settings, the cancellation
+  token and `Session.IsActive` just before applying the pick, and answers `Done`, `Refused` or
+  `Unsupported`.
+- **`tests/`** is an xUnit project on `VentanaTools.Orbit.Extensions.Testing`: countdown tests on
+  a `FakeTimeProvider`, a `RecordingSession` for the status face, a `CompanionTestHost` that drives
+  the handler through a real client, a `ContributionContractSuite` subclass that checks every
+  contribution and setting combination, and a manifest validity check.
+
+## Extend it
+
+- Add a contribution to `extension.json` and handle its id in `CountdownHandler` (or route ids
+  with `ContributionRouter`). The contract suite picks new contributions and settings up by itself.
+- Keep faces short, publish when what they show changes, and set `Renew` for faces that stay true.
+- Validate the manifest and build the package with the SDK's command-line tool (the
+  `VentanaTools.Orbit.Extensions.Tool` package; see the repository README). Its `validate`
+  command checks this folder, and its `pack` command follows `extension.pack.json`: it publishes
+  the companion as one runtime-dependent executable to `payload/companion/`, copies the source to
+  `payload/source/`, and uses `PACKAGE-README.md` as the package readme. Run `pack` in a session
+  where `VentanaExtensionsVersion` names your build (step 1), so its publish step restores those
+  packages.
+- `CountdownExtensionSample.csproj` is AOT-compatible: `dotnet publish -r win-x64
+  -p:PublishAot=true` builds a native executable instead (it needs the C++ build tools).
+
+## Troubleshooting
+
+- **The companion waits for a pairing file.** Save the connection info in the host app again, or
+  pass `--pairing <path>`.
+- **The host refused the connection.** The status line names the reason. After the manifest
+  changes, import it again, turn the extension on, and save fresh connection info.
+- **Restore cannot find the SDK packages.** Point NuGet at a folder or feed with the
+  `VentanaTools.Orbit.Extensions` packages (inside the repository, its `NuGet.config` already
+  points at `artifacts/packages`) and name the version you have: set `VentanaExtensionsVersion`
+  as in step 1, or pass `-p:VentanaExtensionsVersion=<version>`.
+
+The sample is [MIT-0](LICENSE); the SDK is Apache-2.0.

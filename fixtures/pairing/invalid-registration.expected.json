@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "pairing.registration-invalid",
+      "path": "/registrationId",
+      "severity": "Error",
+      "line": 6,
+      "column": 21
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- The companion transport is a Windows named pipe. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Adds the SDK's namespace as a global using; Program.cs also names it explicitly. -->
+    <VentanaToolsImplicitUsings>true</VentanaToolsImplicitUsings>
+    <!-- One executable per runtime when published. Pack's build step publishes for win-x64 unless extension.pack.json's
+         build names another runtime; framework-dependent, so it needs that architecture's .NET runtime (PACKAGE-README.md). -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="VentanaTools.Orbit.Extensions" Version="0.0.0-template-version" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The companion reads extension.json from its own folder. -->
+    <None Include="..\..\extension.json" Link="extension.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

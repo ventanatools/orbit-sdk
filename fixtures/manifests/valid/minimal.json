@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 3,
+  "id": "example.minimal",
+  "name": "Minimal",
+  "description": "The fewest members a valid manifest has.",
+  "version": "0.0.0",
+  "hosts": ["example-host"],
+  "contributions": [
+    {
+      "id": "example.minimal/clock",
+      "name": "Clock",
+      "description": "A passive widget.",
+      "glyph": "\uE121",
+      "provides": ["face"]
+    }
+  ]
+}

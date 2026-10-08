@@ -1,0 +1,22 @@
+name: Documentation
+description: Something on dev.ventana.tools or in this repository's documents is wrong, missing or unclear.
+labels: ["documentation"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page or file
+      description: The address of the page on dev.ventana.tools, or the path of the file in this repository.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested text
+      description: Optional. What the page should say instead.

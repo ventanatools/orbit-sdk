@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev.ventana.tools/schemas/extensions/pack.v1.json",
+  "title": "Extension pack configuration, version 1",
+  "description": "extension.pack.json: what the tool's pack command puts in a package (contract §11.3). Paths are relative to this file. The tool always copies extension.json, generates extension.package.json, leaves out .git, .vs, obj, node_modules/.cache, *.user and pairing files, and refuses links and pairing files among the staged files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["packVersion", "readme"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "packVersion": {
+      "const": 1
+    },
+    "readme": {
+      "description": "The file copied to README.md, which people read before installing.",
+      "type": "string"
+    },
+    "strings": {
+      "description": "A folder whose *.json files are copied to strings/.",
+      "type": "string"
+    },
+    "build": {
+      "description": "A dotnet publish step that runs first; its output is copied to payload/<to>/.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project"],
+      "properties": {
+        "project": {
+          "description": "The project to publish.",
+          "type": "string"
+        },
+        "runtime": {
+          "description": "The runtime identifier. Default: win-x64.",
+          "type": "string"
+        },
+        "configuration": {
+          "description": "The build configuration. Default: Release.",
+          "type": "string"
+        },
+        "to": {
+          "description": "The folder under payload/. Default: companion.",
+          "type": "string"
+        }
+      }
+    },
+    "payload": {
+      "description": "Copy rules, applied in order after the build step.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": {
+          "from": {
+            "description": "A file or folder.",
+            "type": "string"
+          },
+          "to": {
+            "description": "The folder under payload/ the files go to; \"\" for payload/ itself.",
+            "type": "string"
+          },
+          "include": {
+            "description": "Globs of the files to copy from a folder (*, ** and ?). Default: [\"**/*\"].",
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "exclude": {
+            "description": "Globs of the files to leave out. Default: [].",
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "url.invalid",
+      "path": "/supportUrl",
+      "severity": "Error",
+      "line": 14,
+      "column": 17
+    }
+  ]
+}

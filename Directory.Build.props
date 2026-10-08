@@ -7,6 +7,15 @@
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- The same analysis settings as the Orbit app, so a change builds identically in both repositories. -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!-- The one version of every VentanaTools.Orbit.Extensions* package. Builds may override it
+       with -p:VentanaExtensionsVersion=<version>. -->
+  <PropertyGroup>
+    <VentanaExtensionsVersion>0.1.0-preview.1</VentanaExtensionsVersion>
+    <Version>$(VentanaExtensionsVersion)</Version>
   </PropertyGroup>
 </Project>

@@ -1,0 +1,24 @@
+#nullable enable
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceCollectionExtensions
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.Arguments.get -> System.Collections.Generic.IReadOnlyList<string!>?
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.Arguments.set -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.Client.get -> VentanaTools.Orbit.Extensions.CompanionClientOptions?
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.Client.set -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.CompanionServiceOptions() -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.HandlerFaulted.get -> System.Action<VentanaTools.Orbit.Extensions.HandlerFaultedEventArgs!>?
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.HandlerFaulted.set -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.ManifestPath.get -> string?
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.ManifestPath.set -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.PairingPath.get -> string?
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.PairingPath.set -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.StatusChanged.get -> System.Action<VentanaTools.Orbit.Extensions.StatusChangedEventArgs!>?
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.StatusChanged.set -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.StopApplicationOnExit.get -> bool
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.StopApplicationOnExit.set -> void
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.WatchFiles.get -> bool
+VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions.WatchFiles.set -> void
+static VentanaTools.Orbit.Extensions.Hosting.CompanionServiceCollectionExtensions.AddCompanion(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, VentanaTools.Orbit.Extensions.IContributionHandler!>! handlerFactory) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static VentanaTools.Orbit.Extensions.Hosting.CompanionServiceCollectionExtensions.AddCompanion(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, VentanaTools.Orbit.Extensions.IContributionHandler!>! handlerFactory, System.Action<VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static VentanaTools.Orbit.Extensions.Hosting.CompanionServiceCollectionExtensions.AddCompanion<THandler>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static VentanaTools.Orbit.Extensions.Hosting.CompanionServiceCollectionExtensions.AddCompanion<THandler>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<VentanaTools.Orbit.Extensions.Hosting.CompanionServiceOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

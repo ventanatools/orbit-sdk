@@ -1,0 +1,39 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.unknown-member",
+      "path": "/protocolVersion",
+      "severity": "Error",
+      "line": 2,
+      "column": 22
+    },
+    {
+      "code": "json.required-missing",
+      "path": "/pairingVersion",
+      "severity": "Error",
+      "line": 1,
+      "column": 1
+    },
+    {
+      "code": "json.required-missing",
+      "path": "/mode",
+      "severity": "Error",
+      "line": 1,
+      "column": 1
+    },
+    {
+      "code": "json.required-missing",
+      "path": "/hostId",
+      "severity": "Error",
+      "line": 1,
+      "column": 1
+    },
+    {
+      "code": "pairing.pipe-name-invalid",
+      "path": "/pipeName",
+      "severity": "Error",
+      "line": 3,
+      "column": 15
+    }
+  ]
+}

@@ -1,330 +1,149 @@
-# Photoshop actions and live state sample
+# Photoshop bridge sample
 
-The default `extension.json` is a schema-2 bundle for Orbit: **Selected layer visibility**
-can toggle, show or hide one selected layer, while **Layer status** is passive. Each
-placement has its own choice setting. Both can publish short live text faces through
-a separately started companion and an Adobe UXP plugin. Manifest, named-pipe
-and bridge protocol 2 are the only supported contract. Older declarations and
-pairing files are rejected; there is no compatibility runtime or automatic
-development-data migration.
+> **Status: developer sample.** The automated tests use an in-memory Photoshop document.
+> Running Photoshop, Adobe UXP loading, the panel's persistent file token and reconnection, and
+> `.ccx` installation need checking in the installed Adobe host after this protocol-3 rewrite.
+> This is not an Adobe-endorsed integration or a finished end-user extension.
 
-The [developer walkthrough](../../docs/extension-examples.md)
-uses this as the complex application-adapter reference alongside the simpler
-Countdown SDK example. The [local distribution guide](../../docs/extension-distribution.md)
-packages its curated source without credentials or runtime dependencies.
-`orbit-package.json` becomes root package metadata; the npm `package.json`
-remains inside the source payload. Reviewed v2 package updates revoke pairing
-and stay off, preserving ring data. Unsupported older declarations remain
-preserved and refused rather than silently becoming runnable v2 contributions.
+## What it does
 
-The command changes the selected layer's own visibility property. It requires
-exactly one selected layer, refuses a changed selection while waiting for a
-modal scope, and never saves a document. Photoshop's normal Undo remains
-available through an explicit history transaction; Show/Hide no-ops create no
-history entry. Document names, paths, layer names and pixels stay in Photoshop.
+Two contributions for the host app, both driven by one selected Photoshop layer:
 
-The automated tests use a fake Photoshop document model. **Running Photoshop,
-Adobe UXP loading, loopback permission behavior and `.ccx` installation are not
-verified by those tests.** Installed Photoshop 27.9 with UXP Developer Tools
-2.3.0 passed a native v2 check on 2026-10-05: mutual authentication through the
-actual Node companion to scratch Orbit, independent Toggle/Show/Hide actions,
-live visibility/selection faces, and Show followed by Photoshop Undo and Redo
-with the layer preserved. Basic focus return, panel hiding, plugin reload and
-explicit reconnection were exercised. Individual Adobe notification delivery,
-deeper lifecycle/refusal paths, accessibility and `.ccx` installation remain
-open. This is a development example, not an Adobe-endorsed integration or a
-finished end-user extension.
+- **Selected layer visibility** toggles, shows or hides the one selected layer. Each placement
+  keeps its own **When picked** choice. Its live face shows Shown or Hidden.
+- **Layer status** is passive: its face shows the selected layer's visibility or how many layers
+  are selected (None, One or Many). Picking it changes nothing.
 
-## How it connects
+The change happens inside Photoshop's modal scope with one named history step (**Change selected
+layer visibility**), so Photoshop's normal Undo and Redo work. Show and Hide create no history
+step when the layer is already in that state. Document names, paths, layer names and pixels stay
+in Photoshop: only the short values above leave it.
 
-```text
-Orbit (action and face host)
-  ↕ authenticated Windows named pipe, protocol 2
-Node companion (started by you)
-  ↕ authenticated WebSocket: UXP uses localhost:38475; listener binds 127.0.0.1
-Photoshop UXP panel (connected by you)
-  → executeAsModal → selectedLayer.visible
-```
+## Run it
 
-Protocol 2 receives action/request IDs, opaque session IDs and the declared
-choice settings, and publishes bounded
-text faces for those sessions. No ring contents, foreground-window identity, document
-names, layer names, pixels, paths, scripts or arbitrary `batchPlay` commands cross
-this sample's connection. Outcomes remain `done`, `refused`, `failed` or `unsupported`.
+You need Windows, Node.js 22 or later, Photoshop 25 or later, Adobe's UXP Developer Tool, and a
+build of the host app with extension support.
 
-UXP has a WebSocket **client**, but it does not run Node.js. A normal UXP plugin
-cannot use Node's `net` module to open Orbit's pipe. The companion bridges the
-two supported transports. Orbit itself opens no WebSocket/HTTP endpoint and
-does not launch either companion or Photoshop. See Adobe's [UXP runtime](https://developer.adobe.com/uxp/guides/explanation/tech-stack/)
-and [network APIs](https://developer.adobe.com/uxp/guides/how-to/recipes/network/).
-
-## Prepare the sample
-
-Use Windows, Node.js 22 or newer, and an Orbit version with
-**Settings > Extensions** enabled. Store-signed extension compatibility has not
-yet been verified; this repository does not include an Orbit build. For the real application test, also
-install Photoshop 25 or newer and Adobe's UXP Developer Tool. Version 25 is the
-sample's declared minimum, not a claim that every supported version has been
-tested. The panel requires `crypto.getRandomValues` and manifest v5 permissions.
-
-Before loading a development plugin, enable Developer Mode in both Adobe UXP
-Developer Tool and Photoshop. Keep Photoshop running while loading the sample.
-Apply the Photoshop preference and restart Photoshop before choosing **Load**
-again. In the installed 27.9 check, loading succeeded after that restart without
-changing the manifest. See Adobe's
-[development prerequisites](https://developer.adobe.com/uxp/faq/).
-
-From this folder:
-
-```powershell
-npm ci --ignore-scripts
-npm run check
-npm test
-```
-
-`npm test` first builds `uxp/vendor/bridge-crypto.js` and copies its MIT license.
-`npm run build:uxp` does the same preparation without tests. Generated files and
-`node_modules` are ignored; do this before loading or packaging `uxp/`.
-The lockfile pins all dependencies. Nothing is downloaded at Orbit runtime.
-
-The manifest allows `ws://localhost:38475`, and the panel connects to exactly
-`ws://localhost:38475/orbit-photoshop`. In the installed Photoshop 27.9 check,
-its permission matcher rejected the IPv4 literal but accepted `localhost`.
-The companion still binds only `127.0.0.1`, and its generated bridge file
-retains `ws://127.0.0.1:38475/orbit-photoshop`. The panel's parser requires that
-canonical value; do not edit the file to change its host or port.
-
-## Connect to Orbit and Photoshop
-
-1. In Orbit, open **Settings → Extensions**, enable **Extension developer mode**, choose
-   **Import manifest…**, and select this folder's `extension.json`.
-   Normal package installation does not require that toggle.
-   On **Photoshop sample**, choose
-   **Enable…**, review its two contributions, and confirm **Enable**. Importing
-   the manifest runs nothing.
-2. Use **Copy connection info** for that registration. Save that JSON as, for
-   example, `Orbit.pairing.json` in a private local folder outside this repository.
-   This file is a credential. Do not share it with a ring, sample or bug report.
-3. Start the companion with the file's path and a **new** output file path:
+1. From this folder, install and test:
 
    ```powershell
-   npm start -- --pairing "C:\private-folder\Orbit.pairing.json" --bridge-file "C:\private-folder\Photoshop.bridge.json"
+   npm ci --ignore-scripts
+   npm run check
+   npm test
    ```
 
-   Replace both example paths. The output directory must already exist. An
-   existing bridge file is never overwritten. The companion uses port 38475;
-   another listener there causes startup to fail.
-4. In Adobe UXP Developer Tool, add `uxp/manifest.json`, then load it into
-   Photoshop. Open the **Orbit Photoshop sample** panel from Photoshop's
-   Plugins menu. If loading fails, open **Details** in the **Plugin Load Failed**
-   notification and inspect the logs. Photoshop may have its own developer-mode
-   prompt open even after Developer Tool's setup is complete.
-5. Choose **Choose bridge file** in that panel and pick the newly created
-   `Photoshop.bridge.json`. Do not give Photoshop the Orbit pairing file.
-   Wait for the panel's **Connected.** status as well as Orbit's **Connected**
-   state. Orbit's state confirms its named-pipe connection to Node; the panel
-   confirms the separate authenticated Photoshop-to-Node connection.
-6. In Orbit's ring editor, add an item, choose **Extensions**, then
-   **Photoshop sample: Selected layer visibility**. Its **When picked** choice
-   offers Toggle visibility, Show layer and Hide layer. Add a second placement
-   with a different choice to check that settings remain independent. Add
-   **Layer status** for a passive face; choose visibility or selection count.
-   With a disposable document and one selected layer, a visibility action should
-   make the requested change once.
+   `npm test` first builds `uxp/vendor/bridge-crypto.js` (`npm run build:uxp` does that alone).
+   The companion uses the repository's Node SDK, `@ventanatools/orbit-extensions`, through
+   `file:../../node/orbit-extensions`; the other dependencies are pinned by the lockfile.
+2. In the host app, open the extension settings, turn on developer mode, import this folder's
+   `extension.json`, and turn the extension on after reviewing it. Then choose **Save connection
+   info**: the host app writes the pairing file to
+   `%USERPROFILE%\.ventana\pairings\<host-id>\example.photoshop.pairing.json`, where the
+   companion finds it. The pairing file is a credential: never commit, package or share it.
+3. Start the companion:
 
-Hiding the panel keeps its authenticated connection and active sessions. Explicit
-**Disconnect**, plugin destruction or companion exit ends it. After disconnecting,
-choose the current bridge file to connect again. The companion retries an unavailable
-Orbit once a second, but never queues or replays commands across reconnects.
+   ```powershell
+   npm start
+   ```
 
-After restarting the companion, choose a new bridge-file path; the previous
-derived credential has expired. Remove old bridge files when no longer needed.
-Disabling/removing the extension in Orbit revokes the Orbit credential. After
-re-enabling, explicitly copy fresh connection info and restart the companion.
+   It prints one status line per change. It starts the bridge on port 38475 and writes the bridge
+   file to `%LOCALAPPDATA%\VentanaTools\Samples\Photoshop\bridge.json` (deleted again when the
+   companion stops). Ctrl+C stops it. `npm start -- --pairing <path>` uses a pairing file
+   elsewhere.
+4. In Adobe UXP Developer Tool, add `uxp/manifest.json` and load it into Photoshop (enable
+   developer mode in both first, and restart Photoshop after changing that preference). Open
+   **Photoshop bridge sample** from the Plugins menu and choose **Choose bridge file** once,
+   picking the `bridge.json` above. The panel keeps the file through a persistent token: when
+   the companion restarts, the panel reconnects by itself, waiting 1 second, then 2, 4 and so on
+   up to 30 seconds between tries. **Disconnect** stops it until you choose the file again.
+5. In the host app, add **Photoshop sample: Selected layer visibility** with different choices,
+   and **Layer status**. Try them on a disposable document with one selected layer.
 
-### If the panel cannot connect
-
-After changing source, rebuild the UXP bundle and reload the plugin in
-Developer Tool. After changing manifest permissions, **Unload** then **Load**
-so Adobe applies them. Use the current Node companion and its fresh bridge file.
-
-**Could not connect (stage/kind)** identifies a local setup step using fixed
-categories. For `metadata`, `read` or `config`, choose the bridge file generated
-by the running companion, not the Orbit pairing file. For `socket`, check the
-exact manifest permission and endpoint above. For `platform` or `session`,
-confirm the generated bundle is present and reload the plugin. Messages omit
-exception prose, paths, bridge contents, secrets and authentication values.
-Failed setup closes partially created socket and platform resources.
-
-**Disconnected. Choose the bridge file again.** can follow a failed handshake
-or a lost connection. Confirm the companion is running and choose its current
-bridge file. A companion restart requires a new bridge file; re-enabling the
-Orbit registration requires fresh Orbit pairing information first.
-
-Adobe's [Developer Tool guide](https://developer.adobe.com/photoshop/uxp/guides/devtool/)
-covers loading and debugging plugins. The command uses the documented
-[Layer.visible](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/classes/layer)
-property inside [executeAsModal](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/executeasmodal).
-
-## Authentication and command lifetime
-
-Orbit pairing uses [protocol 2](../../docs/extension-protocol.md):
-bounded little-endian length-prefixed JSON, fresh nonces and mutual
-HMAC-SHA256. The companion strictly checks the Photoshop extension ID, pipe
-shape, schema, Base64 and fields. It verifies Orbit before sending its own
-proof. The Orbit secret never crosses a wire or enters Photoshop.
-
-The companion derives a **different per-launch secret** using
-`HMAC-SHA256(orbitSecret, ASCII("Orbit.Photoshop.Bridge.Key.v2\n") || random32)`.
-Only this secret and the loopback URL enter the bridge file. The file remains
-sensitive: possession authorizes this sample's local Photoshop command.
-Choose a private directory; Windows directory ACLs, rather than Node's Unix
-file-mode argument, control file access. Do not use shared or synced folders.
-
-The WebSocket leg has its own mutual HMAC exchange. It uses lowercase hex
-nonces/proofs rather than the pipe's Base64. The plugin sends
-`{type:"hello", protocolVersion:2, clientNonce}`. The companion answers
-`{type:"challenge", serverNonce, proof}`; after verifying the server, the
-plugin sends `{type:"authenticate", proof}`. The companion answers
-`{type:"ready"}` only after verifying the client. Each proof is HMAC-SHA256
-over this ASCII transcript with LF separators and **no final newline**:
+## How it works
 
 ```text
-Orbit.Photoshop.Bridge.v2
-ROLE
-CLIENT_NONCE
-SERVER_NONCE
+host app
+  | authenticated named pipe, protocol 3 (the Node SDK)
+Node companion (npm start)
+  | authenticated WebSocket on 127.0.0.1:38475/photoshop-bridge (the panel connects to localhost)
+Photoshop UXP panel
+  -> executeAsModal -> the selected layer's visible property
 ```
 
-`ROLE` is `server` or `client`. Fresh nonces and separate roles prevent proof
-reflection and replay. No raw secret is sent. Authenticated command/result/
-cancel messages use the same fields as Orbit's pipe, encoded as text WebSocket
-messages. Both peers reject unknown or duplicate fields and unexpected messages.
+UXP has a WebSocket client but no Node.js, so it cannot open the host app's pipe; the companion
+bridges the two.
 
-The listener binds only `127.0.0.1`, accepts one authenticated Photoshop peer,
-bounds payloads and rates, and gives authentication five seconds. The bridge
-admits absent Origin, literal `null` and exact `file://` (observed from
-installed Photoshop); all require mutual per-launch HMAC authentication.
-HTTP(S) web origins and other Origin values are rejected. Origin is not a
-credential. This is not a boundary against a hostile program running as
-the same Windows user with access to the user's private files/processes.
+- **Host side.** `companion/main.cjs` runs `runCompanion` from the Node SDK with the bridge's
+  handler. The SDK finds the pairing file, verifies the host's proof before it proves its own,
+  reconnects with backoff, cleans and paces faces, and renews them while their sessions run. The
+  status lines name the host from the registry entry of the id the host proved, never a literal.
+- **Bridge.** `companion/bridge.cjs` listens only on `127.0.0.1`. It accepts the exact Origin
+  `file://` (Photoshop's) or no Origin, and refuses every other Origin and path. Sockets that
+  have not authenticated are counted apart from the one authenticated panel (at most four), must
+  say hello within 1 second and authenticate within 5. Each launch uses a fresh random bridge
+  key, `HMAC-SHA256(random 32 bytes, "Example.Photoshop.Bridge.Key.v3\n")`, which is unrelated to
+  the pairing secret: the bridge file never carries a host credential.
+- **Bridge handshake.** The panel sends `{ type: "hello", bridgeVersion: 3, clientNonce }`; the
+  companion answers `{ type: "challenge", serverNonce, proof }`; after verifying it, the panel
+  sends `{ type: "authenticate", proof }`; the companion answers `{ type: "ready" }`. Each proof is
+  HMAC-SHA256 with the bridge key over this ASCII transcript, LF-separated with no final newline:
 
-Orbit's deadline is 15 seconds; the bridge and plugin cancel pending work after
-12 seconds. Selection is captured when the UXP command arrives and checked
-again inside the modal scope. Busy Photoshop, no document, multiple selected
-layers, a stale selection or cancellation refuses the command. A concurrent
-command is refused, not queued. Cancellation cannot undo a mutation that
-already completed; the sample never automatically retries that mutation.
+  ```text
+  Example.Photoshop.Bridge.v3
+  ROLE
+  CLIENT_NONCE
+  SERVER_NONCE
+  ```
 
-The adapter wraps visibility changes in Photoshop's
-[`suspendHistory`/`resumeHistory`](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/executeasmodal)
-scope for a named Undo step. After awaiting history setup it rechecks
-cancellation, the captured document/layer and the current session.
-Exceptions escape the modal callback so Photoshop rolls back a
-still-suspended change. Success is reported only after the history commit.
+  `ROLE` is `server` or `client`; nonces and proofs are lowercase hexadecimal. Both peers refuse
+  unknown or duplicate members and unexpected messages, and bound sizes and rates.
+- **Sessions and picks.** Every session the host app starts is forwarded to the panel; the panel
+  publishes a face only when it changes (events are coalesced, and a 2-second reconciliation
+  catches missed notifications). A pick is forwarded with its session's settings; the selection
+  is captured when it arrives and checked again inside the modal scope. A busy Photoshop, no
+  document, several selected layers, a changed selection or cancellation refuses the pick; a
+  concurrent pick is refused, not queued. Nothing is replayed after a reconnection.
+- **When Photoshop goes away**, every face fails as `AppUnavailable` and a pending pick fails the
+  same way, so the host app says the app is unavailable rather than that the network failed.
 
-## Verification
+`uxp/constants.js` holds the port, path and labels for both sides.
 
-`npm test` exercises real local named-pipe and WebSocket connections with a fake
-Orbit host and an in-memory Photoshop model. It checks mutual authentication,
-the checked-in HMAC vector, partial/coalesced frames, invalid UTF-8, duplicate
-JSON fields, payload/rate/deadline limits, command round trips, refusal,
-cancellation, disconnects, duplicate-invoke rejection, independent settings,
-state renewal, retired modal targets, event-listener cleanup and reconnect
-without replay. Transport tests cover exact
-`file://` authentication, rejection of foreign origins, unauthenticated peers,
-history commits, cancellation during history setup and rollback on
-setter/commit failures and Show/Hide no-ops. Panel tests cover lifecycle registration, fixed
-diagnostics and partial-resource cleanup. `test/interop-v2-peer.cjs`
-is the v2 peer for the real C# host; Photoshop remains an in-memory model.
-Windows transport
-tests are skipped on other operating systems; parser and command tests run there.
+## Extend it
 
-`test/interop-v2-peer.cjs` supplies a peer for a host team's interoperability
-harness. This public repository does not include the proprietary Orbit host
-tests. The peer connects through the actual Node bridge and UXP client to the
-same fake document model. It prints `READY`, then `INVOKED` with the mutation
-count after each successful action; `STOP` on stdin shuts it down. Its command-line
-argument is a temporary pairing-file path, never a credential value.
+- Add a contribution to `extension.json`, give it settings in `uxp/wire.js` (`settingsFor`) and
+  handle it in `uxp/platform.js`. Keep faces to short values that never contain document content.
+- Use your own extension id, UXP plugin id and labels in a fork.
+- `test/` shows how to test each layer: `flow.test.cjs` runs the real SDK client against the
+  SDK's in-memory test host (`@ventanatools/orbit-extensions/testing`), the bridge, a real
+  WebSocket and the panel's client; `interop-peer.cjs` is a peer a host team's tests can drive
+  (`node test/interop-peer.cjs <pairing file>`: it prints `READY`, then `INVOKED <count>` after
+  each pick that changed the document, and stops on `STOP`).
+- To share it, validate and pack this folder with the SDK's tool (the repository README shows
+  how to install it). The package mirrors the repository layout: the sample under
+  `payload/samples/photoshop-extension/` and the Node SDK under `payload/node/orbit-extensions/`,
+  so the `file:` dependency resolves. To share a prepared Adobe plugin, build the UXP bundle and
+  package `uxp/` as `.ccx` with Adobe's tooling. Never include a pairing or bridge file.
 
-Before distributing a real Photoshop integration, verify in the installed
-Adobe host:
+## Troubleshooting
 
-- UXP loading and authenticated connection passed on Photoshop 27.9 with UXP
-  Developer Tools 2.3.0, using the fixed `localhost` endpoint and exact `file://`
-  Origin. Other supported host versions need checks. Do not remove
-  authentication or allow arbitrary web origins.
-- Independent Toggle, Show and Hide placements changed one selected layer in
-  a new disposable document. Native passive faces showed Shown/Hidden and One.
-  After the history fix, Show changed hidden to shown, Ctrl+Z hid the layer
-  without removing it, and Ctrl+Shift+Z showed it again; live faces followed.
-  Other action/history combinations and no-document, multiple-selection,
-  changed-selection, cancellation and modal-busy paths need installed checks.
-- Repeated native-ring hotkeys and actions worked without manually activating
-  Photoshop between actions, providing a basic focus-return pass. Broader
-  focus scenarios remain open.
-- Closing the floating panel kept live faces active. Plugin reload disconnected;
-  choosing the current bridge file reconnected without replaying an action.
-  Full plugin destruction, companion exit, Orbit disable/restart and
-  stale-session/refusal cases need deeper installed lifecycle checks.
-- Keyboard navigation and screen-reader status work in the UXP panel, then
-  test `.ccx` installation on a clean supported Photoshop/Creative Cloud setup.
-  Clean `.ccx` installation remains unverified.
+- **`Port 38475 is in use`.** Another copy of the companion, or another program, listens there.
+  Stop it and start the companion again.
+- **`ventana: waiting (pairing.missing)`** in the companion: the host app has not saved
+  connection info yet. Choose **Save connection info** for this extension; the companion
+  connects when the file appears.
+- **`Could not connect (stage/kind).`** in the panel names a fixed setup step. For `token`, choose
+  the bridge file again. For `metadata`, `read` or `config`, check that the companion is running
+  (it writes the file at start) and that you chose its `bridge.json`, not the pairing file. For
+  `socket`, check the manifest permission `ws://localhost:38475`; after changing permissions,
+  unload and load the plugin. For `platform` or `session`, rebuild the UXP bundle and reload the
+  plugin. Messages never contain exception text, paths, file contents or keys.
+- **`Waiting for the companion; trying again in N s.`** The panel is reconnecting; start the
+  companion. Choose **Disconnect** to stop.
 
-## Share and extend
+## Licence and dependencies
 
-Share source plus `extension.json`; the recipient registers and pairs their
-own local instance. To share a prepared Adobe plugin, build the UXP bundle and
-package `uxp/` as `.ccx` using Adobe's tooling. Adobe supports
-[independent distribution](https://developer.adobe.com/uxp/guides/how-to/distribution/independent-distribution/)
-as well as its reviewed marketplace. Use your own stable plugin/extension IDs
-for a published fork. Do not include either connection file or any secret.
-Sharing an Orbit ring never installs or allows a companion. This milestone's
-ring importer leaves external command items out with an explanation; after
-registering and enabling the extension, the recipient adds its command locally.
-
-Keep the plugin-level `create` callback in `entrypoints.setup`, even when it
-does no initialization work; Adobe requires it for this lifecycle registration.
-Plugin `destroy` disconnects and retires pending file selections. Panel hide
-or panel destruction keeps the plugin's shared session connected.
-
-The v2 adapter uses Adobe's [action notifications](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/photoshopaction)
-and documented [event codes](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/eventcodes):
-`select`, `show`, `hide`, `open`, `close`, `make`, `delete`, `set`, and `undoEvent`,
-plus the documented [modal-exit event](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/executeasmodal).
-These names are checked against Adobe's documentation. Installed live faces
-followed visibility changes and Undo/Redo, but that does not isolate notification
-delivery from the reconciliation fallback. Notification-specific registration,
-delivery and cleanup checks remain open.
-Events coalesce to at most two refreshes per second (slower at the instance cap).
-An initial refresh and a refresh after each command complement a two-second
-reconciliation tick while at least one session exists. This catches missed or
-suppressed notifications, including history changes. Every text face expires
-after five seconds. The last session stopping removes listeners and timers.
-
-The short values are Shown/Hidden or None/One/Many; no document content is sent.
-Orbit may use its fallback glyph when a value does not fit a slot; its selected
-status retains the full description. A session ID is replaced when settings
-change or Orbit reconnects, so retired-session updates are ignored. Reconnecting
-Photoshop restores subscriptions but never replays a command.
-
-The bundle declares `hosts: ["orbit"]`; it does not claim Lollipop compatibility.
-Lollipop support, a marketplace, public NuGet publication, richer settings
-inspectors, and other contribution types remain separately versioned work.
-This sample is a source developer example, not a ready-to-install consumer
-extension. Visit the [developer site](https://dev.ventana.tools/orbit/examples/photoshop/)
-for the public walkthrough. SDK/sample source uses [Apache-2.0](../../LICENSE);
-Orbit remains proprietary. The dependency licenses below remain applicable.
-
-## Dependencies
-
-Complete license texts and attribution are retained in
-[third-party notices](THIRD-PARTY-NOTICES.md). Keep these notices and the
-generated bundle's license when distributing a prepared integration.
-
-The companion uses [ws 8.22.0](https://github.com/websockets/ws), MIT. The UXP
-bundle uses [@noble/hashes 2.4.0](https://github.com/paulmillr/noble-hashes), MIT;
-its complete license is copied beside the generated bundle. The build tool is
-[esbuild 0.28.2](https://esbuild.github.io/), MIT. The application does not ship
-or run Node, these npm packages, the companion, or the Adobe plugin as part of
-loading an extension manifest.
+The sample source is [MIT-0](LICENSE); the Node SDK is Apache-2.0. Complete dependency licence
+texts are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md): `ws` (MIT) for the companion's
+WebSocket, `@noble/hashes` (MIT) bundled into the UXP panel, and `esbuild` (MIT) to build that
+bundle. Photoshop and Adobe UXP are Adobe products, not included in or endorsed by this
+repository.

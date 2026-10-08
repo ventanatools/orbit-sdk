@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 3,
+  "language": "de-DE",
+  "name": "Countdown-Beispiel",
+  "description": "Ein lokaler Countdown mit Start-, Pause- und Zur\u00fccksetzen-Aktionen.",
+  "publisher": {
+    "name": "Beispiel GmbH"
+  },
+  "contributions": {
+    "example.countdown/timer": {
+      "name": "Countdown",
+      "settings": {
+        "mode": {
+          "name": "Beim Ausw\u00e4hlen",
+          "choices": {
+            "start": "Starten oder fortsetzen",
+            "pause": "Anhalten"
+          }
+        },
+        "duration": {
+          "name": "Dauer",
+          "description": "Wird beim Neustart verwendet."
+        }
+      }
+    },
+    "example.countdown/status": {
+      "description": "Zeigt den gemeinsamen Countdown."
+    }
+  }
+}

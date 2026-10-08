@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "choice.label-required",
+      "path": "/contributions/0/settings/0/choices/2/name",
+      "severity": "Error",
+      "line": 45,
+      "column": 23
+    }
+  ]
+}

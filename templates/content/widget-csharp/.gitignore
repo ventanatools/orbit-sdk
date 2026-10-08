@@ -1,0 +1,10 @@
+# Build output
+bin/
+obj/
+artifacts/
+.vs/
+*.user
+
+# Connection info is a credential: never commit or pack it.
+*.pairing.json
+pairing.json

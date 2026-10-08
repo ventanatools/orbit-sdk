@@ -1,0 +1,8 @@
+exit 1
+--- out
+strings/fr.json(1,35): error strings.language-mismatch: language differs from the file name's tag. [/language]
+  fix: Make them equal.
+strings/fr.json(1,89): error strings.target-unknown: This key names a contribution, setting or choice the manifest does not have. [/contributions/example.tool-test~1missing]
+  fix: Correct the key.
+{tool}: 2 errors, 0 warnings
+--- error

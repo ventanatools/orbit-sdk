@@ -1,0 +1,6 @@
+exit 1
+--- out
+companion/linked: error pack.link: A staged file or folder is a symbolic link or junction. []
+  fix: Stage the real file.
+{tool}: 1 error, 0 warnings
+--- error

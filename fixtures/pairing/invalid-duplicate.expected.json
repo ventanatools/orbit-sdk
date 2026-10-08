@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.duplicate-member",
+      "path": "/mode",
+      "severity": "Error",
+      "line": 4,
+      "column": 16
+    }
+  ]
+}

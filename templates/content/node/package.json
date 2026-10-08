@@ -1,0 +1,17 @@
+{
+  "name": "template-npm-name",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An extension companion.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@ventanatools/orbit-extensions": "file:./vendor/ventanatools-orbit-extensions-0.0.0-template-version.tgz"
+  }
+}

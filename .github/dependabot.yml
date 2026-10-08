@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    # The repository's own packages are built here, never restored from a public feed.
+    ignore:
+      - dependency-name: VentanaTools.*
+    groups:
+      nuget:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /samples/photoshop-extension
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: '@ventanatools/*'
+    groups:
+      photoshop-sample:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /node/orbit-extensions
+    schedule:
+      interval: weekly
+    groups:
+      node-sdk:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

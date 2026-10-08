@@ -1,0 +1,110 @@
+<Project>
+  <!-- Shared package metadata. Every packable project imports this file. -->
+  <PropertyGroup>
+    <Authors>Ventana Tools</Authors>
+    <Company>Ventana Tools LLC</Company>
+    <Copyright>© 2026 Ventana Tools LLC</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://dev.ventana.tools/</PackageProjectUrl>
+    <!-- The one place the repository's address is written. RepositoryUrl and SourceLink both
+         take it from here, so renaming the repository is a one-line change. -->
+    <VentanaRepositoryUrl>https://github.com/ventanatools/orbit-sdk</VentanaRepositoryUrl>
+    <RepositoryUrl>$(VentanaRepositoryUrl)</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>windows;extensions;ventana;companion;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EnableSourceLink>true</EnableSourceLink>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <!-- The package icon is added once eng/icon.png exists (128 x 128). -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)icon.png')">
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)\README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)..\NOTICE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false"
+          Condition="Exists('$(MSBuildThisFileDirectory)icon.png')" />
+  </ItemGroup>
+
+  <!-- Public API tracking. The analyzer package reads PublicAPI.Shipped.txt and
+       PublicAPI.Unshipped.txt beside the project. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all"
+                      IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+  </ItemGroup>
+
+  <!--
+    The release notes: a link to the package version's section of CHANGELOG.md on GitHub. The anchor is taken
+    from the changelog's own heading for the version (GitHub's anchor: lowercased, punctuation other than hyphens
+    and underscores removed, spaces as hyphens), so the version is written once, in Directory.Build.props, and
+    the link follows the heading when its date is set for a release. A version without a section of its own,
+    such as a local -dev build, links to the changelog itself.
+  -->
+  <UsingTask TaskName="_VentanaReleaseNotes" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Changelog ParameterType="System.String" Required="true" />
+      <Version ParameterType="System.String" Required="true" />
+      <BaseUrl ParameterType="System.String" Required="true" />
+      <Url ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        Url = BaseUrl;
+        if (System.IO.File.Exists(Changelog))
+        {
+            foreach (var line in System.IO.File.ReadAllLines(Changelog))
+            {
+                if (!line.StartsWith("## [" + Version + "]", System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var anchor = new System.Text.StringBuilder();
+                foreach (var c in line.Substring(3).Trim().ToLowerInvariant())
+                {
+                    if (c == ' ')
+                    {
+                        anchor.Append('-');
+                    }
+                    else if (char.IsLetterOrDigit(c) || c == '-' || c == '_')
+                    {
+                        anchor.Append(c);
+                    }
+                }
+
+                Url = BaseUrl + "#" + anchor;
+                break;
+            }
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="_VentanaSetPackageReleaseNotes" BeforeTargets="GenerateNuspec" Condition="'$(PackageReleaseNotes)' == ''">
+    <_VentanaReleaseNotes Changelog="$(MSBuildThisFileDirectory)..\CHANGELOG.md" Version="$(PackageVersion)"
+                          BaseUrl="$(VentanaRepositoryUrl)/blob/main/CHANGELOG.md">
+      <Output TaskParameter="Url" PropertyName="PackageReleaseNotes" />
+    </_VentanaReleaseNotes>
+  </Target>
+
+  <!-- SourceLink maps the repository root to VentanaRepositoryUrl, not to the clone's remote. -->
+  <Target Name="_VentanaSetSourceLinkRepositoryUrl" BeforeTargets="SourceControlManagerPublishTranslatedUrls">
+    <ItemGroup>
+      <SourceRoot Update="@(SourceRoot)"
+                  Condition="'%(SourceRoot.SourceControl)' == 'git' and '%(SourceRoot.NestedRoot)' == ''">
+        <RepositoryUrl>$(VentanaRepositoryUrl)</RepositoryUrl>
+      </SourceRoot>
+    </ItemGroup>
+  </Target>
+</Project>

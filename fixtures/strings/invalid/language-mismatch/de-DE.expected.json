@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "strings.language-mismatch",
+      "path": "/language",
+      "severity": "Error",
+      "line": 3,
+      "column": 15
+    }
+  ]
+}

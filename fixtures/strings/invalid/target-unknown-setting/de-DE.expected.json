@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "strings.target-unknown",
+      "path": "/contributions/example.countdown~1timer/settings/volume",
+      "severity": "Error",
+      "line": 7,
+      "column": 19
+    }
+  ]
+}

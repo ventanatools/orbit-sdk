@@ -1,0 +1,219 @@
+{
+  "about": "Every enumeration token and its C# value (contract section 7.13), generated from the explicit token tables. The wire carries tokens, never numbers. Non-flags C# enumerations start at 1. reserved lists tokens a capability or a later schema will add, with their reserved value when one is assigned.",
+  "FaceState": {
+    "flags": false,
+    "values": [
+      {
+        "token": "None",
+        "value": 1
+      },
+      {
+        "token": "Playing",
+        "value": 2
+      },
+      {
+        "token": "Paused",
+        "value": 3
+      },
+      {
+        "token": "On",
+        "value": 4
+      },
+      {
+        "token": "Off",
+        "value": 5
+      }
+    ],
+    "reserved": []
+  },
+  "Failure": {
+    "flags": false,
+    "values": [
+      {
+        "token": "UnsupportedInput",
+        "value": 1
+      },
+      {
+        "token": "NeedsSetup",
+        "value": 2
+      },
+      {
+        "token": "Network",
+        "value": 3
+      },
+      {
+        "token": "NoResult",
+        "value": 4
+      },
+      {
+        "token": "AppUnavailable",
+        "value": 5
+      }
+    ],
+    "reserved": [
+      {
+        "token": "LlmUnavailable",
+        "value": 6
+      }
+    ]
+  },
+  "Outcome": {
+    "flags": false,
+    "values": [
+      {
+        "token": "Done",
+        "value": 1
+      },
+      {
+        "token": "Refused",
+        "value": 2
+      },
+      {
+        "token": "Failed",
+        "value": 3
+      },
+      {
+        "token": "Unsupported",
+        "value": 4
+      }
+    ],
+    "reserved": []
+  },
+  "NetworkUse": {
+    "flags": false,
+    "values": [
+      {
+        "token": "None",
+        "value": 1
+      },
+      {
+        "token": "LocalNetwork",
+        "value": 2
+      },
+      {
+        "token": "Internet",
+        "value": 3
+      }
+    ],
+    "reserved": []
+  },
+  "SettingKind": {
+    "flags": false,
+    "values": [
+      {
+        "token": "Choice",
+        "value": 1
+      }
+    ],
+    "reserved": [
+      {
+        "token": "Toggle",
+        "value": null
+      },
+      {
+        "token": "Text",
+        "value": null
+      },
+      {
+        "token": "Number",
+        "value": null
+      }
+    ]
+  },
+  "Provides": {
+    "flags": true,
+    "values": [
+      {
+        "token": "invoke",
+        "value": 1
+      },
+      {
+        "token": "face",
+        "value": 2
+      }
+    ],
+    "reserved": []
+  },
+  "PairingMode": {
+    "flags": false,
+    "values": [
+      {
+        "token": "Persistent",
+        "value": 1
+      },
+      {
+        "token": "PerLaunch",
+        "value": 2
+      }
+    ],
+    "reserved": []
+  },
+  "DiagnosticSeverity": {
+    "flags": false,
+    "values": [
+      {
+        "token": "Error",
+        "value": 1
+      },
+      {
+        "token": "Warning",
+        "value": 2
+      }
+    ],
+    "reserved": []
+  },
+  "HostStatus": {
+    "flags": false,
+    "values": [
+      {
+        "token": "Active",
+        "value": 1
+      },
+      {
+        "token": "Reserved",
+        "value": 2
+      }
+    ],
+    "reserved": []
+  },
+  "Disposition": {
+    "flags": false,
+    "values": [
+      {
+        "token": "close",
+        "value": 1
+      },
+      {
+        "token": "advisory",
+        "value": 2
+      },
+      {
+        "token": "refuse",
+        "value": 3
+      },
+      {
+        "token": "ignore",
+        "value": 4
+      },
+      {
+        "token": "local",
+        "value": 5
+      }
+    ],
+    "reserved": []
+  },
+  "ProofRole": {
+    "flags": false,
+    "values": [
+      {
+        "token": "server",
+        "value": 1
+      },
+      {
+        "token": "client",
+        "value": 2
+      }
+    ],
+    "reserved": []
+  }
+}

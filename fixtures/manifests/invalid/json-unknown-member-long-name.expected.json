@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.unknown-member",
+      "path": "",
+      "severity": "Error",
+      "line": 1,
+      "column": 1
+    }
+  ]
+}

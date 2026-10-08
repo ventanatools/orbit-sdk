@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- The test assembly doubles as the Generic Host companion one test starts as a child process (Program.cs). -->
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <NoWarn>$(NoWarn);CA1416;CA1707;CA1861</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- A real Generic Host, with logging, to run the add-on in. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <!-- Compiles the package readme's example. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <ProjectReference Include="../../src/VentanaTools.Orbit.Extensions.Hosting/VentanaTools.Orbit.Extensions.Hosting.csproj" />
+    <ProjectReference Include="../../src/VentanaTools.Orbit.Extensions.Testing/VentanaTools.Orbit.Extensions.Testing.csproj" />
+  </ItemGroup>
+</Project>

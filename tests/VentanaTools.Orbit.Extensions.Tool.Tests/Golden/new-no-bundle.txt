@@ -1,0 +1,4 @@
+exit 3
+--- out
+--- error
+{tool}: error: This copy of the tool carries none of the packages a new project needs. Install the tool from its package.

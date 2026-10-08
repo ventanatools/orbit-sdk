@@ -1,74 +1,82 @@
+// SPDX-License-Identifier: MIT-0
+// SPDX-FileCopyrightText: 2026 Ventana Tools LLC
+
 using System.Globalization;
-using Orbit.Extensions.Sdk;
+using VentanaTools.Orbit.Extensions;
 
 namespace CountdownExtensionSample;
 
-internal sealed class CountdownHandler : IContributionHandler
+/// <summary>
+/// The countdown's two contributions: the timer action (start, pause or reset, with a face) and
+/// the passive status. Faces are published when what they show changes: every second while the
+/// countdown runs, and once per change otherwise, renewed by the SDK while the session runs.
+/// </summary>
+internal sealed class CountdownHandler(TimeProvider? time = null) : ContributionHandler
 {
-    private readonly Countdown _countdown;
-    private readonly Func<TimeSpan, CancellationToken, Task> _delay;
-    private int _activeFaceLoops;
+    private static readonly TimeSpan RunningFaceLifetime = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan StillFaceLifetime = TimeSpan.FromMinutes(10);
 
-    public CountdownHandler(Countdown countdown, Func<TimeSpan, CancellationToken, Task>? delay = null)
+    internal Countdown Countdown { get; } = new(time ?? TimeProvider.System);
+
+    public override async Task RunSessionAsync(Session session, CancellationToken cancellationToken)
     {
-        _countdown = countdown;
-        _delay = delay ?? ((interval, token) => Task.Delay(interval, token));
-    }
-
-    public Task RunSessionAsync(CompanionSession session, CancellationToken cancellationToken) =>
-        RunSessionCoreAsync(session.ActionId, session.Settings, () => session.IsActive,
-            session.SetFace, failure => session.Fail(failure), cancellationToken);
-
-    public Task<CompanionOutcome> InvokeAsync(CompanionInvocation invocation, CancellationToken cancellationToken) =>
-        Task.FromResult(InvokeCore(invocation.Session.ActionId, invocation.Session.Settings,
-            () => invocation.Session.IsActive, cancellationToken));
-
-    // Narrow behavior seams exercise cancellation and publication without copying transport.
-    internal async Task RunSessionCoreAsync(string actionId, IReadOnlyDictionary<string, string> settings,
-        Func<bool> isActive, Func<CompanionFace, bool> publish, Action<CompanionFailure> fail,
-        CancellationToken cancellationToken)
-    {
-        CountdownChoice? choice = null;
-        if (actionId == CountdownChoices.TimerAction && CountdownChoices.TryRead(settings, out var configured))
-            choice = configured;
-        else if (actionId != CountdownChoices.StatusAction || settings.Count != 0)
+        CountdownChoice? choice = session.ContributionId == CountdownChoices.TimerId && CountdownChoices.TryRead(session.Settings, out var configured)
+            ? configured
+            : null;
+        while (true)
         {
-            if (isActive() && !cancellationToken.IsCancellationRequested) fail(CompanionFailure.NeedsSetup);
-            return;
-        }
-
-        Interlocked.Increment(ref _activeFaceLoops);
-        try
-        {
-            while (isActive())
+            var changed = Countdown.Changed;
+            var snapshot = Countdown.Read();
+            session.SetFace(CreateFace(snapshot, choice, session.UiCulture));
+            if (snapshot.Phase == CountdownPhase.Running)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!publish(CreateFace(_countdown.Read(), choice))) return;
-                var milliseconds = Math.Max(1000, Volatile.Read(ref _activeFaceLoops) * 1000 / 32);
-                await _delay(TimeSpan.FromMilliseconds(milliseconds), cancellationToken);
+                // Wake when the displayed second changes, or sooner when a pick changes the countdown.
+                using var tick = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                await Task.WhenAny(changed, Task.Delay(UntilNextSecond(snapshot.Remaining), session.Time, tick.Token)).ConfigureAwait(false);
+                await tick.CancelAsync().ConfigureAwait(false);
             }
+            else
+            {
+                await changed.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
         }
-        finally { Interlocked.Decrement(ref _activeFaceLoops); }
     }
 
-    internal CompanionOutcome InvokeCore(string actionId, IReadOnlyDictionary<string, string> settings,
-        Func<bool> isActive, CancellationToken cancellationToken)
+    public override Task<InvokeResult> InvokeAsync(Invocation invocation, CancellationToken cancellationToken)
     {
-        if (actionId != CountdownChoices.TimerAction) return CompanionOutcome.Unsupported;
-        if (!CountdownChoices.TryRead(settings, out var choice)) return CompanionOutcome.Refused;
-        return _countdown.Apply(choice, isActive, cancellationToken) ? CompanionOutcome.Done : CompanionOutcome.Refused;
+        if (invocation.Session.ContributionId != CountdownChoices.TimerId)
+        {
+            return Task.FromResult(InvokeResult.Unsupported);
+        }
+
+        if (!CountdownChoices.TryRead(invocation.Session.Settings, out var choice))
+        {
+            return Task.FromResult(InvokeResult.Refused);
+        }
+
+        // Check again just before the change: the host may have cancelled, or stopped the session.
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!invocation.Session.IsActive)
+        {
+            return Task.FromResult(InvokeResult.Refused);
+        }
+
+        Countdown.Apply(choice);
+        return Task.FromResult(InvokeResult.Done);
     }
 
-    internal static CompanionFace CreateFace(CountdownSnapshot snapshot, CountdownChoice? choice = null)
+    internal static Face CreateFace(CountdownSnapshot snapshot, CountdownChoice? choice, CultureInfo culture)
     {
         var seconds = Math.Max(0, (long)Math.Ceiling(snapshot.Remaining.TotalSeconds));
-        var text = string.Create(CultureInfo.InvariantCulture, $"{seconds / 60}:{seconds % 60:00}");
+        var text = (seconds / 60).ToString(culture) + ":" + (seconds % 60).ToString("00", culture);
         var phase = snapshot.Phase switch
         {
-            CountdownPhase.Ready => "Ready",
             CountdownPhase.Running => "Running",
             CountdownPhase.Paused => "Paused",
-            _ => "Finished",
+            CountdownPhase.Finished => "Finished",
+            _ => "Ready",
         };
         var operation = choice?.Mode switch
         {
@@ -77,17 +85,29 @@ internal sealed class CountdownHandler : IContributionHandler
             CountdownMode.Reset => "Reset",
             _ => null,
         };
-        return new CompanionFace(text, 5)
+        var running = snapshot.Phase == CountdownPhase.Running;
+        return new Face
         {
-            Line2 = operation is null ? phase : $"{operation} · {phase}",
-            Detail = $"Countdown {phase.ToLowerInvariant()}. {text} remaining.",
+            Picture = FacePicture.Glyph("\uE916"),
+            Line1 = text,
+            Line2 = operation is null ? phase : operation + " · " + phase,
+            Detail = "Countdown " + phase.ToLowerInvariant() + ". " + text + " remaining.",
             State = snapshot.Phase switch
             {
-                CountdownPhase.Running => CompanionFaceState.Playing,
-                CountdownPhase.Paused => CompanionFaceState.Paused,
-                CountdownPhase.Finished => CompanionFaceState.Off,
-                _ => CompanionFaceState.None,
+                CountdownPhase.Running => FaceState.Playing,
+                CountdownPhase.Paused => FaceState.Paused,
+                CountdownPhase.Finished => FaceState.Off,
+                _ => FaceState.None,
             },
+            GoodFor = running ? RunningFaceLifetime : StillFaceLifetime,
+            Renew = !running,
         };
+    }
+
+    /// <summary>How long until the displayed whole second changes (the display rounds up).</summary>
+    internal static TimeSpan UntilNextSecond(TimeSpan remaining)
+    {
+        var fraction = remaining.Ticks % TimeSpan.TicksPerSecond;
+        return fraction == 0 ? TimeSpan.FromSeconds(1) : TimeSpan.FromTicks(Math.Max(fraction, TimeSpan.TicksPerMillisecond));
     }
 }

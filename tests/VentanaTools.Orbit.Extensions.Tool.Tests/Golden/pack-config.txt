@@ -1,0 +1,58 @@
+exit 1
+--- out
+{
+  "tool": "{tool}",
+  "version": "{version}",
+  "command": "pack",
+  "ok": false,
+  "diagnostics": [
+    {
+      "code": "pack.config",
+      "path": "",
+      "message": "extension.pack.json is invalid; its own diagnostics follow.",
+      "severity": "Error",
+      "file": "extension.pack.json"
+    },
+    {
+      "code": "json.unknown-member",
+      "path": "/files",
+      "message": "This member is not part of the schema: a typo, or a member of a newer schema.",
+      "severity": "Error",
+      "file": "extension.pack.json",
+      "line": 5,
+      "column": 12
+    },
+    {
+      "code": "json.type-mismatch",
+      "path": "/packVersion",
+      "message": "The value has the wrong JSON type, or is a number that is not an integer.",
+      "severity": "Error",
+      "file": "extension.pack.json",
+      "line": 2,
+      "column": 18
+    },
+    {
+      "code": "package.path",
+      "path": "/payload/0/to",
+      "message": "This entry name breaks the path grammar.",
+      "severity": "Error",
+      "file": "extension.pack.json",
+      "line": 4,
+      "column": 45
+    },
+    {
+      "code": "json.type-mismatch",
+      "path": "/payload/0/exclude",
+      "message": "The value has the wrong JSON type, or is a number that is not an integer.",
+      "severity": "Error",
+      "file": "extension.pack.json",
+      "line": 4,
+      "column": 70
+    }
+  ],
+  "summary": {
+    "errors": 5,
+    "warnings": 0
+  }
+}
+--- error

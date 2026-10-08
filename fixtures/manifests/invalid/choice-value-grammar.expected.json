@@ -1,0 +1,11 @@
+{
+  "diagnostics": [
+    {
+      "code": "choice.value-grammar",
+      "path": "/contributions/0/settings/0/choices/2/value",
+      "severity": "Error",
+      "line": 44,
+      "column": 24
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "diagnostics": [
+    {
+      "code": "json.encoding",
+      "path": "",
+      "severity": "Error"
+    }
+  ]
+}
