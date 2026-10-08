@@ -72,11 +72,12 @@ public sealed class SimulateTests
             second?.ToString() ?? "a second server took the name");
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        await using var client = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        await using var client = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous);
         var accepted = server.WaitForConnectionAsync(timeout.Token);
         await client.ConnectAsync(timeout.Token);
         await accepted;
         Assert.True(server.IsConnected, "no refused open held the instance");
+        AssertOwnedByTheUser(client);
     }
 
     [WindowsFact]
@@ -352,13 +353,14 @@ public sealed class SimulateTests
         }
     }
 
-    // A client of the pipe, or null when no instance became free within the time.
+    // A client of the pipe, which it checks is owned by the user, or null when no instance became free within the time.
     private static async Task<NamedPipeClientStream?> TryConnectAsync(string pipeName, TimeSpan within)
     {
-        var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         try
         {
             await client.ConnectAsync((int)within.TotalMilliseconds);
+            AssertOwnedByTheUser(client);
             return client;
         }
         catch (TimeoutException)
@@ -366,6 +368,21 @@ public sealed class SimulateTests
             await client.DisposeAsync();
             return null;
         }
+        catch
+        {
+            await client.DisposeAsync();
+            throw;
+        }
+    }
+
+    // What a companion checks before it writes (contract §7.1): the pipe's owner, read through the client's handle, is the
+    // user SID of its token. A test client does not use PipeOptions.CurrentUserOnly, which compares the owner with the
+    // token's default owner instead: the Administrators group in an elevated process, as on GitHub's Windows runners,
+    // where it refuses the simulated host's pipe that the user's own SID owns.
+    private static void AssertOwnedByTheUser(NamedPipeClientStream client)
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        Assert.Equal(identity.User, client.GetAccessControl().GetOwner(typeof(SecurityIdentifier)));
     }
 
     private static async Task WriteAsync(Stream stream, WireMessage message, CancellationToken cancellationToken) =>
