@@ -24,6 +24,11 @@ public sealed class SimulateTests
     private const int ErrorPipeBusy = 231;
     private const int FileAllAccess = 0x001F01FF; // FILE_ALL_ACCESS, the SDDL right FA
 
+    // The tests that drive the handshake by hand aren't about its deadline: on a loaded runner the hello can
+    // come more than the host's 5 seconds after the connection is accepted, which the host answers with
+    // auth.timeout instead of a challenge.
+    private static readonly TimeSpan TestHandshakeTimeout = TimeSpan.FromSeconds(30);
+
     private static string TestAssembly => typeof(SimulateTests).Assembly.Location;
 
     [WindowsFact]
@@ -110,6 +115,7 @@ public sealed class SimulateTests
         await using var host = new SimulatedHost(ToolTestManifest(), registration, transcript.Create())
         {
             ErrorFlushTimeout = Timeout.InfiniteTimeSpan,
+            HandshakeTimeout = TestHandshakeTimeout,
         };
         host.Start();
 
@@ -136,7 +142,10 @@ public sealed class SimulateTests
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         using var registration = SimulationRegistration.Create("example-host", "example.tool-test");
-        await using var host = new SimulatedHost(ToolTestManifest(), registration, new TranscriptLines().Create());
+        await using var host = new SimulatedHost(ToolTestManifest(), registration, new TranscriptLines().Create())
+        {
+            HandshakeTimeout = TestHandshakeTimeout,
+        };
         Assert.Equal(TimeSpan.FromSeconds(1), host.ErrorFlushTimeout);
         host.Start();
 
@@ -161,7 +170,10 @@ public sealed class SimulateTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         using var registration = SimulationRegistration.Create("example-host", "example.tool-test");
         var manifest = ToolTestManifest();
-        var host = new SimulatedHost(manifest, registration, new TranscriptLines().Create());
+        var host = new SimulatedHost(manifest, registration, new TranscriptLines().Create())
+        {
+            HandshakeTimeout = TestHandshakeTimeout,
+        };
         NamedPipeClientStream companion;
         try
         {
