@@ -4,7 +4,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Pipes;
-using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
@@ -38,7 +37,10 @@ public sealed class WindowsTheoryAttribute : TheoryAttribute
     }
 }
 
-/// <summary>A fact that needs an elevated Windows process, where a pipe's owner can be set to another principal.</summary>
+/// <summary>
+/// A fact that needs an elevated Windows process: one that can make the Administrators group a pipe's owner, and whose
+/// token's default owner is normally that group rather than its user. GitHub's Windows runners run elevated.
+/// </summary>
 public sealed class ElevatedWindowsFactAttribute : FactAttribute
 {
     public ElevatedWindowsFactAttribute()
@@ -47,9 +49,19 @@ public sealed class ElevatedWindowsFactAttribute : FactAttribute
         {
             Skip = "Companion named pipes require Windows.";
         }
-        else if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+        else if (!IsElevated)
         {
-            Skip = "Setting a pipe's owner to another principal requires an elevated process.";
+            Skip = "This case needs an elevated process.";
+        }
+    }
+
+    /// <summary>Whether this process runs elevated: as a member of the Administrators group, which it can use.</summary>
+    public static bool IsElevated
+    {
+        get
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
         }
     }
 }
@@ -542,7 +554,7 @@ public sealed class CompanionPeerTests
     public async Task ALowIntegrityProcessThatHoldsThePipeNameIsRefusedBeforeAnyByteIsWritten()
     {
         // A Low-integrity process of the same user can read a pairing file that has no mandatory label and create the
-        // pipe while the host is not listening. Its pipe is owned by the user, so the owner check passes; the process
+        // pipe while the host is not listening. It makes the user its pipe's owner, so the owner check passes; the process
         // check and the pipe's label each refuse it.
         await using var host = new IndependentHost(new TestHandler(), start: false, listen: false);
         using var squatter = StartLowIntegritySquatter(host.PipeName);
@@ -573,26 +585,30 @@ public sealed class CompanionPeerTests
 
     /// <summary>
     /// A Low-integrity Windows PowerShell that creates the pipe, waits for one connection and exits with 10 plus the
-    /// number of bytes it read from it (10: closed without a byte, 11: the client wrote to it).
+    /// number of bytes it read from it (10: closed without a byte, 11: the client wrote to it). Like a squatter that has
+    /// read the pairing file, it makes the user's own SID its pipe's owner, which the owner check accepts; without that,
+    /// an elevated token's pipe would be owned by its default owner, the Administrators group, and refused for it.
     /// </summary>
     private static LowIntegrity.LowProcess StartLowIntegritySquatter(string pipeName)
     {
-        var script = "$p = New-Object System.IO.Pipes.NamedPipeServerStream('" + pipeName + "', 'InOut', 1, 'Byte', 'Asynchronous'); "
+        var script = "$u = [System.Security.Principal.WindowsIdentity]::GetCurrent().User; $s = New-Object System.IO.Pipes.PipeSecurity; "
+            + "$s.SetOwner($u); $s.AddAccessRule((New-Object System.IO.Pipes.PipeAccessRule($u, 'FullControl', 'Allow'))); "
+            + "$p = New-Object System.IO.Pipes.NamedPipeServerStream('" + pipeName + "', 'InOut', 1, 'Byte', 'Asynchronous', 0, 0, $s); "
             + "if (-not $p.WaitForConnectionAsync().Wait(60000)) { exit 30 }; $b = New-Object byte[] 1; $r = $p.ReadAsync($b, 0, 1); "
             + "if (-not $r.Wait(15000)) { exit 20 }; exit (10 + $r.Result)";
         return LowIntegrity.Start("\"" + LowIntegrity.WindowsPowerShell + "\" -NoProfile -NonInteractive -Command \"" + script + "\"");
     }
 
     [ElevatedWindowsFact]
-    public async Task APipeOwnedByAnotherPrincipalIsRefusedBeforeAnyByteIsWritten()
+    public async Task APipeOwnedByTheAdministratorsGroupIsRefusedBeforeAnyByteIsWritten()
     {
-        // An elevated process's new objects are owned by Administrators, its token's default owner, so a pipe owned by the
-        // user's own SID is "another principal" to PipeOptions.CurrentUserOnly.
-        var user = WindowsIdentity.GetCurrent().User!;
-        var security = new PipeSecurity();
-        security.SetOwner(user);
-        security.AddAccessRule(new PipeAccessRule(user, PipeAccessRights.FullControl, AccessControlType.Allow));
-        await using var host = new IndependentHost(new TestHandler(), start: false, security: security);
+        // The Administrators group is an elevated token's default owner, the one PipeOptions.CurrentUserOnly compares and so
+        // accepts in an elevated client. Any administrator's elevated process can make it a pipe's owner, so the client
+        // refuses it like any owner but its token's user. Only the owner differs from a host's pipe: its access-control list
+        // admits the user, this process serves it at the client's own integrity level, and it carries no lower label.
+        var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        await using var host = new IndependentHost(new TestHandler(), start: false, security: TestPipes.HostSecurity(administrators));
+        Assert.Equal(administrators, PipeNatives.PipeOwner(host.Pipe.SafePipeHandle));
         host.StartClient();
         var accept = host.WaitForConnectionAsync();
         var waiting = await host.WaitForStatusAsync(ConnectionState.Waiting, seconds: 15);
@@ -600,6 +616,26 @@ public sealed class CompanionPeerTests
         Assert.False(waiting.ServerVerified);
         await accept.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Null(await host.ReadAsync(TimeSpan.FromMilliseconds(500)));
+    }
+
+    [ElevatedWindowsFact]
+    public async Task AnElevatedClientVerifiesAPipeItsUserOwnsAtItsOwnIntegrityLevel()
+    {
+        // A host makes the user's own SID its pipe's owner. PipeOptions.CurrentUserOnly compared that with the token's default
+        // owner, the Administrators group when elevated, so an elevated companion refused every host's pipe, even an elevated
+        // host's or orbit-ext simulate's. The owner check compares the token's user, and this process serves the pipe at the
+        // client's own integrity level, so the server is verified before its challenge.
+        await using var host = new IndependentHost(new TestHandler());
+        using (var identity = WindowsIdentity.GetCurrent())
+        {
+            Assert.Equal(identity.User, PipeNatives.PipeOwner(host.Pipe.SafePipeHandle));
+        }
+
+        await host.AcceptHelloAsync();
+        await host.SendAsync(new ErrorMessage { Code = ReasonCode.AuthRegistrationMismatch });
+        var stopped = await host.WaitForStatusAsync(ConnectionState.Stopped);
+        Assert.Equal(ReasonCode.AuthRegistrationMismatch, stopped.Reason);
+        Assert.True(stopped.ServerVerified);
     }
 
     private static string NewId() => Guid.NewGuid().ToString("N");
@@ -661,13 +697,9 @@ public sealed class CompanionPeerTests
             _manifest = manifest ?? Manifest(DefaultContributions());
             _manifestHash = ManifestWriter.ComputeHash(_manifest);
             PipeName = PipeNames.Create(TestHosts.Id, "test", PipeNames.UserHash(WindowsIdentity.GetCurrent().User!.Value), _registrationId);
-            Pipe = !listen
-                ? null!
-                : security is null
-                ? new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly | PipeOptions.FirstPipeInstance)
-                : NamedPipeServerStreamAcl.Create(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous | PipeOptions.FirstPipeInstance, 0, 0, security);
+            // As a host does, the pipe's owner is the user's own SID unless security says otherwise; PipeOptions.CurrentUserOnly
+            // would make it the token's default owner, the Administrators group when elevated, and the client refuses that.
+            Pipe = listen ? TestPipes.CreateServer(PipeName, security) : null!;
             _pairing = new Pairing(TestHosts.Id, PipeName, _registrationId, _manifest.Id, (byte[])_secret.Clone());
             _client = new CompanionClient(_pairing, _manifest, handler);
             _client.StatusChanged += (_, e) =>

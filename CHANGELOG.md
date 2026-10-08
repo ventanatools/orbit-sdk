@@ -166,3 +166,16 @@ protocol-2 source preview, `Orbit.Extensions.Protocol` and `Orbit.Extensions.Sdk
   release workflow that builds, tests, packs and validates without publishing.
 - `eng/rename-product.ps1` and `tools/Set-HostCodename.ps1`, the scripted
   product rename.
+
+### Fixed
+
+- An elevated .NET companion, for example one debugged from Visual Studio run
+  as administrator, can connect to a host or `orbit-ext simulate` that runs
+  elevated as well. The client used `PipeOptions.CurrentUserOnly`, which
+  compares the pipe's owner with the token's default owner, the Administrators
+  group in an elevated process, so it refused every host's pipe, which the
+  user's own SID owns. It now checks that the pipe is owned by the current
+  user's account, its token's user SID, and refuses any other owner (another
+  user, the Administrators group, SYSTEM) with `auth.server-unverified` before
+  writing anything. A companion that runs elevated while its host does not is
+  still refused, by the integrity checks (contract §7.1).

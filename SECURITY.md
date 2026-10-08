@@ -29,15 +29,18 @@ it does not sandbox the companion, and no manifest member can restrict what it
 does. People should install only extensions they trust, and hosts say so in
 install review and consent.
 
-- **The pipe.** A host creates each registration's named pipe for the current
-  user only, with a Medium mandatory label that refuses lower-integrity
-  processes every kind of open, rejecting remote clients, as the first and only
-  instance of its name, so a sandboxed process of the same user can neither use
-  that one instance nor hold it to keep the companion out. `orbit-ext simulate`
-  creates its pipe the same way. Before it writes a byte, the .NET SDK checks
-  that the current user owns the pipe, that the server
-  process runs as the current user at an integrity level no lower than its own,
-  and that the pipe's mandatory label does not show a lower-integrity creator.
+- **The pipe.** A host creates each registration's named pipe owned by the
+  current user's account and open to it only, with a Medium mandatory label
+  that refuses lower-integrity processes every kind of open, rejecting remote
+  clients, as the first and only instance of its name, so a sandboxed process
+  of the same user can neither use that one instance nor hold it to keep the
+  companion out. `orbit-ext simulate` creates its pipe the same way. Before it
+  writes a byte, the .NET SDK checks that the pipe is owned by the current
+  user's account (its user SID, checked explicitly: .NET's `CurrentUserOnly`
+  option compares the token's default owner, which is the Administrators group
+  when elevated), that the server process runs as the current user at an
+  integrity level no lower than its own, and that the pipe's mandatory label
+  does not show a lower-integrity creator.
   The label check still refuses a lower-integrity process that has denied
   everyone access to itself so that the process check cannot open it: Windows
   labels the pipes such a process creates, and it can neither raise nor remove

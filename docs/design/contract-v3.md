@@ -1282,12 +1282,18 @@ package and synced folder:
 
 ### 7.1 Transport
 
-- A Windows named pipe in byte mode, created by the host with access for the
-  current user only, a mandatory label at Medium that denies lower-integrity
-  processes read, write and execute (`S:(ML;;NRNWNX;;;ME)`), rejecting remote
-  clients, and as the first and only instance of its name. The host keeps the
-  same server instance across reconnects, so the name never lapses while the
-  registration listens.
+- A Windows named pipe in byte mode, created by the host with the current
+  user's account (the user SID of the host's token) as its owner and as the
+  only entry of its access-control list, a mandatory label at Medium that
+  denies lower-integrity processes read, write and execute
+  (`S:(ML;;NRNWNX;;;ME)`), rejecting remote clients, and as the first and only
+  instance of its name. The host keeps the same server instance across
+  reconnects, so the name never lapses while the registration listens.
+- The host sets the owner explicitly. A pipe created without one is owned by
+  the token's default owner, which in an elevated process is the
+  Administrators group, and .NET's server-side `PipeOptions.CurrentUserOnly`
+  makes that default owner both the owner and the only entry; clients refuse a
+  pipe that group owns (below).
 - That single instance is a resource a read-only opener can hold. Under the
   default label, which denies a lower-integrity process only writes, a
   sandboxed process of the same user could open it for reading and hold it
@@ -1295,12 +1301,22 @@ package and synced folder:
   and backs off. The label refuses such a process every kind of open. A host
   sets it in the call that creates the pipe; .NET's `PipeSecurity` cannot carry
   a label, so a .NET host creates the pipe with `CreateNamedPipeW` and a
-  security descriptor.
+  security descriptor: `O:<user>D:P(A;;FA;;;<user>)S:(ML;;NRNWNX;;;ME)`,
+  where `<user>` is the user SID.
 - One registration has one pipe, and the pipe accepts one connection at a time.
 - **Clients verify the server before writing.** Before writing the first byte, a
-  client MUST verify that the pipe is owned by the current user (in .NET,
-  `PipeOptions.CurrentUserOnly`). It SHOULD also check the server process and
-  the pipe's label, and a client that checks the process MUST also check the
+  client MUST verify that the pipe is owned by the current user's account: the
+  pipe's owner, read through the client's own handle (`GetSecurityInfo` with
+  `OWNER_SECURITY_INFORMATION`), MUST be the user SID of the client's token.
+  Any other owner, such as another user, the Administrators group or SYSTEM,
+  fails this owner check, as does an owner that cannot be read. The token's
+  default owner is no substitute for its user: in an elevated process it is the
+  Administrators group, which any administrator's elevated process can make a
+  pipe's owner. .NET's `PipeOptions.CurrentUserOnly` compares the pipe's owner
+  with that default owner, so in an elevated client it refuses every host's
+  pipe and accepts one the Administrators group owns; a .NET client checks the
+  owner itself instead. A client SHOULD also check the server process and the
+  pipe's label, and a client that checks the process MUST also check the
   label:
   - *Process:* get its id (`GetNamedPipeServerProcessId`), open it with
     `PROCESS_QUERY_LIMITED_INFORMATION`, open its token with `TOKEN_QUERY`, and
@@ -1331,7 +1347,10 @@ package and synced folder:
     because a lower-integrity process of the same user may have read the
     pairing file (§6.2). A client that runs at a higher integrity level than
     its host, for example a companion started as administrator while the host
-    is not, is refused the same way.
+    is not, is refused the same way. Elevation matters only to the process and
+    label checks, never to the owner check: a companion and a host that both
+    run as administrator are not refused for it, nor is a companion that does
+    not with a host that does.
 - Clients SHOULD request identification-level impersonation
   (`SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION`), so a server can learn
   who the client is but cannot act as the client.
@@ -2729,14 +2748,16 @@ Behaviour the SDK guarantees:
   because the transport is a Windows named pipe. Everything else in the
   package (declarations, diagnostics, pairing, packaging and wire) is portable.
 - **Pipe and server verification.** The client connects with
-  `PipeOptions.CurrentUserOnly | PipeOptions.Asynchronous` and
-  `TokenImpersonationLevel.Identification`, so it never writes to a pipe the
-  current user does not own (`auth.server-unverified`). Before writing `hello`
-  it checks the server process's user and integrity level and the pipe's
-  mandatory label (§7.1). When both checks pass, the server is verified from
-  the start. When it reads the server's token and finds another user or a
-  lower integrity level, or the pipe's label is lower than §7.1 allows or
-  cannot be read, it closes the pipe without writing anything
+  `PipeOptions.Asynchronous` and `TokenImpersonationLevel.Identification`.
+  Before writing `hello` it checks that the pipe's owner is its token's user
+  SID, so it never writes to a pipe the current user's account does not own
+  (`auth.server-unverified`), elevated or not; it does not use
+  `PipeOptions.CurrentUserOnly`, which compares the token's default owner
+  instead (§7.1). It then checks the server process's user and integrity level
+  and the pipe's mandatory label (§7.1). When both checks pass, the server is
+  verified from the start. When it reads the server's token and finds another
+  user or a lower integrity level, or the pipe's label is lower than §7.1
+  allows or cannot be read, it closes the pipe without writing anything
   (`auth.server-unverified`, then `Waiting` with normal backoff). When it
   cannot open or read the server process or its token but the label is no
   lower than the companion's own level, the server becomes verified only when
@@ -3613,13 +3634,13 @@ reason code); and `wait`. Durations are `<n>s` or `<n>ms`. A script has at most
 1,000 steps, and its reader reports the codes of §4 (`enum.undefined` for an
 unknown token, or a malformed duration or code).
 
-`simulate` creates its pipe exactly as a host must (§7.1): access for the
-current user only, the Medium mandatory label that denies lower-integrity
-processes read, write and execute, rejecting remote clients, the first and only
-instance of its name, one connection at a time. Its temporary pairing file and
-the folder that holds it are created with an access-control list that grants
-access only to the current user and the mandatory label of §6.2, and deleted on
-exit.
+`simulate` creates its pipe exactly as a host must (§7.1): the current user's
+account as its owner and the only entry of its access-control list, the Medium
+mandatory label that denies lower-integrity processes read, write and execute,
+rejecting remote clients, the first and only instance of its name, one
+connection at a time. Its temporary pairing file and the folder that holds it
+are created with an access-control list that grants access only to the current
+user and the mandatory label of §6.2, and deleted on exit.
 
 ### 11.3 Pack configuration: `extension.pack.json`
 

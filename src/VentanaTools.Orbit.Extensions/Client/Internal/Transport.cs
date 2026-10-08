@@ -88,14 +88,15 @@ internal sealed class InMemoryTransport : ICompanionTransport
 }
 
 /// <summary>
-/// The named-pipe transport (contract §7.1): the pipe must be owned by the current user
-/// (<see cref="PipeOptions.CurrentUserOnly"/>) and is opened with identification-level
-/// impersonation. Before any byte is written, the server process's user and integrity level and the
-/// pipe's mandatory label are checked: a server that passes is verified; a server whose process runs
-/// as another user or at a lower integrity level, or whose pipe was created at a lower integrity
-/// level, is refused (<c>auth.server-unverified</c>); and a server whose process cannot be opened or
-/// read, but whose pipe label is no lower than this process's level, stays unverified until its
-/// challenge proof verifies.
+/// The named-pipe transport (contract §7.1), opened with identification-level impersonation. Before
+/// any byte is written, it checks that the pipe is owned by the current user's account, its token's
+/// user SID (not <see cref="PipeOptions.CurrentUserOnly"/>, which compares the token's default owner:
+/// the Administrators group in an elevated process), then the server process's user and integrity
+/// level and the pipe's mandatory label. A server that passes is verified; a pipe that another
+/// principal owns, a server whose process runs as another user or at a lower integrity level, or
+/// whose pipe was created at a lower integrity level, is refused (<c>auth.server-unverified</c>); and
+/// a server whose process cannot be opened or read, but whose pipe label is no lower than this
+/// process's level, stays unverified until its challenge proof verifies.
 /// </summary>
 [SupportedOSPlatform("windows")]
 internal sealed class PipeTransport : ICompanionTransport
@@ -116,15 +117,18 @@ internal sealed class PipeTransport : ICompanionTransport
             return TransportConnection.Failed(ReasonCode.HostNotRunning);
         }
 
-        var pipe = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut,
-            PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly, TokenImpersonationLevel.Identification);
+        // Not PipeOptions.CurrentUserOnly: it compares the pipe's owner with the token's default owner, which is the
+        // Administrators group in an elevated process, so an elevated companion would refuse every host's pipe and accept
+        // one that group owns. CheckServer compares the owner with the token's user before anything is written.
+        var pipe = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous,
+            TokenImpersonationLevel.Identification);
         try
         {
             await pipe.ConnectAsync(ConnectTimeoutMilliseconds, cancellationToken).ConfigureAwait(false);
         }
         catch (UnauthorizedAccessException)
         {
-            // The pipe's owner is not the current user: nothing was written to it.
+            // The pipe's access-control list or label does not admit this process: nothing was written to it.
             await pipe.DisposeAsync().ConfigureAwait(false);
             return TransportConnection.Failed(ReasonCode.AuthServerUnverified);
         }
@@ -147,8 +151,8 @@ internal sealed class PipeTransport : ICompanionTransport
         var check = PipeNatives.CheckServer(pipe.SafePipeHandle);
         if (check == ServerCheck.Refused)
         {
-            // Another user's or a lower-integrity process holds the pipe name, or its pipe was created at a lower
-            // integrity level: nothing was written to it.
+            // The pipe is not owned by the current user's account, another user's or a lower-integrity process holds the
+            // pipe name, or its pipe was created at a lower integrity level: nothing was written to it.
             await pipe.DisposeAsync().ConfigureAwait(false);
             return TransportConnection.Failed(ReasonCode.AuthServerUnverified);
         }
@@ -161,20 +165,23 @@ internal sealed class PipeTransport : ICompanionTransport
 internal enum ServerCheck
 {
     /// <summary>
-    /// It runs as the current user at an integrity level no lower than this process's, and its pipe's
-    /// label is no lower than Medium or this process's level, whichever is lower.
+    /// Its pipe is owned by the current user's account, it runs as the current user at an integrity
+    /// level no lower than this process's, and its pipe's label is no lower than Medium or this
+    /// process's level, whichever is lower.
     /// </summary>
     Verified = 1,
 
     /// <summary>
-    /// Its process or token could not be opened or read, but its pipe's label is no lower than this
-    /// process's integrity level; it is unverified until its challenge proof verifies.
+    /// Its pipe is owned by the current user's account, and its process or token could not be opened or
+    /// read, but its pipe's label is no lower than this process's integrity level; it is unverified
+    /// until its challenge proof verifies.
     /// </summary>
     Unchecked = 2,
 
     /// <summary>
-    /// It runs as another user or at a lower integrity level, or its pipe's label is lower than the
-    /// check allows or cannot be read; the client writes nothing to it.
+    /// Its pipe is owned by another principal or its owner cannot be read, it runs as another user or
+    /// at a lower integrity level, or its pipe's label is lower than the check allows or cannot be
+    /// read; the client writes nothing to it.
     /// </summary>
     Refused = 3,
 }
@@ -189,6 +196,7 @@ internal static partial class PipeNatives
     private const int TokenUserClass = 1;
     private const int TokenIntegrityLevelClass = 25;
     private const int SeKernelObject = 6;
+    private const uint OwnerSecurityInformation = 0x1;
     private const uint LabelSecurityInformation = 0x10;
     private const byte SystemMandatoryLabelAceType = 0x11;
     private const int MaximumSecurityDescriptorLength = 64 * 1024;
@@ -209,12 +217,18 @@ internal static partial class PipeNatives
     }
 
     /// <summary>
-    /// Checks the pipe's server process and the pipe's mandatory label (contract §7.1). A process that
+    /// Checks the pipe's owner, its server process and its mandatory label, in that order (contract
+    /// §7.1). A pipe that is not owned by the current user's account refuses the server; a process that
     /// cannot be checked counts as <see cref="ServerCheck.Unchecked"/>; a label that cannot be read
     /// refuses the server.
     /// </summary>
     public static ServerCheck CheckServer(SafePipeHandle pipe)
     {
+        if (!IsOwnedByUser(PipeOwner(pipe), CurrentUser()))
+        {
+            return ServerCheck.Refused;
+        }
+
         ServerCheck process;
         try
         {
@@ -252,16 +266,50 @@ internal static partial class PipeNatives
     }
 
     /// <summary>
+    /// The owner check (contract §7.1): whether a pipe is owned by the current user's account, the user
+    /// SID of this process's token. No other owner passes, the token's default owner included: in an
+    /// elevated process that is the Administrators group, which any administrator's elevated process
+    /// can make a pipe's owner (it is what <see cref="PipeOptions.CurrentUserOnly"/> compares). An
+    /// owner or user that could not be read fails the check.
+    /// </summary>
+    /// <param name="owner">The pipe's owner, or null when it could not be read.</param>
+    /// <param name="user">The user SID of this process's token, or null when it could not be read.</param>
+    internal static bool IsOwnedByUser(SecurityIdentifier? owner, SecurityIdentifier? user) =>
+        owner is not null && user is not null && owner == user;
+
+    /// <summary>
+    /// The pipe's owner, read through the client's own handle, which has <c>READ_CONTROL</c> as part of
+    /// <c>GENERIC_READ</c>, or null when it cannot be read.
+    /// </summary>
+    internal static SecurityIdentifier? PipeOwner(SafeHandle pipe) => SecurityDescriptor(pipe, OwnerSecurityInformation)?.Owner;
+
+    /// <summary>
     /// The pipe's integrity level, read through the client's own handle, which has <c>READ_CONTROL</c>
-    /// because the owner check needed it: the lowest mandatory label that applies to the pipe itself,
+    /// as part of <c>GENERIC_READ</c>: the lowest mandatory label that applies to the pipe itself,
     /// Medium when it has none, or null when it cannot be read.
     /// </summary>
     internal static uint? PipeLabel(SafeHandle pipe)
     {
+        try
+        {
+            return SecurityDescriptor(pipe, LabelSecurityInformation) is { } descriptor ? LowestLabel(descriptor) : null;
+        }
+        catch (SystemException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The parts of the pipe's security descriptor that <paramref name="information"/> names, read
+    /// through <paramref name="pipe"/>, or null when they cannot be read.
+    /// </summary>
+    private static RawSecurityDescriptor? SecurityDescriptor(SafeHandle pipe, uint information)
+    {
         nint descriptor = 0;
         try
         {
-            if (GetSecurityInfo(pipe, SeKernelObject, LabelSecurityInformation, 0, 0, 0, 0, out descriptor) != 0 || descriptor == 0)
+            if (GetSecurityInfo(pipe, SeKernelObject, information, 0, 0, 0, 0, out descriptor) != 0 || descriptor == 0)
             {
                 return null;
             }
@@ -274,7 +322,7 @@ internal static partial class PipeNatives
 
             var bytes = new byte[length];
             Marshal.Copy(descriptor, bytes, 0, length);
-            return LowestLabel(new RawSecurityDescriptor(bytes, 0));
+            return new RawSecurityDescriptor(bytes, 0);
         }
         catch (SystemException)
         {
@@ -319,6 +367,20 @@ internal static partial class PipeNatives
         }
 
         return lowest ?? MediumIntegrity;
+    }
+
+    /// <summary>The user SID of this process's token, or null when it cannot be read.</summary>
+    private static SecurityIdentifier? CurrentUser()
+    {
+        try
+        {
+            using var self = WindowsIdentity.GetCurrent(TokenAccessLevels.Query);
+            return self.User;
+        }
+        catch (SystemException)
+        {
+            return null;
+        }
     }
 
     /// <summary>This process's integrity level (relative identifier), or null when it cannot be read.</summary>

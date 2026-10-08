@@ -4,14 +4,16 @@
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using Microsoft.Win32.SafeHandles;
 using Xunit;
 
 namespace VentanaTools.Orbit.Extensions.Tests.Client;
 
 /// <summary>
-/// The pipe-label half of the server check (contract §7.1). The end-to-end cases, with a Low-integrity
-/// squatter, are in <see cref="CompanionPeerTests"/>.
+/// The owner check and the pipe-label half of the server check (contract §7.1). The end-to-end cases,
+/// with a Low-integrity squatter and, elevated, a pipe the Administrators group owns, are in
+/// <see cref="CompanionPeerTests"/>.
 /// </summary>
 public sealed class ServerCheckTests
 {
@@ -22,6 +24,27 @@ public sealed class ServerCheckTests
     private const uint Low = 0x1000;
     private const uint Medium = 0x2000;
     private const uint High = 0x3000;
+    private const string User = "S-1-5-21-1-2-3-1001";
+
+    [WindowsTheory]
+    [InlineData(User, true)] // The token's user: the current user's account.
+    [InlineData("S-1-5-32-544", false)] // Administrators: an elevated token's default owner, which any administrator's process can assign.
+    [InlineData("S-1-5-18", false)] // SYSTEM.
+    [InlineData("S-1-5-21-1-2-3-1002", false)] // Another user.
+    [InlineData("S-1-5-21-1-2-3", false)] // The user's domain, a prefix of its SID.
+    public void OnlyTheTokensUserPassesTheOwnerCheck(string owner, bool expected)
+    {
+        Assert.Equal(expected, PipeNatives.IsOwnedByUser(new SecurityIdentifier(owner), new SecurityIdentifier(User)));
+    }
+
+    [WindowsFact]
+    public void AnOwnerOrUserThatCannotBeReadFailsTheOwnerCheck()
+    {
+        var user = new SecurityIdentifier(User);
+        Assert.False(PipeNatives.IsOwnedByUser(null, user));
+        Assert.False(PipeNatives.IsOwnedByUser(user, null));
+        Assert.False(PipeNatives.IsOwnedByUser(null, null));
+    }
 
     [Theory]
     [InlineData(Verified, Medium, Medium, Verified)]
@@ -65,14 +88,18 @@ public sealed class ServerCheckTests
     [WindowsFact]
     public async Task APipeThisProcessCreatesCarriesNoLabelAndItsServerIsVerified()
     {
+        // Neither end uses PipeOptions.CurrentUserOnly, which works with the token's default owner (the Administrators group
+        // when elevated): the server makes the user its pipe's owner, as a host does, and the client reads the owner.
         var name = "VentanaTools.Tests." + Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-        await using var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly | PipeOptions.FirstPipeInstance);
-        await using var client = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        await using var server = TestPipes.CreateServer(name);
+        await using var client = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous);
         var accept = server.WaitForConnectionAsync();
         await client.ConnectAsync(5_000);
         await accept;
 
+        using var identity = WindowsIdentity.GetCurrent();
+        Assert.Equal(identity.User, PipeNatives.PipeOwner(server.SafePipeHandle));
+        Assert.Equal(identity.User, PipeNatives.PipeOwner(client.SafePipeHandle));
         Assert.Equal(PipeNatives.MediumIntegrity, PipeNatives.PipeLabel(client.SafePipeHandle));
         Assert.Equal(ServerCheck.Verified, PipeNatives.CheckServer(client.SafePipeHandle));
     }
@@ -82,5 +109,12 @@ public sealed class ServerCheckTests
     {
         using var invalid = new SafeFileHandle(0, ownsHandle: false);
         Assert.Null(PipeNatives.PipeLabel(invalid));
+    }
+
+    [WindowsFact]
+    public void AHandleWhoseOwnerCannotBeReadHasNoOwner()
+    {
+        using var invalid = new SafeFileHandle(0, ownsHandle: false);
+        Assert.Null(PipeNatives.PipeOwner(invalid));
     }
 }
