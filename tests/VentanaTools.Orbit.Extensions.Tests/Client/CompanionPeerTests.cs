@@ -575,7 +575,16 @@ public sealed class CompanionPeerTests
         using var squatter = StartLowIntegritySquatter(host.PipeName);
         await ClientHarness.WaitForAsync(() => !PipeNatives.PipeIsMissing(host.PipeName), "the squatter's pipe", seconds: 60);
         squatter.DenyEveryone();
-        Assert.Equal(ServerCheck.Unchecked, PipeNatives.CheckProcess(squatter.Id));
+        var process = PipeNatives.CheckProcess(squatter.Id);
+        if (process != ServerCheck.Unchecked)
+        {
+            // An elevated administrator's process can open any process whatever its access-control list (a token with
+            // SeDebugPrivilege enabled does), and on GitHub's Windows runners this one opens the squatter. The process check
+            // then runs and refuses the Low squatter itself before the label is read; ServerCheckTests covers the label's
+            // decision for a process that cannot be checked.
+            Assert.Equal(ServerCheck.Refused, process);
+            Assert.True(ElevatedWindowsFactAttribute.IsElevated, "a process that is not elevated opened a process that denied everyone access");
+        }
 
         host.StartClient();
         var refused = await host.WaitForStatusAsync(ConnectionState.Waiting, ReasonCode.AuthServerUnverified, seconds: 60);
