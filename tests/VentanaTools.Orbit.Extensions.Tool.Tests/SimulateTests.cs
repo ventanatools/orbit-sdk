@@ -4,6 +4,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO.Pipes;
+using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -21,6 +22,7 @@ namespace VentanaTools.Orbit.Extensions.Tool.Tests;
 public sealed class SimulateTests
 {
     private const int ErrorPipeBusy = 231;
+    private const int FileAllAccess = 0x001F01FF; // FILE_ALL_ACCESS, the SDDL right FA
 
     private static string TestAssembly => typeof(SimulateTests).Assembly.Location;
 
@@ -46,7 +48,7 @@ public sealed class SimulateTests
         var name = "ventana-tool-test-" + Guid.NewGuid().ToString("N");
         await using var server = SimulatedHost.CreatePipe(name);
         using var identity = WindowsIdentity.GetCurrent();
-        var user = identity.User!.Value;
+        var user = identity.User!;
 
         foreach (var access in new[] { LowIntegrityToken.GenericRead, LowIntegrityToken.GenericRead | LowIntegrityToken.GenericWrite,
             LowIntegrityToken.GenericWrite })
@@ -57,9 +59,17 @@ public sealed class SimulateTests
             Assert.Equal(LowIntegrityToken.ErrorAccessDenied, error);
         }
 
-        // Windows reads the descriptor back as O:<user>D:P(A;;FA;;;<user>)S:AI(ML;;NWNRNX;;;ME).
+        // Windows reads the descriptor back as O:<user>D:P(A;;FA;;;<user>)S:AI(ML;;NWNRNX;;;ME), but writes a SID it has
+        // an alias for as that alias (the built-in Administrator account, which GitHub's Windows runner uses, reads as
+        // LA), so the owner and the one entry are compared as SIDs, not as text.
         var sddl = PipeFacts.Sddl(server.SafePipeHandle);
-        Assert.StartsWith("O:" + user + "D:P(A;;FA;;;" + user + ")S:", sddl, StringComparison.Ordinal);
+        var descriptor = new RawSecurityDescriptor(sddl);
+        Assert.Equal(user, descriptor.Owner);
+        Assert.True((descriptor.ControlFlags & ControlFlags.DiscretionaryAclProtected) != 0, sddl);
+        var entry = Assert.IsType<CommonAce>(Assert.Single(descriptor.DiscretionaryAcl!.Cast<GenericAce>()));
+        Assert.Equal(AceQualifier.AccessAllowed, entry.AceQualifier);
+        Assert.Equal(user, entry.SecurityIdentifier);
+        Assert.Equal(FileAllAccess, entry.AccessMask);
         var label = Regex.Match(sddl, @"S:[A-Z]*\(ML;;(?<rights>[A-Z]+);;;ME\)$");
         Assert.True(label.Success, sddl);
         Assert.Equal(["NR", "NW", "NX"], label.Groups["rights"].Value.Chunk(2).Select(pair => new string(pair)).Order(StringComparer.Ordinal));
