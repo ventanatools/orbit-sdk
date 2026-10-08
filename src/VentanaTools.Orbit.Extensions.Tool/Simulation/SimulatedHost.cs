@@ -128,7 +128,6 @@ internal sealed class SimulatedHost : IAsyncDisposable
 {
     private const int HostSendRate = 256;
     private const int HostSendBurst = 512;
-    private static readonly TimeSpan HandshakeTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan WriteTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan ThrottleNoticeInterval = TimeSpan.FromSeconds(5);
 
@@ -168,6 +167,13 @@ internal sealed class SimulatedHost : IAsyncDisposable
     /// Tests may change it.
     /// </summary>
     internal TimeSpan ErrorFlushTimeout { get; init; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// How long a new connection has to finish the handshake before the host closes it with
+    /// <c>auth.timeout</c>: 5 seconds. Tests that aren't about this deadline lengthen it, because a loaded
+    /// runner can take longer than that to send a hello after it connects.
+    /// </summary>
+    internal TimeSpan HandshakeTimeout { get; init; } = TimeSpan.FromSeconds(5);
 
     public bool IsConnected
     {
@@ -917,7 +923,7 @@ internal sealed class SimulatedHost : IAsyncDisposable
         private async Task<bool> HandshakeAsync(CancellationToken token)
         {
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
-            deadline.CancelAfter(HandshakeTimeout);
+            deadline.CancelAfter(host.HandshakeTimeout);
             try
             {
                 if (await ReadAsync(ConnectionPhase.Handshake, Framing.MaxHandshakeFrameBytes, deadline.Token).ConfigureAwait(false) is not HelloMessage hello)
