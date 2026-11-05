@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@ventanatools/orbit-extensions": "file:../../node/orbit-extensions",
-    "ws": "8.22.0"
+    "ws": "8.22.1"
   },
   "devDependencies": {
     "@noble/hashes": "2.4.0",
